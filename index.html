@@ -450,7 +450,10 @@ function syncDot(c) {
 function saveD() {
   saving = true;
   syncDot('#f59e0b');
-  REF.set(D).then(function() {
+  // screen'i Firebase'e kaydetme - her cihaz kendi ekranını yönetsin
+  var toSave = JSON.parse(JSON.stringify(D));
+  delete toSave.screen;
+  REF.set(toSave).then(function() {
     saving = false;
     syncDot('#22c55e');
   }).catch(function(e) {
@@ -510,8 +513,9 @@ REF.on('value', function(snap) {
     firstLoad = false;
     refreshAll();
   } else if (!isOwnSave) {
-    // Başka cihazdan gelen güncelleme - tam refreshAll yap
-    refreshAll();
+    // Başka cihazdan gelen güncelleme
+    var localScreen = D.screen; // yerel ekranı koru
+    refreshAllRemote(localScreen);
   } else {
     renderPool();
     if (D.screen === 4) renderGameCards();
@@ -523,6 +527,50 @@ db.ref('.info/connected').on('value', function(snap) {
   syncDot(snap.val() ? '#22c55e' : '#f59e0b');
 });
 
+function refreshAllRemote(localScreen) {
+  // Başka cihazdan veri geldi - ekranı zorla değiştirme
+  // Sadece veriyi güncelle, gerekirse ekrana geç
+  renderPool();
+  if (localScreen === 2) renderSessChips();
+
+  // Eğer oyun başladıysa ve biz henüz oyun ekranında değilsek → geç
+  if (D.started && localScreen !== 4) {
+    // Masa bilgileri güncellendi, oyun ekranına geç
+    if (D.round && (D.round.masa1active || D.round.masa2active)) {
+      updateMasaLabels();
+      renderSessChips();
+      renderGameCards();
+      goS(4);
+    }
+  } else if (D.started && localScreen === 4) {
+    // Zaten oyun ekranındayız, sadece güncelle
+    updateMasaLabels();
+    renderGameCards();
+  } else if (!D.started && localScreen === 4) {
+    // Oturum kapandı, ana ekrana dön
+    renderPool();
+    goS(1);
+  }
+}
+
+function updateMasaLabels() {
+  if (D.round && D.round.masa1 && D.round.masa1active) {
+    document.getElementById('lbl-m1A').textContent = 'K: ' + (D.round.masa1.A||[]).join(', ');
+    document.getElementById('lbl-m1B').textContent = 'S: ' + (D.round.masa1.B||[]).join(', ');
+    var m1btn = document.getElementById('mtab1');
+    if (m1btn) m1btn.style.display = '';
+  }
+  if (D.round && D.round.masa2 && D.round.masa2active) {
+    document.getElementById('lbl-m2A').textContent = 'K: ' + (D.round.masa2.A||[]).join(', ');
+    document.getElementById('lbl-m2B').textContent = 'S: ' + (D.round.masa2.B||[]).join(', ');
+    var m2btn = document.getElementById('mtab2');
+    if (m2btn) m2btn.style.display = '';
+  } else {
+    var m2btn2 = document.getElementById('mtab2');
+    if (m2btn2) m2btn2.style.display = 'none';
+  }
+}
+
 function refreshAll() {
   renderPool();
   var mpEl = document.getElementById('m-puan');
@@ -532,18 +580,7 @@ function refreshAll() {
     document.getElementById('m-kaz').value = D.sess.mKaz;
   }
   if (D.started && D.screen === 4) {
-    if (D.round && D.round.masa1 && D.round.masa1active) {
-      document.getElementById('lbl-m1A').textContent = 'K: ' + (D.round.masa1.A||[]).join(', ');
-      document.getElementById('lbl-m1B').textContent = 'S: ' + (D.round.masa1.B||[]).join(', ');
-    }
-    if (D.round && D.round.masa2 && D.round.masa2active) {
-      document.getElementById('lbl-m2A').textContent = 'K: ' + (D.round.masa2.A||[]).join(', ');
-      document.getElementById('lbl-m2B').textContent = 'S: ' + (D.round.masa2.B||[]).join(', ');
-    }
-    if (D.round && !D.round.masa2active) {
-      var m2btn = document.getElementById('mtab2');
-      if (m2btn) m2btn.style.display = 'none';
-    }
+    updateMasaLabels();
     renderSessChips();
     renderGameCards();
     goS(4);
