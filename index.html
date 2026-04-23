@@ -208,6 +208,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div style="display:flex;gap:2px;background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:3px;margin-bottom:12px">
       <button id="mtab1" class="btn bp bfw" style="border-radius:8px;font-size:.8rem" onclick="switchMasa(1)">Masa 1</button>
       <button id="mtab2" class="btn bo bfw" style="border-radius:8px;font-size:.8rem" onclick="switchMasa(2)">Masa 2</button>
+      <button id="mtab-skor" class="btn bo bfw" style="border-radius:8px;font-size:.8rem;background:#fffbf0;border-color:#e8c96a;color:#8a6010" onclick="showSkorTakip()">📊 Skor</button>
     </div>
 
     <!-- Masa 1 formu -->
@@ -326,6 +327,71 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <div id="toast"></div>
 
+<!-- Skor Takip Overlay -->
+<div class="ov" id="ov-skor">
+  <div class="ovbox" style="max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="ovttl" style="margin-bottom:0">📊 Skor Takip</div>
+      <div style="display:flex;gap:6px">
+        <select id="skor-masa-sel" style="font-size:.8rem;padding:6px 8px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit" onchange="renderSkorTakip()">
+          <option value="1">Masa 1</option>
+          <option value="2">Masa 2</option>
+        </select>
+        <button class="btn bo bs" onclick="closeOv('ov-skor')">Kapat</button>
+      </div>
+    </div>
+
+    <!-- Takım başlıkları -->
+    <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;margin-bottom:8px;align-items:center">
+      <div style="width:28px"></div>
+      <div style="text-align:center;font-size:.72rem;font-weight:700;color:#cc0000">Kırmızı</div>
+      <div style="text-align:center;font-size:.72rem;font-weight:700;color:#111">Siyah</div>
+    </div>
+
+    <!-- Tur listesi -->
+    <div id="skor-turler"></div>
+
+    <!-- Toplam -->
+    <div id="skor-toplam" style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;margin-top:8px;padding:10px;background:var(--g1);border-radius:9px;color:white;align-items:center">
+      <div style="font-size:.7rem;font-weight:700;width:28px">TOP</div>
+      <div id="skor-top-k" style="text-align:center;font-size:1.4rem;font-weight:900">0</div>
+      <div id="skor-top-s" style="text-align:center;font-size:1.4rem;font-weight:900">0</div>
+    </div>
+
+    <!-- Tur ekle -->
+    <div style="margin-top:12px;padding:12px;background:var(--bg2);border-radius:9px">
+      <div style="font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--g2);margin-bottom:10px">Yeni Tur</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+        <div>
+          <label style="color:#cc0000;font-size:.7rem">Kırmızı Puan</label>
+          <input class="bnum" type="number" id="tur-kpts" placeholder="0" oninput="updateTurPrev()">
+        </div>
+        <div>
+          <label style="font-size:.7rem">Siyah Puan</label>
+          <input class="bnum" type="number" id="tur-spts" placeholder="0" oninput="updateTurPrev()">
+        </div>
+        <div>
+          <label style="color:#cc0000;font-size:.7rem">Kırmızı Pişti</label>
+          <input class="bnum" type="number" id="tur-kpi" placeholder="0">
+        </div>
+        <div>
+          <label style="font-size:.7rem">Siyah Pişti</label>
+          <input class="bnum" type="number" id="tur-spi" placeholder="0">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn bp bfw" onclick="addTur()">+ Tur Ekle</button>
+      </div>
+    </div>
+
+    <!-- Oyunu Bitir -->
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button class="btn bp bfw" style="background:#166534" onclick="bitirOyun()">✓ Oyunu Bitir ve Kaydet</button>
+      <button class="btn bd_btn" onclick="resetSkor()">Sıfırla</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
@@ -364,6 +430,7 @@ var DEF = {
   sessLdg:{},
   initialLdg:{},
   winLoss:{},
+  skorTakip:{},
   closedSess:[],
   screen:1,
   started:false
@@ -432,6 +499,7 @@ REF.on('value', function(snap) {
   if (!D.ldg) D.ldg = {};
   if (!D.sessLdg) D.sessLdg = {};
   if (!D.winLoss) D.winLoss = {};
+  if (!D.skorTakip) D.skorTakip = {};
   if (!D.closedSess) D.closedSess = [];
 
   syncDot('#22c55e');
@@ -1471,6 +1539,119 @@ function renderAPChips() {
     html += '<span class="chip">' + D.pool[i] + '<button class="chipx" onclick="rmP(' + i + ');renderAPChips()">x</button></span>';
   }
   document.getElementById('ap-chips').innerHTML = html;
+}
+
+// ── SKOR TAKİP ──
+// Firebase'de D.skorTakip[masa] = {turler:[{k,s,kpi,spi}], active:true}
+
+function showSkorTakip() {
+  if (!D.skorTakip) D.skorTakip = {};
+  var masa = activeMasa || 1;
+  document.getElementById('skor-masa-sel').value = masa;
+  renderSkorTakip();
+  document.getElementById('ov-skor').classList.add('on');
+}
+
+function renderSkorTakip() {
+  if (!D.skorTakip) D.skorTakip = {};
+  var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+  var st = D.skorTakip['m' + masa] || {turler:[]};
+  var turler = st.turler || [];
+
+  var html = '';
+  var totK = 0, totS = 0;
+  for (var i = 0; i < turler.length; i++) {
+    var t = turler[i];
+    totK += (t.k || 0);
+    totS += (t.s || 0);
+    var leading = totK > totS ? 'color:#cc0000' : totS > totK ? 'color:#111' : '';
+    html += '<div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;padding:6px 0;border-bottom:1px solid var(--bd);align-items:center">';
+    html += '<div style="font-size:.65rem;color:var(--tx3);width:28px">' + (i+1) + '.</div>';
+    html += '<div style="text-align:center;font-size:.85rem;font-weight:600;color:#cc0000">' + (t.k||0) + (t.kpi?'<span style="font-size:.65rem"> +'+t.kpi+'⚡</span>':'') + '</div>';
+    html += '<div style="text-align:center;font-size:.85rem;font-weight:600">' + (t.s||0) + (t.spi?'<span style="font-size:.65rem"> +'+t.spi+'⚡</span>':'') + '</div>';
+    html += '<div></div>';
+    html += '<div style="text-align:center;font-size:.65rem;color:var(--tx3)">top: ' + (function(arr,idx){var s=0;for(var j=0;j<=idx;j++)s+=arr[j].k||0;return s;})(turler,i) + '</div>';
+    html += '<div style="text-align:center;font-size:.65rem;color:var(--tx3)">top: ' + (function(arr,idx){var s=0;for(var j=0;j<=idx;j++)s+=arr[j].s||0;return s;})(turler,i) + '</div>';
+    html += '</div>';
+  }
+
+  if (!turler.length) html = '<div class="empty">Henüz tur girilmedi</div>';
+  document.getElementById('skor-turler').innerHTML = html;
+
+  // Toplam
+  var kEl = document.getElementById('skor-top-k');
+  var sEl = document.getElementById('skor-top-s');
+  kEl.textContent = totK;
+  sEl.textContent = totS;
+  kEl.style.color = totK > totS ? '#e8c96a' : 'white';
+  sEl.style.color = totS > totK ? '#e8c96a' : 'white';
+}
+
+function updateTurPrev() {
+  // anlık önizleme istersen buraya eklenebilir
+}
+
+function addTur() {
+  var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+  var k   = parseInt(document.getElementById('tur-kpts').value) || 0;
+  var s   = parseInt(document.getElementById('tur-spts').value) || 0;
+  var kpi = parseInt(document.getElementById('tur-kpi').value) || 0;
+  var spi = parseInt(document.getElementById('tur-spi').value) || 0;
+  if (!k && !s && !kpi && !spi) { toast('En az bir değer girin'); return; }
+
+  if (!D.skorTakip) D.skorTakip = {};
+  var key = 'm' + masa;
+  if (!D.skorTakip[key]) D.skorTakip[key] = {turler:[]};
+  D.skorTakip[key].turler.push({k:k, s:s, kpi:kpi, spi:spi});
+  saveD();
+
+  // Inputları temizle
+  ['tur-kpts','tur-spts','tur-kpi','tur-spi'].forEach(function(id){
+    document.getElementById(id).value = '';
+  });
+  renderSkorTakip();
+  toast('Tur eklendi');
+}
+
+function resetSkor() {
+  var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+  if (!confirm('Bu masanın skor takibini sıfırla?')) return;
+  if (!D.skorTakip) D.skorTakip = {};
+  D.skorTakip['m' + masa] = {turler:[]};
+  saveD();
+  renderSkorTakip();
+}
+
+function bitirOyun() {
+  var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+  if (!D.skorTakip || !D.skorTakip['m'+masa] || !D.skorTakip['m'+masa].turler.length) {
+    toast('Henüz tur girilmedi'); return;
+  }
+  var turler = D.skorTakip['m'+masa].turler;
+  var totK = 0, totS = 0, totKpi = 0, totSpi = 0;
+  for (var i = 0; i < turler.length; i++) {
+    totK   += turler[i].k   || 0;
+    totS   += turler[i].s   || 0;
+    totKpi += turler[i].kpi || 0;
+    totSpi += turler[i].spi || 0;
+  }
+
+  if (!confirm('Oyun bitti. Kırmızı: ' + totK + ' puan, ' + totKpi + ' pişti | Siyah: ' + totS + ' puan, ' + totSpi + ' pişti\nKaydet?')) return;
+
+  // Skor girme alanını doldur
+  switchMasa(masa);
+  document.getElementById('m'+masa+'-Apts').value = totK;
+  document.getElementById('m'+masa+'-Bpts').value = totS;
+  document.getElementById('m'+masa+'-Api').value  = totKpi;
+  document.getElementById('m'+masa+'-Bpi').value  = totSpi;
+  updatePrev(masa);
+
+  // Skor takibini sıfırla
+  D.skorTakip['m'+masa] = {turler:[]};
+  saveD();
+
+  closeOv('ov-skor');
+  toast('Skorlar aktarıldı — Kaydet butonuna basın');
 }
 
 // ── TOAST ──
