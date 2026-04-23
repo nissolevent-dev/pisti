@@ -528,26 +528,21 @@ db.ref('.info/connected').on('value', function(snap) {
 });
 
 function refreshAllRemote(localScreen) {
-  // Başka cihazdan veri geldi - ekranı zorla değiştirme
-  // Sadece veriyi güncelle, gerekirse ekrana geç
   renderPool();
   if (localScreen === 2) renderSessChips();
 
-  // Eğer oyun başladıysa ve biz henüz oyun ekranında değilsek → geç
-  if (D.started && localScreen !== 4) {
-    // Masa bilgileri güncellendi, oyun ekranına geç
-    if (D.round && (D.round.masa1active || D.round.masa2active)) {
-      updateMasaLabels();
-      renderSessChips();
-      renderGameCards();
+  if (D.started) {
+    // Oyun başlamış - oyun ekranına geç (zaten orada olsak bile güncelle)
+    updateMasaLabels();
+    renderSessChips();
+    renderGameCards();
+    if (localScreen !== 4) {
+      if (D.round && D.round.masa1active) switchMasa(1);
+      else if (D.round && D.round.masa2active) switchMasa(2);
       goS(4);
     }
-  } else if (D.started && localScreen === 4) {
-    // Zaten oyun ekranındayız, sadece güncelle
-    updateMasaLabels();
-    renderGameCards();
   } else if (!D.started && localScreen === 4) {
-    // Oturum kapandı, ana ekrana dön
+    // Oturum kapandı
     renderPool();
     goS(1);
   }
@@ -579,14 +574,15 @@ function refreshAll() {
     document.getElementById('m-pisti').value = D.sess.mPisti;
     document.getElementById('m-kaz').value = D.sess.mKaz;
   }
-  if (D.started && D.screen === 4) {
+  if (D.started) {
+    // Oyun başlamış - her zaman oyun ekranına git
     updateMasaLabels();
     renderSessChips();
     renderGameCards();
+    // Aktif masaya göre sekme seç
+    if (D.round && D.round.masa1active) switchMasa(1);
+    else if (D.round && D.round.masa2active) switchMasa(2);
     goS(4);
-  } else if (D.started) {
-    renderSessChips();
-    goS(D.screen || 1);
   } else if (D.pool.length > 0) {
     renderSessChips();
     goS(1);
