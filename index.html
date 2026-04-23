@@ -213,19 +213,19 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <!-- Masa 1 formu -->
     <div id="masa1-form" class="card">
       <div class="ctitle" id="lbl-m1">Masa 1</div>
+      <div id="lbl-m1A" style="font-size:.72rem;font-weight:700;color:#cc0000;margin-bottom:4px">Kırmızı Takım</div>
+      <div id="lbl-m1B" style="font-size:.72rem;font-weight:700;color:#111;margin-bottom:10px">Siyah Takım</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px">
-        <div style="min-width:0">
-          <div id="lbl-m1A" style="font-size:.7rem;font-weight:700;color:#cc0000;margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Kırmızı Takım</div>
-          <label>Puan</label>
+        <div>
+          <label style="color:#cc0000">Kırmızı Puan</label>
           <input class="bnum" type="number" id="m1-Apts" placeholder="0" oninput="updatePrev(1)">
-          <label style="margin-top:8px">Pisti</label>
+          <label style="margin-top:8px;color:#cc0000">Kırmızı Pişti</label>
           <input class="bnum" type="number" id="m1-Api" placeholder="0" style="font-size:1.3rem" oninput="updatePrev(1)">
         </div>
-        <div style="min-width:0">
-          <div id="lbl-m1B" style="font-size:.7rem;font-weight:700;color:#111;margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Siyah Takım</div>
-          <label>Puan</label>
+        <div>
+          <label>Siyah Puan</label>
           <input class="bnum" type="number" id="m1-Bpts" placeholder="0" oninput="updatePrev(1)">
-          <label style="margin-top:8px">Pisti</label>
+          <label style="margin-top:8px">Siyah Pişti</label>
           <input class="bnum" type="number" id="m1-Bpi" placeholder="0" style="font-size:1.3rem" oninput="updatePrev(1)">
         </div>
       </div>
@@ -243,19 +243,19 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <!-- Masa 2 formu -->
     <div id="masa2-form" class="card" style="display:none">
       <div class="ctitle" id="lbl-m2">Masa 2</div>
+      <div id="lbl-m2A" style="font-size:.72rem;font-weight:700;color:#cc0000;margin-bottom:4px">Kırmızı Takım</div>
+      <div id="lbl-m2B" style="font-size:.72rem;font-weight:700;color:#111;margin-bottom:10px">Siyah Takım</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px">
-        <div style="min-width:0">
-          <div id="lbl-m2A" style="font-size:.7rem;font-weight:700;color:#cc0000;margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Kırmızı Takım</div>
-          <label>Puan</label>
+        <div>
+          <label style="color:#cc0000">Kırmızı Puan</label>
           <input class="bnum" type="number" id="m2-Apts" placeholder="0" oninput="updatePrev(2)">
-          <label style="margin-top:8px">Pisti</label>
+          <label style="margin-top:8px;color:#cc0000">Kırmızı Pişti</label>
           <input class="bnum" type="number" id="m2-Api" placeholder="0" style="font-size:1.3rem" oninput="updatePrev(2)">
         </div>
-        <div style="min-width:0">
-          <div id="lbl-m2B" style="font-size:.7rem;font-weight:700;color:#111;margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Siyah Takım</div>
-          <label>Puan</label>
+        <div>
+          <label>Siyah Puan</label>
           <input class="bnum" type="number" id="m2-Bpts" placeholder="0" oninput="updatePrev(2)">
-          <label style="margin-top:8px">Pisti</label>
+          <label style="margin-top:8px">Siyah Pişti</label>
           <input class="bnum" type="number" id="m2-Bpi" placeholder="0" style="font-size:1.3rem" oninput="updatePrev(2)">
         </div>
       </div>
@@ -664,13 +664,13 @@ function refreshBench() {
     var pv = (v && typeof v === 'object') ? v : {m1: null, m2: null};
     if (m1active) {
       html += '<span style="font-size:.65rem;color:var(--tx3);margin-right:2px">M1:</span>';
-      html += '<button class="ptog' + (pv.m1 === 'A' ? ' pA' : '') + '" onclick="setPart(\'' + p + '\',1,\'A\')">A</button>';
-      html += '<button class="ptog' + (pv.m1 === 'B' ? ' pB' : '') + '" onclick="setPart(\'' + p + '\',1,\'B\')">B</button>';
+      html += '<button class="ptog' + (pv.m1 === 'A' ? ' pA' : '') + '" onclick="setPart(\'' + p + '\',1,\'A\')">K</button>';
+      html += '<button class="ptog' + (pv.m1 === 'B' ? ' pB' : '') + '" onclick="setPart(\'' + p + '\',1,\'B\')">S</button>';
     }
     if (m2active) {
       html += '<span style="font-size:.65rem;color:var(--tx3);margin-left:6px;margin-right:2px">M2:</span>';
-      html += '<button class="ptog' + (pv.m2 === 'A' ? ' pA' : '') + '" onclick="setPart(\'' + p + '\',2,\'A\')">A</button>';
-      html += '<button class="ptog' + (pv.m2 === 'B' ? ' pB' : '') + '" onclick="setPart(\'' + p + '\',2,\'B\')">B</button>';
+      html += '<button class="ptog' + (pv.m2 === 'A' ? ' pA' : '') + '" onclick="setPart(\'' + p + '\',2,\'A\')">K</button>';
+      html += '<button class="ptog' + (pv.m2 === 'B' ? ' pB' : '') + '" onclick="setPart(\'' + p + '\',2,\'B\')">S</button>';
     }
     html += '</div>';
   }
