@@ -59,10 +59,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px}
 .sbox{background:var(--bg2);border:1.5px solid var(--bd);border-radius:10px;padding:12px;min-width:0;overflow:hidden}
 .sbox h3{font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--g2);margin-bottom:10px}
-.seat{display:flex;align-items:flex-start;gap:6px;margin-bottom:7px}
+.seat{display:flex;margin-bottom:7px}
 .seat:last-child{margin-bottom:0}
-.slbl{font-size:.6rem;color:var(--tx3);width:38px;min-width:38px;max-width:38px;flex-shrink:0;font-weight:500;line-height:1.35;overflow-wrap:break-word;white-space:normal}
-.seat select{flex:1;min-width:0;width:0;font-size:.8rem;padding:7px 8px;padding-right:26px;box-sizing:border-box;height:36px}
+.seat select{width:100%;font-size:.8rem;padding:7px 8px;padding-right:26px;box-sizing:border-box;height:36px}
 .bench{background:#fffbf0;border:1px solid #e8d898;border-radius:9px;padding:12px;margin-bottom:10px}
 .bench h3{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#8a6010;margin-bottom:8px}
 .prow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:8px}
@@ -184,16 +183,20 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div class="ctitle">Masa Duzeni</div>
       <div class="sgrid">
         <div class="sbox"><h3>Masa 1</h3>
-          <div class="seat"><span class="slbl" style="width:32px;min-width:32px;max-width:32px;white-space:normal;word-break:break-all;font-size:.58rem">Kırmızı Takım</span><select id="s-m1A1" onchange="updateSeatDropdowns();refreshBench()"></select></div>
-          <div class="seat"><span class="slbl"></span><select id="s-m1A2" onchange="updateSeatDropdowns();refreshBench()"></select></div>
-          <div class="seat"><span class="slbl" style="width:32px;min-width:32px;max-width:32px;white-space:normal;word-break:break-all;font-size:.58rem">Siyah Takım</span><select id="s-m1B1" onchange="updateSeatDropdowns();refreshBench()"></select></div>
-          <div class="seat"><span class="slbl"></span><select id="s-m1B2" onchange="updateSeatDropdowns();refreshBench()"></select></div>
+          <div style="font-size:.6rem;color:#cc0000;font-weight:700;margin-bottom:4px">Kırmızı Takım</div>
+          <div class="seat"><select id="s-m1A1" onchange="updateSeatDropdowns();refreshBench()"></select></div>
+          <div class="seat" style="margin-bottom:10px"><select id="s-m1A2" onchange="updateSeatDropdowns();refreshBench()"></select></div>
+          <div style="font-size:.6rem;color:#111;font-weight:700;margin-bottom:4px">Siyah Takım</div>
+          <div class="seat"><select id="s-m1B1" onchange="updateSeatDropdowns();refreshBench()"></select></div>
+          <div class="seat"><select id="s-m1B2" onchange="updateSeatDropdowns();refreshBench()"></select></div>
         </div>
         <div class="sbox"><h3>Masa 2</h3>
-          <div class="seat"><span class="slbl" style="width:32px;min-width:32px;max-width:32px;white-space:normal;word-break:break-all;font-size:.58rem">Kırmızı Takım</span><select id="s-m2A1" onchange="updateSeatDropdowns();refreshBench()"></select></div>
-          <div class="seat"><span class="slbl"></span><select id="s-m2A2" onchange="updateSeatDropdowns();refreshBench()"></select></div>
-          <div class="seat"><span class="slbl" style="width:32px;min-width:32px;max-width:32px;white-space:normal;word-break:break-all;font-size:.58rem">Siyah Takım</span><select id="s-m2B1" onchange="updateSeatDropdowns();refreshBench()"></select></div>
-          <div class="seat"><span class="slbl"></span><select id="s-m2B2" onchange="updateSeatDropdowns();refreshBench()"></select></div>
+          <div style="font-size:.6rem;color:#cc0000;font-weight:700;margin-bottom:4px">Kırmızı Takım</div>
+          <div class="seat"><select id="s-m2A1" onchange="updateSeatDropdowns();refreshBench()"></select></div>
+          <div class="seat" style="margin-bottom:10px"><select id="s-m2A2" onchange="updateSeatDropdowns();refreshBench()"></select></div>
+          <div style="font-size:.6rem;color:#111;font-weight:700;margin-bottom:4px">Siyah Takım</div>
+          <div class="seat"><select id="s-m2B1" onchange="updateSeatDropdowns();refreshBench()"></select></div>
+          <div class="seat"><select id="s-m2B2" onchange="updateSeatDropdowns();refreshBench()"></select></div>
         </div>
       </div>
       <div id="bench-area"></div>
@@ -506,6 +509,9 @@ REF.on('value', function(snap) {
   if (firstLoad) {
     firstLoad = false;
     refreshAll();
+  } else if (!isOwnSave) {
+    // Başka cihazdan gelen güncelleme - tam refreshAll yap
+    refreshAll();
   } else {
     renderPool();
     if (D.screen === 4) renderGameCards();
@@ -574,6 +580,10 @@ function resetRoundAndGoS3() {
   D.round.partners = {};
   D.round.masa1 = {A:[], B:[]};
   D.round.masa2 = {A:[], B:[]};
+  // Dropdown'ları temizle
+  for (var i = 0; i < SIDS.length; i++) {
+    document.getElementById(SIDS[i]).value = '';
+  }
   goSAndSave(3);
   buildSeats();
 }
