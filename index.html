@@ -62,7 +62,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .seat{display:flex;align-items:flex-start;gap:6px;margin-bottom:7px}
 .seat:last-child{margin-bottom:0}
 .slbl{font-size:.6rem;color:var(--tx3);width:38px;min-width:38px;max-width:38px;font-weight:500;line-height:1.35;word-wrap:break-word;overflow-wrap:break-word;white-space:normal}
-.seat select{flex:1;font-size:.8rem;padding:7px 8px;padding-right:26px}
+.seat select{flex:1;font-size:.8rem;padding:7px 8px;padding-right:26px;box-sizing:border-box;height:36px}
 .bench{background:#fffbf0;border:1px solid #e8d898;border-radius:9px;padding:12px;margin-bottom:10px}
 .bench h3{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#8a6010;margin-bottom:8px}
 .prow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:8px}
@@ -333,7 +333,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div class="ovttl" style="margin-bottom:0">📊 Skor Takip</div>
       <div style="display:flex;gap:6px">
-        <select id="skor-masa-sel" style="font-size:.8rem;padding:6px 8px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit" onchange="renderSkorTakip()">
+        <select id="skor-masa-sel" style="font-size:.82rem;padding:8px 28px 8px 10px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit;min-width:90px;-webkit-appearance:none;appearance:none;background:var(--wh) url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'7\'%3E%3Cpath d=\'M1 1l4 4 4-4\' stroke=\'%232d6a4f\' stroke-width=\'1.8\' fill=\'none\' stroke-linecap=\'round\'/%3E%3C/svg%3E') no-repeat right 8px center" onchange="renderSkorTakip()">
           <option value="1">Masa 1</option>
           <option value="2">Masa 2</option>
         </select>
@@ -344,8 +344,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <!-- Takım başlıkları -->
     <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;margin-bottom:8px;align-items:center">
       <div style="width:28px"></div>
-      <div style="text-align:center;font-size:.72rem;font-weight:700;color:#cc0000">Kırmızı</div>
-      <div style="text-align:center;font-size:.72rem;font-weight:700;color:#111">Siyah</div>
+      <div class="skor-k-hdr" style="text-align:center;font-size:.72rem;font-weight:700;color:#cc0000">K</div>
+      <div class="skor-s-hdr" style="text-align:center;font-size:.72rem;font-weight:700;color:#111">S</div>
     </div>
 
     <!-- Tur listesi -->
@@ -1552,9 +1552,27 @@ function showSkorTakip() {
   document.getElementById('ov-skor').classList.add('on');
 }
 
+function getInitials(players) {
+  if (!players || !players.length) return '?';
+  return players.map(function(p) {
+    var parts = p.trim().split(' ');
+    return parts.map(function(w){ return w[0]; }).join('');
+  }).join('+');
+}
+
 function renderSkorTakip() {
   if (!D.skorTakip) D.skorTakip = {};
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+  var masaData = masa === 1 ? D.round.masa1 : D.round.masa2;
+  var kIsim = masaData ? getInitials(masaData.A) : 'K';
+  var sIsim = masaData ? getInitials(masaData.B) : 'S';
+
+  // Başlık etiketlerini güncelle
+  var kHeader = document.querySelector('#ov-skor .skor-k-hdr');
+  var sHeader = document.querySelector('#ov-skor .skor-s-hdr');
+  if (kHeader) kHeader.textContent = kIsim;
+  if (sHeader) sHeader.textContent = sIsim;
+
   var st = D.skorTakip['m' + masa] || {turler:[]};
   var turler = st.turler || [];
 
