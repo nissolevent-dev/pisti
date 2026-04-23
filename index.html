@@ -367,19 +367,19 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
         <div>
           <label style="color:#cc0000;font-size:.7rem">Kırmızı Puan</label>
-          <input class="bnum" type="number" id="tur-kpts" placeholder="0" oninput="updateTurPrev()">
+          <input class="bnum" type="number" id="tur-kpts" placeholder="0" inputmode="numeric" pattern="[0-9]*" oninput="updateTurPrev()">
         </div>
         <div>
           <label style="font-size:.7rem">Siyah Puan</label>
-          <input class="bnum" type="number" id="tur-spts" placeholder="0" oninput="updateTurPrev()">
+          <input class="bnum" type="number" id="tur-spts" placeholder="0" inputmode="numeric" pattern="[0-9]*" oninput="updateTurPrev()">
         </div>
         <div>
           <label style="color:#cc0000;font-size:.7rem">Kırmızı Pişti</label>
-          <input class="bnum" type="number" id="tur-kpi" placeholder="0">
+          <input class="bnum" type="number" id="tur-kpi" placeholder="0" inputmode="numeric" pattern="[0-9]*">
         </div>
         <div>
           <label style="font-size:.7rem">Siyah Pişti</label>
-          <input class="bnum" type="number" id="tur-spi" placeholder="0">
+          <input class="bnum" type="number" id="tur-spi" placeholder="0" inputmode="numeric" pattern="[0-9]*">
         </div>
       </div>
       <div style="display:flex;gap:8px">
@@ -1107,6 +1107,17 @@ function delGame(id) {
   }
   D.allGames.splice(ai, 1);
   if (si > -1) D.sessGames.splice(si, 1);
+  // Tüm oturum oyunları silindiyse started'ı sıfırla
+  if (D.sessGames.length === 0) {
+    D.started = false;
+    D.round = JSON.parse(JSON.stringify(DEF.round));
+    D.sessLdg = {};
+    saveD();
+    switchToOyun();
+    goS(1);
+    toast('Tüm oyunlar silindi');
+    return;
+  }
   saveD();
   renderGameCards();
   if (typeof renderHesapIfActive === 'function') renderHesapIfActive();
