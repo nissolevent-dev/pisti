@@ -184,16 +184,16 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div class="ctitle">Masa Duzeni</div>
       <div class="sgrid">
         <div class="sbox"><h3>Masa 1</h3>
-          <div class="seat"><span class="slbl">Takim A</span><select id="s-m1A1" onchange="refreshBench()"></select></div>
-          <div class="seat"><span class="slbl"></span><select id="s-m1A2" onchange="refreshBench()"></select></div>
-          <div class="seat"><span class="slbl">Takim B</span><select id="s-m1B1" onchange="refreshBench()"></select></div>
-          <div class="seat"><span class="slbl"></span><select id="s-m1B2" onchange="refreshBench()"></select></div>
+          <div class="seat"><span class="slbl">Kırmızı Takım</span><select id="s-m1A1" onchange="updateSeatDropdowns();refreshBench()"></select></div>
+          <div class="seat"><span class="slbl"></span><select id="s-m1A2" onchange="updateSeatDropdowns();refreshBench()"></select></div>
+          <div class="seat"><span class="slbl">Siyah Takım</span><select id="s-m1B1" onchange="updateSeatDropdowns();refreshBench()"></select></div>
+          <div class="seat"><span class="slbl"></span><select id="s-m1B2" onchange="updateSeatDropdowns();refreshBench()"></select></div>
         </div>
         <div class="sbox"><h3>Masa 2</h3>
-          <div class="seat"><span class="slbl">Takim A</span><select id="s-m2A1" onchange="refreshBench()"></select></div>
-          <div class="seat"><span class="slbl"></span><select id="s-m2A2" onchange="refreshBench()"></select></div>
-          <div class="seat"><span class="slbl">Takim B</span><select id="s-m2B1" onchange="refreshBench()"></select></div>
-          <div class="seat"><span class="slbl"></span><select id="s-m2B2" onchange="refreshBench()"></select></div>
+          <div class="seat"><span class="slbl">Kırmızı Takım</span><select id="s-m2A1" onchange="updateSeatDropdowns();refreshBench()"></select></div>
+          <div class="seat"><span class="slbl"></span><select id="s-m2A2" onchange="updateSeatDropdowns();refreshBench()"></select></div>
+          <div class="seat"><span class="slbl">Siyah Takım</span><select id="s-m2B1" onchange="updateSeatDropdowns();refreshBench()"></select></div>
+          <div class="seat"><span class="slbl"></span><select id="s-m2B2" onchange="updateSeatDropdowns();refreshBench()"></select></div>
         </div>
       </div>
       <div id="bench-area"></div>
@@ -214,15 +214,15 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div id="masa1-form" class="card">
       <div class="ctitle" id="lbl-m1">Masa 1</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px">
-        <div>
-          <div id="lbl-m1A" style="font-size:.7rem;font-weight:700;color:var(--g1);margin-bottom:9px">Takim A</div>
+        <div style="min-width:0">
+          <div id="lbl-m1A" style="font-size:.7rem;font-weight:700;color:#cc0000;margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Kırmızı Takım</div>
           <label>Puan</label>
           <input class="bnum" type="number" id="m1-Apts" placeholder="0" oninput="updatePrev(1)">
           <label style="margin-top:8px">Pisti</label>
           <input class="bnum" type="number" id="m1-Api" placeholder="0" style="font-size:1.3rem" oninput="updatePrev(1)">
         </div>
-        <div>
-          <div id="lbl-m1B" style="font-size:.7rem;font-weight:700;color:var(--g1);margin-bottom:9px">Takim B</div>
+        <div style="min-width:0">
+          <div id="lbl-m1B" style="font-size:.7rem;font-weight:700;color:#111;margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Siyah Takım</div>
           <label>Puan</label>
           <input class="bnum" type="number" id="m1-Bpts" placeholder="0" oninput="updatePrev(1)">
           <label style="margin-top:8px">Pisti</label>
@@ -230,9 +230,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </div>
       </div>
       <div style="background:var(--bg2);border-radius:8px;padding:10px;display:flex;justify-content:space-around;align-items:center;margin-bottom:11px">
-        <div style="text-align:center"><div id="pv-m1A" style="font-size:1.3rem;font-weight:700">-</div><div style="font-size:.6rem;color:var(--tx3)">Takim A</div></div>
+        <div style="text-align:center"><div id="pv-m1A" style="font-size:1.3rem;font-weight:700">-</div><div style="font-size:.6rem;color:var(--tx3)">Kırmızı Takım</div></div>
         <div style="font-size:.75rem;color:var(--tx3);font-weight:600">vs</div>
-        <div style="text-align:center"><div id="pv-m1B" style="font-size:1.3rem;font-weight:700">-</div><div style="font-size:.6rem;color:var(--tx3)">Takim B</div></div>
+        <div style="text-align:center"><div id="pv-m1B" style="font-size:1.3rem;font-weight:700">-</div><div style="font-size:.6rem;color:var(--tx3)">Siyah Takım</div></div>
       </div>
       <div class="row">
         <button class="btn bp" onclick="saveGame(1)">Kaydet</button>
@@ -244,15 +244,15 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div id="masa2-form" class="card" style="display:none">
       <div class="ctitle" id="lbl-m2">Masa 2</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px">
-        <div>
-          <div id="lbl-m2A" style="font-size:.7rem;font-weight:700;color:var(--g1);margin-bottom:9px">Takim A</div>
+        <div style="min-width:0">
+          <div id="lbl-m2A" style="font-size:.7rem;font-weight:700;color:#cc0000;margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Kırmızı Takım</div>
           <label>Puan</label>
           <input class="bnum" type="number" id="m2-Apts" placeholder="0" oninput="updatePrev(2)">
           <label style="margin-top:8px">Pisti</label>
           <input class="bnum" type="number" id="m2-Api" placeholder="0" style="font-size:1.3rem" oninput="updatePrev(2)">
         </div>
-        <div>
-          <div id="lbl-m2B" style="font-size:.7rem;font-weight:700;color:var(--g1);margin-bottom:9px">Takim B</div>
+        <div style="min-width:0">
+          <div id="lbl-m2B" style="font-size:.7rem;font-weight:700;color:#111;margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Siyah Takım</div>
           <label>Puan</label>
           <input class="bnum" type="number" id="m2-Bpts" placeholder="0" oninput="updatePrev(2)">
           <label style="margin-top:8px">Pisti</label>
@@ -260,9 +260,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </div>
       </div>
       <div style="background:var(--bg2);border-radius:8px;padding:10px;display:flex;justify-content:space-around;align-items:center;margin-bottom:11px">
-        <div style="text-align:center"><div id="pv-m2A" style="font-size:1.3rem;font-weight:700">-</div><div style="font-size:.6rem;color:var(--tx3)">Takim A</div></div>
+        <div style="text-align:center"><div id="pv-m2A" style="font-size:1.3rem;font-weight:700">-</div><div style="font-size:.6rem;color:var(--tx3)">Kırmızı Takım</div></div>
         <div style="font-size:.75rem;color:var(--tx3);font-weight:600">vs</div>
-        <div style="text-align:center"><div id="pv-m2B" style="font-size:1.3rem;font-weight:700">-</div><div style="font-size:.6rem;color:var(--tx3)">Takim B</div></div>
+        <div style="text-align:center"><div id="pv-m2B" style="font-size:1.3rem;font-weight:700">-</div><div style="font-size:.6rem;color:var(--tx3)">Siyah Takım</div></div>
       </div>
       <div class="row">
         <button class="btn bp" onclick="saveGame(2)">Kaydet</button>
@@ -455,12 +455,12 @@ function refreshAll() {
   }
   if (D.started && D.screen === 4) {
     if (D.round && D.round.masa1 && D.round.masa1active) {
-      document.getElementById('lbl-m1A').textContent = 'A: ' + (D.round.masa1.A||[]).join(', ');
-      document.getElementById('lbl-m1B').textContent = 'B: ' + (D.round.masa1.B||[]).join(', ');
+      document.getElementById('lbl-m1A').textContent = 'K: ' + (D.round.masa1.A||[]).join(', ');
+      document.getElementById('lbl-m1B').textContent = 'S: ' + (D.round.masa1.B||[]).join(', ');
     }
     if (D.round && D.round.masa2 && D.round.masa2active) {
-      document.getElementById('lbl-m2A').textContent = 'A: ' + (D.round.masa2.A||[]).join(', ');
-      document.getElementById('lbl-m2B').textContent = 'B: ' + (D.round.masa2.B||[]).join(', ');
+      document.getElementById('lbl-m2A').textContent = 'K: ' + (D.round.masa2.A||[]).join(', ');
+      document.getElementById('lbl-m2B').textContent = 'S: ' + (D.round.masa2.B||[]).join(', ');
     }
     if (D.round && !D.round.masa2active) {
       var m2btn = document.getElementById('mtab2');
@@ -591,17 +591,32 @@ function toS3() {
 
 // ── SEATS ──
 function buildSeats() {
+  updateSeatDropdowns();
+  refreshBench();
+}
+
+function updateSeatDropdowns() {
   var ps = D.sess.players;
+  // Her dropdown için seçili değerleri topla
+  var selected = {};
+  for (var i = 0; i < SIDS.length; i++) {
+    var v = document.getElementById(SIDS[i]).value;
+    if (v) selected[v] = SIDS[i];
+  }
+  // Her dropdown'u güncelle: kendi seçili değeri + boş olanlar
   for (var i = 0; i < SIDS.length; i++) {
     var sel = document.getElementById(SIDS[i]);
     var cur = sel.value;
     var opts = '<option value="">-</option>';
     for (var j = 0; j < ps.length; j++) {
-      opts += '<option' + (ps[j] === cur ? ' selected' : '') + '>' + ps[j] + '</option>';
+      var p = ps[j];
+      // Göster: bu dropdown'ın kendi seçili değeri VEYA hiçbir yerde seçili değil
+      if (!selected[p] || selected[p] === SIDS[i]) {
+        opts += '<option' + (p === cur ? ' selected' : '') + '>' + p + '</option>';
+      }
     }
     sel.innerHTML = opts;
   }
-  refreshBench();
 }
 
 function refreshBench() {
@@ -741,15 +756,15 @@ function startPlay() {
 
   // Masa etiketlerini guncelle
   if (D.round.masa1active) {
-    document.getElementById('lbl-m1A').textContent = 'A: ' + D.round.masa1.A.join(', ');
-    document.getElementById('lbl-m1B').textContent = 'B: ' + D.round.masa1.B.join(', ');
+    document.getElementById('lbl-m1A').textContent = 'K: ' + D.round.masa1.A.join(', ');
+    document.getElementById('lbl-m1B').textContent = 'S: ' + D.round.masa1.B.join(', ');
     document.getElementById('mtab1').style.display = '';
   } else {
     document.getElementById('mtab1').style.display = 'none';
   }
   if (D.round.masa2active) {
-    document.getElementById('lbl-m2A').textContent = 'A: ' + D.round.masa2.A.join(', ');
-    document.getElementById('lbl-m2B').textContent = 'B: ' + D.round.masa2.B.join(', ');
+    document.getElementById('lbl-m2A').textContent = 'K: ' + D.round.masa2.A.join(', ');
+    document.getElementById('lbl-m2B').textContent = 'S: ' + D.round.masa2.B.join(', ');
     document.getElementById('mtab2').style.display = '';
   } else {
     document.getElementById('mtab2').style.display = 'none';
@@ -955,9 +970,9 @@ function renderGameCards() {
     var masaLbl = g.masa ? ' <span style="background:var(--g2);color:#fff;font-size:.58rem;padding:2px 5px;border-radius:3px">M' + g.masa + '</span>' : '';
     html += '<div class="ghd"><span class="gnum">' + g.snum + '. Oyun' + masaLbl + (g.rubikon ? '<span class="rubi">RUBIKON</span>' : '') + '</span><span style="font-size:.68rem;color:var(--tx3)">' + g.date + '</span><button class="gdel" onclick="delGame(' + g.id + ')">x</button></div>';
     html += '<div class="gbody">';
-    html += '<div class="gteam' + (wA ? ' won' : '') + '"><div class="gtlbl">Takim A' + (wA ? ' W' : '') + '</div><div class="gtnm">' + g.teamA.join(', ') + '</div><div class="gtpt">' + g.pts[0] + '</div>' + (g.pi[0] ? '<div class="gtpi">' + g.pi[0] + ' pisti</div>' : '') + '<div class="plines">' + payA + '</div></div>';
+    html += '<div class="gteam' + (wA ? ' won' : '') + '"><div class="gtlbl">Kırmızı Takım' + (wA ? ' W' : '') + '</div><div class="gtnm">' + g.teamA.join(', ') + '</div><div class="gtpt">' + g.pts[0] + '</div>' + (g.pi[0] ? '<div class="gtpi">' + g.pi[0] + ' pisti</div>' : '') + '<div class="plines">' + payA + '</div></div>';
     html += '<div class="gvs">vs</div>';
-    html += '<div class="gteam' + (wB ? ' won' : '') + '"><div class="gtlbl">Takim B' + (wB ? ' W' : '') + '</div><div class="gtnm">' + g.teamB.join(', ') + '</div><div class="gtpt">' + g.pts[1] + '</div>' + (g.pi[1] ? '<div class="gtpi">' + g.pi[1] + ' pisti</div>' : '') + '<div class="plines">' + payB + '</div></div>';
+    html += '<div class="gteam' + (wB ? ' won' : '') + '"><div class="gtlbl">Siyah Takım' + (wB ? ' W' : '') + '</div><div class="gtnm">' + g.teamB.join(', ') + '</div><div class="gtpt">' + g.pts[1] + '</div>' + (g.pi[1] ? '<div class="gtpi">' + g.pi[1] + ' pisti</div>' : '') + '<div class="plines">' + payB + '</div></div>';
     html += '</div></div>';
   }
   el.innerHTML = html;
@@ -1128,7 +1143,7 @@ function renderHesap() {
       }
       html += '<div style="background:var(--wh);border:1px solid var(--bd);border-radius:9px;padding:11px 13px;margin-bottom:8px">';
       html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">';
-      html += '<span style="font-size:.68rem;font-weight:700;color:var(--tx3)">' + g.snum + '. Oyun' + (g.rubikon ? ' [RUBIKON]' : '') + ' - ' + (g.winner ? 'Takim ' + g.winner + ' kazandi' : 'Berabere') + '</span>';
+      html += '<span style="font-size:.68rem;font-weight:700;color:var(--tx3)">' + g.snum + '. Oyun' + (g.rubikon ? ' [RUBIKON]' : '') + ' - ' + (g.winner ? (g.winner==='A'?'Kırmızı Takım kazandı':'Siyah Takım kazandı') : 'Berabere') + '</span>';
       html += '<button onclick="delGame(' + g.id + ');renderHesap()" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:.8rem;padding:2px 6px;border-radius:4px">x</button>';
       html += '</div>';
       html += rows + '</div>';
@@ -1261,9 +1276,9 @@ function renderHesap() {
             }).join(' ');
             sessGamesHtml += '<div style="padding:6px 0;border-bottom:1px solid var(--bd);font-size:.73rem">'
               + '<b style="color:var(--g2);margin-right:5px">#'+sg.num+'</b>'
-              + '<span style="'+(wA2?'color:var(--win);font-weight:700':'')+'">A: '+tA+'</span>'
+              + '<span style="'+(wA2?'color:var(--win);font-weight:700':'')+'">K: '+tA+'</span>'
               + ' <span style="color:var(--tx3)">vs</span> '
-              + '<span style="'+(wB2?'color:var(--win);font-weight:700':'')+'">B: '+tB+'</span>'
+              + '<span style="'+(wB2?'color:var(--win);font-weight:700':'')+'">S: '+tB+'</span>'
               + (sg.rubikon?'<span style="background:#dc2626;color:#fff;font-size:.55rem;padding:1px 4px;border-radius:3px;margin-left:4px">R</span>':'')
               + '</div>';
           }
@@ -1413,14 +1428,14 @@ function renderStat() {
       '<div style="display:flex;justify-content:space-between;margin-bottom:5px">' +
         '<b style="color:var(--g2)">#' + g.num + (g.rubikon ? ' [R]' : '') + '</b>' +
         '<span style="color:var(--tx3)">' + g.date + '</span>' +
-        '<b style="color:' + (g.winner ? 'var(--win)' : 'var(--tx3)') + '">' + (g.winner ? 'Takim ' + g.winner : 'Berabere') + '</b>' +
+        '<b style="color:' + (g.winner ? 'var(--win)' : 'var(--tx3)') + '">' + (g.winner ? g.winner==='A'?'Kırmızı Takım':'Siyah Takım' : 'Berabere') + '</b>' +
       '</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">' +
         '<div style="background:' + (g.winner==='A'?'var(--winbg)':'var(--bg2)') + ';border-radius:7px;padding:7px">' +
-          '<div style="font-size:.62rem;color:var(--tx3);margin-bottom:4px">Takim A - ' + g.pts[0] + 'pt' + (g.pi[0]?' '+g.pi[0]+'pisti':'') + '</div>' +
+          '<div style="font-size:.62rem;color:var(--tx3);margin-bottom:4px">Kırmızı Takım - ' + g.pts[0] + 'pt' + (g.pi[0]?' '+g.pi[0]+'pisti':'') + '</div>' +
           '<div style="font-weight:600;line-height:1.6">' + renderNames(g.teamA) + '</div></div>' +
         '<div style="background:' + (g.winner==='B'?'var(--winbg)':'var(--bg2)') + ';border-radius:7px;padding:7px">' +
-          '<div style="font-size:.62rem;color:var(--tx3);margin-bottom:4px">Takim B - ' + g.pts[1] + 'pt' + (g.pi[1]?' '+g.pi[1]+'pisti':'') + '</div>' +
+          '<div style="font-size:.62rem;color:var(--tx3);margin-bottom:4px">Siyah Takım - ' + g.pts[1] + 'pt' + (g.pi[1]?' '+g.pi[1]+'pisti':'') + '</div>' +
           '<div style="font-weight:600;line-height:1.6">' + renderNames(g.teamB) + '</div></div>' +
       '</div></div>';
   }
