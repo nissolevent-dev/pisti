@@ -1112,7 +1112,9 @@ function delGame(id) {
     D.started = false;
     D.round = JSON.parse(JSON.stringify(DEF.round));
     D.sessLdg = {};
+    D.sess.players = [];
     saveD();
+    renderSessChips();
     switchToOyun();
     goS(1);
     toast('Tüm oyunlar silindi');
