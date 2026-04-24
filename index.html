@@ -330,6 +330,21 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <div id="toast"></div>
 
+<!-- Şifre Overlay -->
+<div class="ov" id="ov-sifre">
+  <div class="ovbox" style="max-width:340px;margin:0 auto">
+    <div class="ovttl" id="sifre-title">Şifre</div>
+    <input id="sifre-inp" type="password" inputmode="numeric" pattern="[0-9]*"
+      placeholder="••••"
+      style="width:100%;text-align:center;font-size:2rem;letter-spacing:.5rem;padding:14px;border:2px solid var(--bd2);border-radius:10px;font-family:inherit;outline:none;margin-bottom:14px"
+      onkeydown="if(event.key==='Enter')sifreOnayla()">
+    <div style="display:flex;gap:8px">
+      <button class="btn bp bfw" onclick="sifreOnayla()">Onayla</button>
+      <button class="btn bo" onclick="sifreIptal()">İptal</button>
+    </div>
+  </div>
+</div>
+
 <!-- Skor Takip Overlay -->
 <div class="ov" id="ov-skor">
   <div class="ovbox" style="max-height:90vh;overflow-y:auto">
@@ -1094,8 +1109,13 @@ function renderGameCards() {
 }
 
 function delGame(id) {
-  var sifre = prompt('Silmek icin sifre:');
-  if (sifre !== '2580') { toast('Yanlis sifre'); return; }
+  sifreSor('Oyun silmek için şifre:', function(sifre) {
+    if (sifre !== '2580') { toast('Yanlış şifre'); return; }
+    _delGameExec(id);
+  });
+  return;
+}
+function _delGameExec(id) {
   var ai = -1; var si = -1;
   for (var i = 0; i < D.allGames.length; i++) { if (D.allGames[i].id === id) { ai = i; break; } }
   for (var i = 0; i < D.sessGames.length; i++) { if (D.sessGames[i].id === id) { si = i; break; } }
@@ -1129,8 +1149,13 @@ function delGame(id) {
 // ── SESSION CLOSE ──
 function closeSession() {
   if (!D.sessGames.length) { toast('Bu oturumda oyun yok'); return; }
-  var sifre = prompt('Kapatmak icin sifre:');
-  if (sifre !== '2580') { toast('Yanlis sifre'); return; }
+  sifreSor('Oturumu kapatmak için şifre:', function(sifre) {
+    if (sifre !== '2580') { toast('Yanlış şifre'); return; }
+    _closeSessionExec();
+  });
+  return;
+}
+function _closeSessionExec() {
   if (!confirm('Oturumu kaydedip kapatmak istiyor musunuz?')) return;
 
   var summary = {};
@@ -1186,8 +1211,13 @@ function switchToOyun() {
 
 // ── SIFIRLA ──
 function resetAllData() {
-  var sifre = prompt('Sifirlama sifresi:');
-  if (sifre !== '2580') { toast('Yanlis sifre'); return; }
+  sifreSor('Sıfırlama şifresi:', function(sifre) {
+    if (sifre !== '2580') { toast('Yanlış şifre'); return; }
+    _resetAllDataExec();
+  });
+  return;
+}
+function _resetAllDataExec() {
   if (!confirm('Emin misiniz? Tum oyunlar, hesaplar ve istatistikler silinir. Oyuncu havuzu korunur.')) return;
   var pool = D.pool.slice(); // havuzu koru
   D = JSON.parse(JSON.stringify(DEF));
@@ -1205,8 +1235,13 @@ function toggleCS(sid) {
 }
 
 function saveInitWL() {
-  var sifre = prompt('Kaydetmek icin sifre:');
-  if (sifre !== '2580') { toast('Yanlis sifre'); return; }
+  sifreSor('Kaydetmek için şifre:', function(sifre) {
+    if (sifre !== '2580') { toast('Yanlış şifre'); return; }
+    _saveInitWLExec();
+  });
+  return;
+}
+function _saveInitWLExec() {
   if (!D.winLoss) D.winLoss = {};
   for (var pi12 = 0; pi12 < D.pool.length; pi12++) {
     var pn4 = D.pool[pi12];
@@ -1226,8 +1261,13 @@ function saveInitWL() {
 }
 
 function saveInitLdg() {
-  var sifre = prompt('Kaydetmek icin sifre:');
-  if (sifre !== '2580') { toast('Yanlis sifre'); return; }
+  sifreSor('Kaydetmek için şifre:', function(sifre) {
+    if (sifre !== '2580') { toast('Yanlış şifre'); return; }
+    _saveInitLdgExec();
+  });
+  return;
+}
+function _saveInitLdgExec() {
   if (!D.initialLdg) D.initialLdg = {};
   if (!D.winLoss) D.winLoss = {};
   for (var pi8 = 0; pi8 < D.pool.length; pi8++) {
@@ -1725,6 +1765,32 @@ function bitirOyun() {
 
   closeOv('ov-skor');
   toast('Skorlar aktarıldı — Kaydet butonuna basın');
+}
+
+// ── ŞİFRE ──
+var _sifreCallback = null;
+
+function sifreSor(title, callback) {
+  _sifreCallback = callback;
+  document.getElementById('sifre-title').textContent = title;
+  document.getElementById('sifre-inp').value = '';
+  document.getElementById('ov-sifre').classList.add('on');
+  setTimeout(function() { document.getElementById('sifre-inp').focus(); }, 80);
+}
+
+function sifreOnayla() {
+  var val = document.getElementById('sifre-inp').value;
+  document.getElementById('ov-sifre').classList.remove('on');
+  if (_sifreCallback) {
+    var cb = _sifreCallback;
+    _sifreCallback = null;
+    cb(val);
+  }
+}
+
+function sifreIptal() {
+  document.getElementById('ov-sifre').classList.remove('on');
+  _sifreCallback = null;
 }
 
 // ── TOAST ──
