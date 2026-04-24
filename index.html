@@ -330,6 +330,18 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <div id="toast"></div>
 
+<!-- Paylaşım Overlay -->
+<div class="ov" id="ov-share" style="align-items:center;justify-content:center">
+  <div class="ovbox" style="max-height:92vh;overflow-y:auto;padding:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="ovttl" style="margin-bottom:0">📤 Paylaş</div>
+      <button class="btn bo bs" onclick="closeOv('ov-share')">Kapat</button>
+    </div>
+    <canvas id="share-canvas" style="width:100%;border-radius:10px;display:block;margin-bottom:12px"></canvas>
+    <button class="btn bp bfw" onclick="shareImage()">WhatsApp'a Paylaş</button>
+  </div>
+</div>
+
 <!-- Şifre Overlay -->
 <div class="ov" id="ov-sifre">
   <div class="ovbox" style="max-width:340px;margin:0 auto">
@@ -1172,14 +1184,27 @@ function _closeSessionExec() {
 
   var sessIds = [];
   for (var si2=0; si2<D.sessGames.length; si2++) sessIds.push(D.sessGames[si2].id);
+  var sessId = Date.now();
   D.closedSess.push({
-    id: Date.now(),
+    id: sessId,
     date: new Date().toLocaleDateString('tr-TR'),
     games: D.sessGames.length,
     players: D.sess.players.slice(),
     summary: summary,
     sessGameIds: sessIds
   });
+
+  // Görsel paylaşım için veriyi sakla
+  var shareData = {
+    date: new Date().toLocaleDateString('tr-TR'),
+    games: D.sessGames.length,
+    players: D.sess.players.slice(),
+    summary: summary,
+    allLdg: JSON.parse(JSON.stringify(D.ldg)),
+    initialLdg: JSON.parse(JSON.stringify(D.initialLdg || {})),
+    pool: D.pool.slice(),
+    winLoss: JSON.parse(JSON.stringify(D.winLoss || {}))
+  };
 
   D.sessGames = []; D.sessLdg = {}; D.sess.players = [];
   D.round = JSON.parse(JSON.stringify(DEF.round));
@@ -1189,6 +1214,9 @@ function _closeSessionExec() {
   switchToOyun();
   goS(1);
   toast('Oturum kaydedildi');
+
+  // Paylaşım görseli göster
+  setTimeout(function() { showShareCard(shareData); }, 400);
 }
 
 function newSession() {
@@ -1229,6 +1257,32 @@ function _resetAllDataExec() {
 }
 
 // ── HESAP ──
+function delClosedSess(sessId) {
+  sifreSor('Oturumu silmek icin sifre:', function(sifre) {
+    if (sifre !== '2580') { toast('Yanlis sifre'); return; }
+    var idx = -1;
+    for (var i = 0; i < D.closedSess.length; i++) {
+      if (D.closedSess[i].id === sessId) { idx = i; break; }
+    }
+    if (idx === -1) return;
+    var s = D.closedSess[idx];
+    // ldg'den oturum tutarlarını geri al
+    for (var p in s.summary) {
+      D.ldg[p] = (D.ldg[p] || 0) - (s.summary[p] || 0);
+    }
+    // allGames'den o oturumun oyunlarını sil
+    if (s.sessGameIds) {
+      D.allGames = D.allGames.filter(function(g) {
+        return s.sessGameIds.indexOf(g.id) === -1;
+      });
+    }
+    D.closedSess.splice(idx, 1);
+    saveD();
+    renderHesap();
+    toast('Oturum silindi');
+  });
+}
+
 function toggleCS(sid) {
   var el = document.getElementById(sid);
   if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
@@ -1458,8 +1512,9 @@ function renderHesap() {
       var toggleBtn = sessGamesHtml
         ? '<button onclick="toggleCS(\'' + sid + '\')" style="background:none;border:none;color:var(--g2);font-size:.72rem;cursor:pointer;font-weight:600;padding:0">Oyunlar ▾</button>'
         : '';
+      var delBtn = '<button onclick="delClosedSess('+s.id+')" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:.75rem;padding:2px 4px;font-family:inherit">Sil</button>';
       html += '<div class="csbox">'
-        + '<div class="cshd"><span class="csdt">'+s.date+'</span><div style="display:flex;align-items:center;gap:10px"><span class="csinf">'+s.games+' oyun</span>'+toggleBtn+'</div></div>'
+        + '<div class="cshd"><span class="csdt">'+s.date+'</span><div style="display:flex;align-items:center;gap:8px"><span class="csinf">'+s.games+' oyun</span>'+toggleBtn+delBtn+'</div></div>'
         + '<div class="ldg">'+ldgRows+'</div>'
         + gamesDiv
         + '</div>';
@@ -1791,6 +1846,171 @@ function sifreOnayla() {
 function sifreIptal() {
   document.getElementById('ov-sifre').classList.remove('on');
   _sifreCallback = null;
+}
+
+// ── PAYLAŞIM GÖRSELİ ──
+function showShareCard(data) {
+  var canvas = document.getElementById('share-canvas');
+  var dpr = window.devicePixelRatio || 1;
+  var W = 600, pad = 28;
+  
+  // Satır sayısına göre yükseklik hesapla
+  var players = data.players.slice().sort(function(a,b) {
+    return (data.summary[b]||0) - (data.summary[a]||0);
+  });
+  var allP = data.pool.slice().sort(function(a,b) {
+    var totA = (data.allLdg[a]||0) + (data.initialLdg[a]||0);
+    var totB = (data.allLdg[b]||0) + (data.initialLdg[b]||0);
+    return totB - totA;
+  });
+
+  var rowH = 38, secH = 36, titleH = 70, dateH = 30, gapH = 18, footH = 30;
+  var H = titleH + dateH + secH + players.length*rowH + gapH + secH + allP.length*rowH + footH + pad*2;
+
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.height = H + 'px';
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  // Arka plan
+  ctx.fillStyle = '#1b4332';
+  roundRect(ctx, 0, 0, W, H, 16);
+  ctx.fill();
+
+  // İnce altın çizgi üst
+  ctx.strokeStyle = '#e8c96a';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(pad, titleH+dateH-8); ctx.lineTo(W-pad, titleH+dateH-8); ctx.stroke();
+
+  // Başlık
+  ctx.fillStyle = '#e8c96a';
+  ctx.font = 'bold 32px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('PİŞTİ', W/2, 46);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '13px Arial';
+  ctx.fillText('ORTAKLI TAKİP', W/2, 66);
+
+  // Tarih & oyun sayısı
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = '13px Arial';
+  ctx.fillText(data.date + '  •  ' + data.games + ' oyun', W/2, titleH+dateH-16);
+
+  var y = titleH + dateH + 8;
+
+  // Oturum sonuçları bölümü
+  y = drawSection(ctx, 'BU OTURUM', players, function(p) {
+    return data.summary[p] || 0;
+  }, data.winLoss, W, pad, y, rowH, secH);
+
+  y += gapH;
+
+  // Tüm zamanlar bölümü
+  y = drawSection(ctx, 'TÜM ZAMANLAR', allP, function(p) {
+    return (data.allLdg[p]||0) + (data.initialLdg[p]||0);
+  }, data.winLoss, W, pad, y, rowH, secH);
+
+  // Alt çizgi
+  ctx.strokeStyle = 'rgba(232,201,106,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad, H-footH-4); ctx.lineTo(W-pad, H-footH-4); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '11px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('pistitakip.pages.dev', W/2, H-12);
+
+  document.getElementById('ov-share').classList.add('on');
+}
+
+function drawSection(ctx, title, players, getVal, winLoss, W, pad, y, rowH, secH) {
+  // Bölüm başlığı
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  roundRect(ctx, pad, y, W-pad*2, secH-4, 7);
+  ctx.fill();
+  ctx.fillStyle = '#e8c96a';
+  ctx.font = 'bold 12px Arial';
+  ctx.textAlign = 'left';
+  ctx.fillText(title, pad+12, y+secH/2+1);
+  y += secH + 2;
+
+  for (var i = 0; i < players.length; i++) {
+    var p = players[i];
+    var val = getVal(p);
+    var isPos = val > 0, isNeg = val < 0;
+
+    // Satır arka plan (alternatif)
+    if (i % 2 === 0) {
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      roundRect(ctx, pad, y, W-pad*2, rowH-2, 5);
+      ctx.fill();
+    }
+
+    // Sıra no
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText(i+1, pad+20, y+rowH/2+5);
+
+    // İsim
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '500 15px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(p, pad+30, y+rowH/2+5);
+
+    // W/L
+    if (winLoss && winLoss[p]) {
+      var wl = winLoss[p];
+      ctx.font = '12px Arial';
+      ctx.fillStyle = '#4ade80';
+      ctx.textAlign = 'right';
+      ctx.fillText((wl.w||0)+'W', W-pad-70, y+rowH/2+5);
+      ctx.fillStyle = '#f87171';
+      ctx.fillText((wl.l||0)+'L', W-pad-40, y+rowH/2+5);
+    }
+
+    // Tutar
+    ctx.font = 'bold 15px Arial';
+    ctx.fillStyle = isPos ? '#4ade80' : isNeg ? '#f87171' : 'rgba(255,255,255,0.5)';
+    ctx.textAlign = 'right';
+    ctx.fillText((val>=0?'+':'') + 'TL' + Math.abs(val), W-pad, y+rowH/2+5);
+
+    y += rowH;
+  }
+  return y;
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+function shareImage() {
+  var canvas = document.getElementById('share-canvas');
+  canvas.toBlob(function(blob) {
+    if (navigator.share && navigator.canShare && navigator.canShare({files:[new File([blob],'pisti.png',{type:'image/png'})]})) {
+      navigator.share({
+        files: [new File([blob], 'pisti-oturum.png', {type:'image/png'})],
+        title: 'Pişti Oturum Sonuçları'
+      }).catch(function(){});
+    } else {
+      // Fallback: indir
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'pisti-oturum.png';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  }, 'image/png');
 }
 
 // ── TOAST ──
