@@ -1864,7 +1864,7 @@ function showShareCard(data) {
     return totB - totA;
   });
 
-  var rowH = 38, secH = 36, titleH = 70, dateH = 30, gapH = 18, footH = 30;
+  var rowH = 44, secH = 40, titleH = 76, dateH = 32, gapH = 20, footH = 32;
   var H = titleH + dateH + secH + players.length*rowH + gapH + secH + allP.length*rowH + footH + pad*2;
 
   canvas.width = W * dpr;
@@ -1885,16 +1885,16 @@ function showShareCard(data) {
 
   // Başlık
   ctx.fillStyle = '#e8c96a';
-  ctx.font = 'bold 32px Arial';
+  ctx.font = 'bold 38px Arial';
   ctx.textAlign = 'center';
   ctx.fillText('PİŞTİ', W/2, 46);
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.font = '13px Arial';
+  ctx.font = '15px Arial';
   ctx.fillText('ORTAKLI TAKİP', W/2, 66);
 
   // Tarih & oyun sayısı
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = '13px Arial';
+  ctx.font = '15px Arial';
   ctx.fillText(data.date + '  •  ' + data.games + ' oyun', W/2, titleH+dateH-16);
 
   var y = titleH + dateH + 8;
@@ -1902,34 +1902,34 @@ function showShareCard(data) {
   // Oturum sonuçları bölümü
   y = drawSection(ctx, 'BU OTURUM', players, function(p) {
     return data.summary[p] || 0;
-  }, data.winLoss, W, pad, y, rowH, secH);
+  }, data.winLoss, false, W, pad, y, rowH, secH);
 
   y += gapH;
 
   // Tüm zamanlar bölümü
   y = drawSection(ctx, 'TÜM ZAMANLAR', allP, function(p) {
     return (data.allLdg[p]||0) + (data.initialLdg[p]||0);
-  }, data.winLoss, W, pad, y, rowH, secH);
+  }, data.winLoss, true, W, pad, y, rowH, secH);
 
   // Alt çizgi
   ctx.strokeStyle = 'rgba(232,201,106,0.3)';
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(pad, H-footH-4); ctx.lineTo(W-pad, H-footH-4); ctx.stroke();
   ctx.fillStyle = 'rgba(255,255,255,0.35)';
-  ctx.font = '11px Arial';
+  ctx.font = '13px Arial';
   ctx.textAlign = 'center';
   ctx.fillText('pistitakip.pages.dev', W/2, H-12);
 
   document.getElementById('ov-share').classList.add('on');
 }
 
-function drawSection(ctx, title, players, getVal, winLoss, W, pad, y, rowH, secH) {
+function drawSection(ctx, title, players, getVal, winLoss, showWL, W, pad, y, rowH, secH) {
   // Bölüm başlığı
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
   roundRect(ctx, pad, y, W-pad*2, secH-4, 7);
   ctx.fill();
   ctx.fillStyle = '#e8c96a';
-  ctx.font = 'bold 12px Arial';
+  ctx.font = 'bold 14px Arial';
   ctx.textAlign = 'left';
   ctx.fillText(title, pad+12, y+secH/2+1);
   y += secH + 2;
@@ -1948,29 +1948,27 @@ function drawSection(ctx, title, players, getVal, winLoss, W, pad, y, rowH, secH
 
     // Sıra no
     ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.font = '12px Arial';
+    ctx.font = '14px Arial';
     ctx.textAlign = 'right';
     ctx.fillText(i+1, pad+20, y+rowH/2+5);
 
     // İsim
     ctx.fillStyle = '#ffffff';
-    ctx.font = '500 15px Arial';
+    ctx.font = '500 18px Arial';
     ctx.textAlign = 'left';
     ctx.fillText(p, pad+30, y+rowH/2+5);
 
-    // W/L
-    if (winLoss && winLoss[p]) {
+    // W/L - sadece Tüm Zamanlar bölümünde, tutardan önce ayrı sütunda
+    if (showWL && winLoss && winLoss[p]) {
       var wl = winLoss[p];
-      ctx.font = '12px Arial';
-      ctx.fillStyle = '#4ade80';
+      ctx.font = '13px Arial';
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
       ctx.textAlign = 'right';
-      ctx.fillText((wl.w||0)+'W', W-pad-70, y+rowH/2+5);
-      ctx.fillStyle = '#f87171';
-      ctx.fillText((wl.l||0)+'L', W-pad-40, y+rowH/2+5);
+      ctx.fillText((wl.w||0)+'W '+(wl.l||0)+'L', W-pad-80, y+rowH/2+5);
     }
 
     // Tutar
-    ctx.font = 'bold 15px Arial';
+    ctx.font = 'bold 18px Arial';
     ctx.fillStyle = isPos ? '#4ade80' : isNeg ? '#f87171' : 'rgba(255,255,255,0.5)';
     ctx.textAlign = 'right';
     ctx.fillText((val>=0?'+':'') + 'TL' + Math.abs(val), W-pad, y+rowH/2+5);
