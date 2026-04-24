@@ -1257,6 +1257,31 @@ function _resetAllDataExec() {
 }
 
 // ── HESAP ──
+function shareClosedSess(sessId) {
+  var s = null;
+  for (var i = 0; i < D.closedSess.length; i++) {
+    if (D.closedSess[i].id === sessId) { s = D.closedSess[i]; break; }
+  }
+  if (!s) return;
+
+  // O oturuma ait ldg'yi yeniden hesapla (sessGameIds'den)
+  var sessLdg = {};
+  for (var p in s.summary) sessLdg[p] = s.summary[p] || 0;
+
+  // Tüm zamanlar için mevcut ldg + initialLdg
+  var shareData = {
+    date: s.date,
+    games: s.games,
+    players: s.players.slice(),
+    summary: s.summary,
+    allLdg: JSON.parse(JSON.stringify(D.ldg)),
+    initialLdg: JSON.parse(JSON.stringify(D.initialLdg || {})),
+    pool: D.pool.slice(),
+    winLoss: JSON.parse(JSON.stringify(D.winLoss || {}))
+  };
+  showShareCard(shareData);
+}
+
 function delClosedSess(sessId) {
   sifreSor('Oturumu silmek icin sifre:', function(sifre) {
     if (sifre !== '2580') { toast('Yanlis sifre'); return; }
@@ -1513,8 +1538,9 @@ function renderHesap() {
         ? '<button onclick="toggleCS(\'' + sid + '\')" style="background:none;border:none;color:var(--g2);font-size:.72rem;cursor:pointer;font-weight:600;padding:0">Oyunlar ▾</button>'
         : '';
       var delBtn = '<button onclick="delClosedSess('+s.id+')" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:.75rem;padding:2px 4px;font-family:inherit">Sil</button>';
+      var shareBtn = '<button onclick="shareClosedSess('+s.id+')" style="background:none;border:none;color:#e8c96a;cursor:pointer;font-size:.75rem;padding:2px 4px;font-family:inherit">📤</button>';
       html += '<div class="csbox">'
-        + '<div class="cshd"><span class="csdt">'+s.date+'</span><div style="display:flex;align-items:center;gap:8px"><span class="csinf">'+s.games+' oyun</span>'+toggleBtn+delBtn+'</div></div>'
+        + '<div class="cshd"><span class="csdt">'+s.date+'</span><div style="display:flex;align-items:center;gap:8px"><span class="csinf">'+s.games+' oyun</span>'+toggleBtn+shareBtn+delBtn+'</div></div>'
         + '<div class="ldg">'+ldgRows+'</div>'
         + gamesDiv
         + '</div>';
@@ -1864,7 +1890,7 @@ function showShareCard(data) {
     return totB - totA;
   });
 
-  var rowH = 44, secH = 40, titleH = 76, dateH = 32, gapH = 20, footH = 32;
+  var rowH = 44, secH = 40, titleH = 76, dateH = 32, gapH = 20, footH = 44;
   var H = titleH + dateH + secH + players.length*rowH + gapH + secH + allP.length*rowH + footH + pad*2;
 
   canvas.width = W * dpr;
@@ -1915,10 +1941,13 @@ function showShareCard(data) {
   ctx.strokeStyle = 'rgba(232,201,106,0.3)';
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(pad, H-footH-4); ctx.lineTo(W-pad, H-footH-4); ctx.stroke();
-  ctx.fillStyle = 'rgba(255,255,255,0.35)';
-  ctx.font = '13px Arial';
+  ctx.fillStyle = '#e8c96a';
+  ctx.font = 'bold 14px Arial';
   ctx.textAlign = 'center';
-  ctx.fillText('pistitakip.pages.dev', W/2, H-12);
+  ctx.fillText(data.date + ' tarihli oyun sonucu', W/2, H-footH+10);
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.font = '11px Arial';
+  ctx.fillText('pistitakip.pages.dev', W/2, H-8);
 
   document.getElementById('ov-share').classList.add('on');
 }
