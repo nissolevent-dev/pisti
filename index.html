@@ -1818,7 +1818,7 @@ function addTur() {
   var key = 'm' + masa;
   if (!D.skorTakip[key]) D.skorTakip[key] = {turler:[]};
   D.skorTakip[key].turler.push({k:k, s:s, kpi:kpi, spi:spi});
-  saveD();
+  saveSkorTakip();
 
   // Inputları temizle
   ['tur-kpts','tur-spts','tur-kpi','tur-spi'].forEach(function(id){
@@ -1828,11 +1828,16 @@ function addTur() {
   toast('Tur eklendi');
 }
 
+function saveSkorTakip() {
+  // Sadece skorTakip'i kaydet, saving flag'ini etkileme
+  REF.child('skorTakip').set(D.skorTakip || {});
+}
+
 function delTur(idx) {
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
   if (!D.skorTakip || !D.skorTakip['m'+masa]) return;
   D.skorTakip['m'+masa].turler.splice(idx, 1);
-  saveD();
+  saveSkorTakip();
   renderSkorTakip();
   toast('Tur silindi');
 }
@@ -1842,7 +1847,7 @@ function resetSkor() {
   if (!confirm('Bu masanın skor takibini sıfırla?')) return;
   if (!D.skorTakip) D.skorTakip = {};
   D.skorTakip['m' + masa] = {turler:[]};
-  saveD();
+  saveSkorTakip();
   renderSkorTakip();
 }
 
