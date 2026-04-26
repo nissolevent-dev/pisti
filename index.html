@@ -581,8 +581,10 @@ function refreshAllRemote(localScreen) {
     renderGameCards();
     if (D.round && D.round.masa1active) switchMasa(1);
     else if (D.round && D.round.masa2active) switchMasa(2);
-  } else if (!D.started && currentScreen === 4) {
+  } else if (!D.started) {
+    // Oturum kapandı veya sıfırlandı - ana ekrana git
     renderPool();
+    renderSessChips();
     goS(1);
   } else if (currentScreen === 4) {
     renderGameCards();
