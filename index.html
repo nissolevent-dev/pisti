@@ -1153,14 +1153,13 @@ function _delGameExec(id) {
     };
     D.sessLdg = {};
     D.sess.players = [];
-    // saving flag'ini kullanmadan direkt Firebase'e yaz
+    // Önce saving'i false yap ki listener engellenmesin
     saving = false;
-    REF.update({
-      started: false,
-      round: D.round,
-      sessGames: [],
-      sessLdg: {},
-      sess: D.sess
+    // Tüm D'yi Firebase'e yaz
+    var toSave = JSON.parse(JSON.stringify(D));
+    delete toSave.screen;
+    REF.set(toSave).then(function() {
+      syncDot('#22c55e');
     });
     renderPool();
     renderSessChips();
