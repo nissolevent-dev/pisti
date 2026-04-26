@@ -1144,10 +1144,17 @@ function _delGameExec(id) {
   // Tüm oturum oyunları silindiyse started'ı sıfırla
   if (D.sessGames.length === 0) {
     D.started = false;
-    D.round = JSON.parse(JSON.stringify(DEF.round));
+    D.round = {
+      masa1: {A:[], B:[]},
+      masa2: {A:[], B:[]},
+      partners: {},
+      masa1active: false,
+      masa2active: false
+    };
     D.sessLdg = {};
     D.sess.players = [];
     saveD();
+    renderPool();
     renderSessChips();
     switchToOyun();
     goS(1);
@@ -1782,8 +1789,8 @@ function renderSkorTakip() {
   // Toplam - puan + pişti
   var kEl = document.getElementById('skor-top-k');
   var sEl = document.getElementById('skor-top-s');
-  kEl.innerHTML = totK + (totKpi ? ' <span style="opacity:.85">+'+totKpi+'⚡</span>' : '');
-  sEl.innerHTML = totS + (totSpi ? ' <span style="opacity:.85">+'+totSpi+'⚡</span>' : '');
+  kEl.innerHTML = totK + (totKpi ? ' <span style="opacity:.85">+'+totKpi+'P</span>' : '');
+  sEl.innerHTML = totS + (totSpi ? ' <span style="opacity:.85">+'+totSpi+'P</span>' : '');
   kEl.style.color = totK > totS ? '#e8c96a' : 'white';
   sEl.style.color = totS > totK ? '#e8c96a' : 'white';
 }
