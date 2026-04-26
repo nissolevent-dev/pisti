@@ -558,7 +558,8 @@ function refreshAllRemote(localScreen) {
   renderPool();
   if (localScreen === 2) renderSessChips();
 
-  if (D.started) {
+  var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active);
+  if (reallyStarted) {
     // Oyun başlamış - oyun ekranına geç (zaten orada olsak bile güncelle)
     updateMasaLabels();
     renderSessChips();
@@ -601,7 +602,8 @@ function refreshAll() {
     document.getElementById('m-pisti').value = D.sess.mPisti;
     document.getElementById('m-kaz').value = D.sess.mKaz;
   }
-  if (D.started) {
+  var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active);
+  if (reallyStarted) {
     // Oyun başlamış - her zaman oyun ekranına git
     updateMasaLabels();
     renderSessChips();
@@ -1780,8 +1782,8 @@ function renderSkorTakip() {
   // Toplam - puan + pişti
   var kEl = document.getElementById('skor-top-k');
   var sEl = document.getElementById('skor-top-s');
-  kEl.innerHTML = totK + (totKpi ? '<span style="font-size:.75rem;opacity:.7"> +'+totKpi+'⚡</span>' : '');
-  sEl.innerHTML = totS + (totSpi ? '<span style="font-size:.75rem;opacity:.7"> +'+totSpi+'⚡</span>' : '');
+  kEl.innerHTML = totK + (totKpi ? ' <span style="opacity:.85">+'+totKpi+'⚡</span>' : '');
+  sEl.innerHTML = totS + (totSpi ? ' <span style="opacity:.85">+'+totSpi+'⚡</span>' : '');
   kEl.style.color = totK > totS ? '#e8c96a' : 'white';
   sEl.style.color = totS > totK ? '#e8c96a' : 'white';
 }
