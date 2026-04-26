@@ -502,15 +502,17 @@ REF.on('value', function(snap) {
     return;
   }
 
-  // Kendi kaydetmemizse ldg/sessLdg'yi Firebase'den ALMA - yerel değerleri koru
   var isOwnSave = saving;
+  var isSkorSave = savingSkor;
 
-  if (!isOwnSave) {
+  if (isSkorSave) {
+    // Sadece skorTakip kaydediliyor - started/round/ldg'ye dokunma
+    if (val.skorTakip) D.skorTakip = val.skorTakip;
+  } else if (!isOwnSave) {
     // Başka kullanıcıdan gelen güncelleme - tüm veriyi al
     D = val;
   } else {
-    // Kendi kaydetmemiz - sadece oyun listelerini güncelle, ldg'ye dokunma
-    // Ama started ve round'u her zaman Firebase'den al
+    // Kendi saveD'miz - started ve round'u Firebase'den al, ldg'ye dokunma
     if (val.started !== undefined) D.started = val.started;
     if (val.round) D.round = val.round;
     if (val.allGames) D.allGames = val.allGames;
@@ -543,9 +545,14 @@ REF.on('value', function(snap) {
   if (firstLoad) {
     firstLoad = false;
     refreshAll();
+  } else if (isSkorSave) {
+    // Sadece skor ekranını güncelle
+    if (document.getElementById('ov-skor').classList.contains('on')) {
+      renderSkorTakip();
+    }
   } else if (!isOwnSave) {
     // Başka cihazdan gelen güncelleme
-    var localScreen = D.screen; // yerel ekranı koru
+    var localScreen = D.screen;
     refreshAllRemote(localScreen);
   } else {
     renderPool();
@@ -562,7 +569,7 @@ function refreshAllRemote(localScreen) {
   renderPool();
   if (localScreen === 2) renderSessChips();
 
-  var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active) && D.sessGames && D.sessGames.length > 0;
+  var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active);
   if (reallyStarted) {
     // Oyun başlamış - oyun ekranına geç (zaten orada olsak bile güncelle)
     updateMasaLabels();
@@ -606,7 +613,7 @@ function refreshAll() {
     document.getElementById('m-pisti').value = D.sess.mPisti;
     document.getElementById('m-kaz').value = D.sess.mKaz;
   }
-  var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active) && D.sessGames && D.sessGames.length > 0;
+  var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active);
   if (reallyStarted) {
     // Oyun başlamış - her zaman oyun ekranına git
     updateMasaLabels();
@@ -1832,16 +1839,14 @@ function addTur() {
   toast('Tur eklendi');
 }
 
+var savingSkor = false;
+
 function saveSkorTakip() {
-  // skorTakip'i kaydet - saving flag ile listener'ın veriyi geri getirmesini engelle
-  saving = true;
-  syncDot('#f59e0b');
+  savingSkor = true;
   REF.child('skorTakip').set(D.skorTakip || {}).then(function() {
-    saving = false;
-    syncDot('#22c55e');
+    savingSkor = false;
   }).catch(function(e) {
-    saving = false;
-    syncDot('#ef4444');
+    savingSkor = false;
   });
 }
 
