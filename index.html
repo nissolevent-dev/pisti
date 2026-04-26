@@ -545,13 +545,11 @@ REF.on('value', function(snap) {
   if (firstLoad) {
     firstLoad = false;
     refreshAll();
-  } else if (isSkorSave) {
-    // Sadece skor ekranını güncelle
+  } else if (!isOwnSave) {
+    // Başka cihazdan gelen güncelleme
     if (document.getElementById('ov-skor').classList.contains('on')) {
       renderSkorTakip();
     }
-  } else if (!isOwnSave) {
-    // Başka cihazdan gelen güncelleme
     var localScreen = D.screen;
     refreshAllRemote(localScreen);
   } else {
@@ -571,15 +569,12 @@ function refreshAllRemote(localScreen) {
 
   var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active);
   if (reallyStarted) {
-    // Oyun başlamış - oyun ekranına geç (zaten orada olsak bile güncelle)
+    if (localScreen !== 4) goS(4);
     updateMasaLabels();
     renderSessChips();
     renderGameCards();
-    if (localScreen !== 4) {
-      if (D.round && D.round.masa1active) switchMasa(1);
-      else if (D.round && D.round.masa2active) switchMasa(2);
-      goS(4);
-    }
+    if (D.round && D.round.masa1active) switchMasa(1);
+    else if (D.round && D.round.masa2active) switchMasa(2);
   } else if (!D.started && localScreen === 4) {
     // Oturum kapandı
     renderPool();
@@ -615,14 +610,14 @@ function refreshAll() {
   }
   var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active);
   if (reallyStarted) {
-    // Oyun başlamış - her zaman oyun ekranına git
+    // Önce ekrana geç, sonra içeriği doldur
+    goS(4);
     updateMasaLabels();
     renderSessChips();
     renderGameCards();
     // Aktif masaya göre sekme seç
     if (D.round && D.round.masa1active) switchMasa(1);
     else if (D.round && D.round.masa2active) switchMasa(2);
-    goS(4);
   } else if (D.pool.length > 0) {
     renderSessChips();
     goS(1);
