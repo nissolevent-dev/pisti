@@ -566,20 +566,25 @@ function refreshAllRemote(localScreen) {
   renderPool();
   if (localScreen === 2) renderSessChips();
 
+  // Gerçek ekran durumunu DOM'dan oku
+  var currentScreen = 1;
+  for (var i = 1; i <= 4; i++) {
+    var el = document.getElementById('s' + i);
+    if (el && el.style.display !== 'none') { currentScreen = i; break; }
+  }
+
   var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active);
   if (reallyStarted) {
-    if (localScreen !== 4) goS(4);
+    if (currentScreen !== 4) goS(4);
     updateMasaLabels();
     renderSessChips();
     renderGameCards();
     if (D.round && D.round.masa1active) switchMasa(1);
     else if (D.round && D.round.masa2active) switchMasa(2);
-  } else if (!D.started && localScreen === 4) {
-    // Oturum kapandı
+  } else if (!D.started && currentScreen === 4) {
     renderPool();
     goS(1);
-  } else if (localScreen === 4) {
-    // Oyun ekranındayız, sadece oyun listesini güncelle
+  } else if (currentScreen === 4) {
     renderGameCards();
   }
 }
