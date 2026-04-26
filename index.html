@@ -1153,10 +1153,15 @@ function _delGameExec(id) {
     };
     D.sessLdg = {};
     D.sess.players = [];
-    // Round'u Firebase'de direkt güncelle
-    db.ref('pisti/round').set(D.round);
-    db.ref('pisti/started').set(false);
-    saveD();
+    // saving flag'ini kullanmadan direkt Firebase'e yaz
+    saving = false;
+    REF.update({
+      started: false,
+      round: D.round,
+      sessGames: [],
+      sessLdg: {},
+      sess: D.sess
+    });
     renderPool();
     renderSessChips();
     switchToOyun();
