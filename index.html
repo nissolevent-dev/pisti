@@ -1863,6 +1863,8 @@ function resetSkor() {
   renderSkorTakip();
 }
 
+var _lastSavedGame = null; // Geri alma için son kaydedilen oyun
+
 function bitirOyun() {
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
   if (!D.skorTakip || !D.skorTakip['m'+masa] || !D.skorTakip['m'+masa].turler.length) {
@@ -1879,7 +1881,12 @@ function bitirOyun() {
 
   if (!confirm('Oyun bitti. Kırmızı: ' + totK + ' puan, ' + totKpi + ' pişti | Siyah: ' + totS + ' puan, ' + totSpi + ' pişti\nKaydet?')) return;
 
-  // Skor girme alanını doldur
+  // Skor takibini sıfırla
+  D.skorTakip['m'+masa] = {turler:[]};
+  saveSkorTakip();
+  closeOv('ov-skor');
+
+  // Puan girme alanını doldur ve direkt kaydet
   switchMasa(masa);
   document.getElementById('m'+masa+'-Apts').value = totK;
   document.getElementById('m'+masa+'-Bpts').value = totS;
@@ -1887,12 +1894,45 @@ function bitirOyun() {
   document.getElementById('m'+masa+'-Bpi').value  = totSpi;
   updatePrev(masa);
 
-  // Skor takibini sıfırla
-  D.skorTakip['m'+masa] = {turler:[]};
-  saveD();
+  // Otomatik kaydet
+  saveGame(masa);
 
-  closeOv('ov-skor');
-  toast('Skorlar aktarıldı — Kaydet butonuna basın');
+  // Geri alma butonu göster
+  showUndoToast(masa);
+}
+
+function showUndoToast(masa) {
+  var t = document.getElementById('toast');
+  t.innerHTML = 'Oyun kaydedildi <button onclick="undoLastGame()" style="margin-left:10px;background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.5);color:#fff;border-radius:5px;padding:2px 8px;cursor:pointer;font-family:inherit;font-size:.8rem">Geri Al</button>';
+  t.classList.add('on');
+  clearTimeout(_tt);
+  _tt = setTimeout(function() {
+    t.classList.remove('on');
+    _lastSavedGame = null;
+  }, 8000);
+}
+
+function undoLastGame() {
+  if (!D.sessGames.length) { toast('Geri alınacak oyun yok'); return; }
+  var lastGame = D.sessGames[D.sessGames.length - 1];
+  if (!lastGame) return;
+  // Piyasayı geri al
+  for (var p in lastGame.payMap) {
+    D.ldg[p] = (D.ldg[p] || 0) - lastGame.payMap[p];
+    D.sessLdg[p] = (D.sessLdg[p] || 0) - lastGame.payMap[p];
+  }
+  // Oyunu listelerden çıkar
+  var ai = D.allGames.length - 1;
+  var si = D.sessGames.length - 1;
+  for (var i = D.allGames.length-1; i >= 0; i--) {
+    if (D.allGames[i].id === lastGame.id) { ai = i; break; }
+  }
+  D.allGames.splice(ai, 1);
+  D.sessGames.splice(si, 1);
+  saveD();
+  renderGameCards();
+  document.getElementById('toast').classList.remove('on');
+  toast('Son oyun geri alındı');
 }
 
 // ── ŞİFRE ──
