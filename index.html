@@ -512,14 +512,12 @@ REF.on('value', function(snap) {
     // Başka kullanıcıdan gelen güncelleme - tüm veriyi al
     D = val;
   } else {
-    // Kendi saveD'miz - started ve round'u Firebase'den al, ldg'ye dokunma
-    if (val.started !== undefined) D.started = val.started;
-    if (val.round) D.round = val.round;
-    if (val.allGames) D.allGames = val.allGames;
-    if (val.sessGames) D.sessGames = val.sessGames;
-    if (val.pool) D.pool = val.pool;
-    if (val.closedSess) D.closedSess = val.closedSess;
-    if (val.skorTakip) D.skorTakip = val.skorTakip;
+    // Kendi saveD'miz - ldg'ye dokunma, diğer her şeyi Firebase'den al
+    var savedLdg = D.ldg;
+    var savedSessLdg = D.sessLdg;
+    D = val;
+    D.ldg = savedLdg;
+    D.sessLdg = savedSessLdg;
   }
 
   // Eksik anahtarları doldur
@@ -1916,23 +1914,32 @@ function undoLastGame() {
   if (!D.sessGames.length) { toast('Geri alınacak oyun yok'); return; }
   var lastGame = D.sessGames[D.sessGames.length - 1];
   if (!lastGame) return;
+  var masa = lastGame.masa || 1;
+
   // Piyasayı geri al
   for (var p in lastGame.payMap) {
     D.ldg[p] = (D.ldg[p] || 0) - lastGame.payMap[p];
     D.sessLdg[p] = (D.sessLdg[p] || 0) - lastGame.payMap[p];
   }
+
   // Oyunu listelerden çıkar
-  var ai = D.allGames.length - 1;
-  var si = D.sessGames.length - 1;
   for (var i = D.allGames.length-1; i >= 0; i--) {
-    if (D.allGames[i].id === lastGame.id) { ai = i; break; }
+    if (D.allGames[i].id === lastGame.id) { D.allGames.splice(i, 1); break; }
   }
-  D.allGames.splice(ai, 1);
-  D.sessGames.splice(si, 1);
+  D.sessGames.splice(D.sessGames.length - 1, 1);
   saveD();
   renderGameCards();
+
+  // Skoru skor girme alanına geri yükle
+  switchMasa(masa);
+  document.getElementById('m'+masa+'-Apts').value = lastGame.pts[0];
+  document.getElementById('m'+masa+'-Bpts').value = lastGame.pts[1];
+  document.getElementById('m'+masa+'-Api').value  = lastGame.pi[0];
+  document.getElementById('m'+masa+'-Bpi').value  = lastGame.pi[1];
+  updatePrev(masa);
+
   document.getElementById('toast').classList.remove('on');
-  toast('Son oyun geri alındı');
+  toast('Son oyun geri alındı — düzenleyip tekrar kaydedebilirsiniz');
 }
 
 // ── ŞİFRE ──
