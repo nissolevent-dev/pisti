@@ -1753,30 +1753,35 @@ function renderSkorTakip() {
   var turler = st.turler || [];
 
   var html = '';
-  var totK = 0, totS = 0;
+  var totK = 0, totS = 0, totKpi = 0, totSpi = 0;
   for (var i = 0; i < turler.length; i++) {
     var t = turler[i];
-    totK += (t.k || 0);
-    totS += (t.s || 0);
-    var leading = totK > totS ? 'color:#cc0000' : totS > totK ? 'color:#111' : '';
-    html += '<div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;padding:6px 0;border-bottom:1px solid var(--bd);align-items:center">';
-    html += '<div style="font-size:.65rem;color:var(--tx3);width:28px">' + (i+1) + '.</div>';
-    html += '<div style="text-align:center;font-size:.85rem;font-weight:600;color:#cc0000">' + (t.k||0) + (t.kpi?'<span style="font-size:.65rem"> +'+t.kpi+'⚡</span>':'') + '</div>';
-    html += '<div style="text-align:center;font-size:.85rem;font-weight:600">' + (t.s||0) + (t.spi?'<span style="font-size:.65rem"> +'+t.spi+'⚡</span>':'') + '</div>';
-    html += '<div></div>';
-    html += '<div style="text-align:center;font-size:.65rem;color:var(--tx3)">top: ' + (function(arr,idx){var s=0;for(var j=0;j<=idx;j++)s+=arr[j].k||0;return s;})(turler,i) + '</div>';
-    html += '<div style="text-align:center;font-size:.65rem;color:var(--tx3)">top: ' + (function(arr,idx){var s=0;for(var j=0;j<=idx;j++)s+=arr[j].s||0;return s;})(turler,i) + '</div>';
+    totK   += (t.k   || 0);
+    totS   += (t.s   || 0);
+    totKpi += (t.kpi || 0);
+    totSpi += (t.spi || 0);
+    var runK = 0, runS = 0;
+    for (var j = 0; j <= i; j++) { runK += turler[j].k||0; runS += turler[j].s||0; }
+    html += '<div style="display:grid;grid-template-columns:auto 1fr 1fr auto;gap:4px;padding:6px 0;border-bottom:1px solid var(--bd);align-items:center">';
+    html += '<div style="font-size:.65rem;color:var(--tx3);width:24px">' + (i+1) + '.</div>';
+    html += '<div style="text-align:center">';
+    html += '<div style="font-size:.88rem;font-weight:700;color:#cc0000">' + (t.k||0) + (t.kpi?'<span style="font-size:.65rem;color:var(--tx3)"> +'+t.kpi+'⚡</span>':'') + '</div>';
+    html += '<div style="font-size:.62rem;color:var(--tx3)">top: ' + runK + '</div></div>';
+    html += '<div style="text-align:center">';
+    html += '<div style="font-size:.88rem;font-weight:700">' + (t.s||0) + (t.spi?'<span style="font-size:.65rem;color:var(--tx3)"> +'+t.spi+'⚡</span>':'') + '</div>';
+    html += '<div style="font-size:.62rem;color:var(--tx3)">top: ' + runS + '</div></div>';
+    html += '<button onclick="delTur(' + i + ')" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:.9rem;padding:2px 6px">×</button>';
     html += '</div>';
   }
 
   if (!turler.length) html = '<div class="empty">Henüz tur girilmedi</div>';
   document.getElementById('skor-turler').innerHTML = html;
 
-  // Toplam
+  // Toplam - puan + pişti
   var kEl = document.getElementById('skor-top-k');
   var sEl = document.getElementById('skor-top-s');
-  kEl.textContent = totK;
-  sEl.textContent = totS;
+  kEl.innerHTML = totK + (totKpi ? '<span style="font-size:.75rem;opacity:.7"> +'+totKpi+'⚡</span>' : '');
+  sEl.innerHTML = totS + (totSpi ? '<span style="font-size:.75rem;opacity:.7"> +'+totSpi+'⚡</span>' : '');
   kEl.style.color = totK > totS ? '#e8c96a' : 'white';
   sEl.style.color = totS > totK ? '#e8c96a' : 'white';
 }
@@ -1805,6 +1810,15 @@ function addTur() {
   });
   renderSkorTakip();
   toast('Tur eklendi');
+}
+
+function delTur(idx) {
+  var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+  if (!D.skorTakip || !D.skorTakip['m'+masa]) return;
+  D.skorTakip['m'+masa].turler.splice(idx, 1);
+  saveD();
+  renderSkorTakip();
+  toast('Tur silindi');
 }
 
 function resetSkor() {
