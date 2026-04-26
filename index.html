@@ -510,10 +510,14 @@ REF.on('value', function(snap) {
     D = val;
   } else {
     // Kendi kaydetmemiz - sadece oyun listelerini güncelle, ldg'ye dokunma
+    // Ama started ve round'u her zaman Firebase'den al
+    if (val.started !== undefined) D.started = val.started;
+    if (val.round) D.round = val.round;
     if (val.allGames) D.allGames = val.allGames;
     if (val.sessGames) D.sessGames = val.sessGames;
     if (val.pool) D.pool = val.pool;
     if (val.closedSess) D.closedSess = val.closedSess;
+    if (val.skorTakip) D.skorTakip = val.skorTakip;
   }
 
   // Eksik anahtarları doldur
@@ -1829,8 +1833,16 @@ function addTur() {
 }
 
 function saveSkorTakip() {
-  // Sadece skorTakip'i kaydet, saving flag'ini etkileme
-  REF.child('skorTakip').set(D.skorTakip || {});
+  // skorTakip'i kaydet - saving flag ile listener'ın veriyi geri getirmesini engelle
+  saving = true;
+  syncDot('#f59e0b');
+  REF.child('skorTakip').set(D.skorTakip || {}).then(function() {
+    saving = false;
+    syncDot('#22c55e');
+  }).catch(function(e) {
+    saving = false;
+    syncDot('#ef4444');
+  });
 }
 
 function delTur(idx) {
