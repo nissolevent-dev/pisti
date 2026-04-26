@@ -562,7 +562,7 @@ function refreshAllRemote(localScreen) {
   renderPool();
   if (localScreen === 2) renderSessChips();
 
-  var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active);
+  var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active) && D.sessGames && D.sessGames.length > 0;
   if (reallyStarted) {
     // Oyun başlamış - oyun ekranına geç (zaten orada olsak bile güncelle)
     updateMasaLabels();
@@ -606,7 +606,7 @@ function refreshAll() {
     document.getElementById('m-pisti').value = D.sess.mPisti;
     document.getElementById('m-kaz').value = D.sess.mKaz;
   }
-  var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active);
+  var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active) && D.sessGames && D.sessGames.length > 0;
   if (reallyStarted) {
     // Oyun başlamış - her zaman oyun ekranına git
     updateMasaLabels();
