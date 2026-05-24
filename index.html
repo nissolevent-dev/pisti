@@ -1899,18 +1899,16 @@ function addTur() {
   renderSkorTakip();
   toast('Tur eklendi');
 
-  // HTTB kontrolü - kümülatif toplam üzerinden kontrol
+  // HTTB kontrolü - her tur sonunda kümülatif kontrol
   if (!_httbAskedThisGame) {
     var turler2 = D.skorTakip[key].turler;
     var cumK = 0, cumS = 0;
     for (var ti = 0; ti < turler2.length; ti++) { cumK += turler2[ti].k||0; cumS += turler2[ti].s||0; }
     var cumFark = Math.abs(cumK - cumS);
     var cumKaybetti = (cumK < 51 || cumS < 51);
-    var sorulacak = (cumKaybetti && cumFark > 40) || _httbDeclinedThisTur;
-    if (sorulacak) {
+    if (cumKaybetti && cumFark > 40) {
       _httbPendingTur = turler2.length - 1;
       _httbMasa = masa;
-      _httbDeclinedThisTur = false;
       document.getElementById('httb-prompt').style.display = 'flex';
     }
   }
@@ -1922,18 +1920,14 @@ function httbCevap(evet) {
 
   if (evet && _httbMasa !== null && _httbPendingTur !== null) {
     _httbAskedThisGame = true;
-    _httbDeclinedThisTur = false;
-    // O tura httb flag ekle
     var key = 'm' + _httbMasa;
     if (D.skorTakip[key] && D.skorTakip[key].turler[_httbPendingTur]) {
       D.skorTakip[key].turler[_httbPendingTur].httb = true;
     }
     saveSkorTakip();
     renderSkorTakip();
-  } else {
-    // Hayır - bir sonraki turda tekrar sorulacak
-    _httbDeclinedThisTur = true;
   }
+  // Hayır ise koşul sağlandığında bir sonraki turda tekrar sorulur
 
   _httbPendingTur = null;
   _httbMasa = null;
