@@ -1855,6 +1855,7 @@ function updateTurPrev() {
 var _httbPendingTur = null;
 var _httbMasa = null;
 var _httbAskedThisGame = false;
+var _httbDeclinedThisTur = false; // Bu turda hayır denildi mi
 
 function addTur() {
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
@@ -1879,15 +1880,19 @@ function addTur() {
   renderSkorTakip();
   toast('Tur eklendi');
 
-  // HTTB kontrolü: bir takım 51 altında ve puan farkı 40'tan fazla
+  // HTTB kontrolü - kümülatif toplam üzerinden kontrol
   if (!_httbAskedThisGame) {
-    var fark = Math.abs(k - s);
-    var birKaybetti = (k < 51 || s < 51);
-    if (birKaybetti && fark > 40) {
-      _httbPendingTur = D.skorTakip[key].turler.length - 1;
+    var turler2 = D.skorTakip[key].turler;
+    var cumK = 0, cumS = 0;
+    for (var ti = 0; ti < turler2.length; ti++) { cumK += turler2[ti].k||0; cumS += turler2[ti].s||0; }
+    var cumFark = Math.abs(cumK - cumS);
+    var cumKaybetti = (cumK < 51 || cumS < 51);
+    var sorulacak = (cumKaybetti && cumFark > 40) || _httbDeclinedThisTur;
+    if (sorulacak) {
+      _httbPendingTur = turler2.length - 1;
       _httbMasa = masa;
-      var prompt = document.getElementById('httb-prompt');
-      prompt.style.display = 'flex';
+      _httbDeclinedThisTur = false;
+      document.getElementById('httb-prompt').style.display = 'flex';
     }
   }
 }
@@ -1898,6 +1903,7 @@ function httbCevap(evet) {
 
   if (evet && _httbMasa !== null && _httbPendingTur !== null) {
     _httbAskedThisGame = true;
+    _httbDeclinedThisTur = false;
     // O tura httb flag ekle
     var key = 'm' + _httbMasa;
     if (D.skorTakip[key] && D.skorTakip[key].turler[_httbPendingTur]) {
@@ -1905,8 +1911,10 @@ function httbCevap(evet) {
     }
     saveSkorTakip();
     renderSkorTakip();
+  } else {
+    // Hayır - bir sonraki turda tekrar sorulacak
+    _httbDeclinedThisTur = true;
   }
-  // Hayır ise _httbAskedThisGame false kalır, bir sonraki turda tekrar sorulur
 
   _httbPendingTur = null;
   _httbMasa = null;
