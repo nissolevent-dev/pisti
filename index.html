@@ -1926,6 +1926,11 @@ function saveSkorTakip() {
 function delTur(idx) {
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
   if (!D.skorTakip || !D.skorTakip['m'+masa]) return;
+  // Silinen tur HTTB içeriyorsa flag'i sıfırla
+  var tur = D.skorTakip['m'+masa].turler[idx];
+  if (tur && tur.httb) {
+    _httbAskedThisGame = false;
+  }
   D.skorTakip['m'+masa].turler.splice(idx, 1);
   saveSkorTakip();
   renderSkorTakip();
