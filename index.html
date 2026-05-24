@@ -359,7 +359,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <!-- Skor Takip Overlay -->
 <div class="ov" id="ov-skor">
-  <div class="ovbox" style="max-height:90vh;overflow-y:auto">
+  <div class="ovbox" style="max-height:90vh;overflow-y:auto;position:relative">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div class="ovttl" style="margin-bottom:0">📊 Skor Takip</div>
       <div style="display:flex;gap:6px">
@@ -376,6 +376,18 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div style="width:28px"></div>
       <div class="skor-k-hdr" style="text-align:center;font-size:1.6rem;font-weight:900;color:#cc0000">K</div>
       <div class="skor-s-hdr" style="text-align:center;font-size:1.6rem;font-weight:900;color:#111">S</div>
+    </div>
+
+    <!-- HTTB overlay - skor ekranı içinde -->
+    <div id="httb-prompt" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.7);z-index:10;border-radius:16px;align-items:center;justify-content:center;flex-direction:column">
+      <div style="background:#fff;border-radius:14px;padding:24px;margin:20px;text-align:center;max-width:320px">
+        <div style="font-size:1.1rem;font-weight:700;color:#1b4332;margin-bottom:8px">⚠️ Dikkat!</div>
+        <div style="font-size:.9rem;color:#333;margin-bottom:20px">Bir takım 51 puanı geçemedi ve puan farkı 40'tan fazla.<br><br><b>HTTB yazmak ister misiniz?</b></div>
+        <div style="display:flex;gap:10px;justify-content:center">
+          <button onclick="httbCevap(true)" class="btn bp" style="min-width:80px">Evet</button>
+          <button onclick="httbCevap(false)" class="btn bo" style="min-width:80px">Hayır</button>
+        </div>
+      </div>
     </div>
 
     <!-- Tur listesi -->
@@ -1322,10 +1334,21 @@ function delClosedSess(sessId) {
     }
     if (idx === -1) return;
     var s = D.closedSess[idx];
+
     // ldg'den oturum tutarlarını geri al
     for (var p in s.summary) {
       D.ldg[p] = (D.ldg[p] || 0) - (s.summary[p] || 0);
     }
+
+    // W/L değerlerini geri al
+    if (!D.winLoss) D.winLoss = {};
+    for (var p2 in s.summary) {
+      var val = s.summary[p2] || 0;
+      if (!D.winLoss[p2]) D.winLoss[p2] = {w:0, l:0};
+      if (val > 0) D.winLoss[p2].w = Math.max(0, (D.winLoss[p2].w || 0) - 1);
+      else if (val < 0) D.winLoss[p2].l = Math.max(0, (D.winLoss[p2].l || 0) - 1);
+    }
+
     // allGames'den o oturumun oyunlarını sil
     if (s.sessGameIds) {
       D.allGames = D.allGames.filter(function(g) {
@@ -1793,13 +1816,21 @@ function renderSkorTakip() {
     totSpi += (t.spi || 0);
     var runK = 0, runS = 0;
     for (var j = 0; j <= i; j++) { runK += turler[j].k||0; runS += turler[j].s||0; }
-    html += '<div style="display:grid;grid-template-columns:auto 1fr 1fr auto;gap:4px;padding:6px 0;border-bottom:1px solid var(--bd);align-items:center">';
+    html += '<div style="display:grid;grid-template-columns:auto 1fr auto 1fr auto;gap:4px;padding:6px 0;border-bottom:1px solid var(--bd);align-items:center">';
     html += '<div style="font-size:.65rem;color:var(--tx3);width:24px">' + (i+1) + '.</div>';
     html += '<div style="text-align:center">';
-    html += '<div style="font-size:.88rem;font-weight:700;color:#cc0000">' + (t.k||0) + (t.kpi?'<span style="font-size:.65rem;color:var(--tx3)"> +'+t.kpi+'⚡</span>':'') + '</div>';
+    html += '<div style="font-size:.88rem;font-weight:700;color:#cc0000">' + (t.k||0) + (t.kpi?'<span style="font-size:.65rem;color:var(--tx3)"> +'+t.kpi+'P</span>':'') + '</div>';
     html += '<div style="font-size:.62rem;color:var(--tx3)">top: ' + runK + '</div></div>';
+    if (t.httb) {
+      html += '<div style="display:flex;align-items:center;justify-content:center">';
+      html += '<div style="width:26px;height:26px;border-radius:50%;border:2px solid #cc0000;display:flex;align-items:center;justify-content:center;flex-shrink:0">';
+      html += '<span style="font-size:.42rem;font-weight:900;color:#cc0000;writing-mode:vertical-rl;letter-spacing:.03em">HTTB</span>';
+      html += '</div></div>';
+    } else {
+      html += '<div style="width:26px"></div>';
+    }
     html += '<div style="text-align:center">';
-    html += '<div style="font-size:.88rem;font-weight:700">' + (t.s||0) + (t.spi?'<span style="font-size:.65rem;color:var(--tx3)"> +'+t.spi+'⚡</span>':'') + '</div>';
+    html += '<div style="font-size:.88rem;font-weight:700">' + (t.s||0) + (t.spi?'<span style="font-size:.65rem;color:var(--tx3)"> +'+t.spi+'P</span>':'') + '</div>';
     html += '<div style="font-size:.62rem;color:var(--tx3)">top: ' + runS + '</div></div>';
     html += '<button onclick="delTur(' + i + ')" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:.9rem;padding:2px 6px">×</button>';
     html += '</div>';
@@ -1821,6 +1852,10 @@ function updateTurPrev() {
   // anlık önizleme istersen buraya eklenebilir
 }
 
+var _httbPendingTur = null;
+var _httbMasa = null;
+var _httbAskedThisGame = false;
+
 function addTur() {
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
   var k   = parseInt(document.getElementById('tur-kpts').value) || 0;
@@ -1829,10 +1864,12 @@ function addTur() {
   var spi = parseInt(document.getElementById('tur-spi').value) || 0;
   if (!k && !s && !kpi && !spi) { toast('En az bir değer girin'); return; }
 
+  var tur = {k:k, s:s, kpi:kpi, spi:spi};
+
   if (!D.skorTakip) D.skorTakip = {};
   var key = 'm' + masa;
   if (!D.skorTakip[key]) D.skorTakip[key] = {turler:[]};
-  D.skorTakip[key].turler.push({k:k, s:s, kpi:kpi, spi:spi});
+  D.skorTakip[key].turler.push(tur);
   saveSkorTakip();
 
   // Inputları temizle
@@ -1841,6 +1878,38 @@ function addTur() {
   });
   renderSkorTakip();
   toast('Tur eklendi');
+
+  // HTTB kontrolü: bir takım 51 altında ve puan farkı 40'tan fazla
+  if (!_httbAskedThisGame) {
+    var fark = Math.abs(k - s);
+    var birKaybetti = (k < 51 || s < 51);
+    if (birKaybetti && fark > 40) {
+      _httbPendingTur = D.skorTakip[key].turler.length - 1;
+      _httbMasa = masa;
+      var prompt = document.getElementById('httb-prompt');
+      prompt.style.display = 'flex';
+    }
+  }
+}
+
+function httbCevap(evet) {
+  var prompt = document.getElementById('httb-prompt');
+  prompt.style.display = 'none';
+
+  if (evet && _httbMasa !== null && _httbPendingTur !== null) {
+    _httbAskedThisGame = true;
+    // O tura httb flag ekle
+    var key = 'm' + _httbMasa;
+    if (D.skorTakip[key] && D.skorTakip[key].turler[_httbPendingTur]) {
+      D.skorTakip[key].turler[_httbPendingTur].httb = true;
+    }
+    saveSkorTakip();
+    renderSkorTakip();
+  }
+  // Hayır ise _httbAskedThisGame false kalır, bir sonraki turda tekrar sorulur
+
+  _httbPendingTur = null;
+  _httbMasa = null;
 }
 
 var savingSkor = false;
@@ -1864,6 +1933,7 @@ function delTur(idx) {
 }
 
 function resetSkor() {
+  _httbAskedThisGame = false;
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
   if (!confirm('Bu masanın skor takibini sıfırla?')) return;
   if (!D.skorTakip) D.skorTakip = {};
@@ -1875,6 +1945,7 @@ function resetSkor() {
 var _lastSavedGame = null; // Geri alma için son kaydedilen oyun
 
 function bitirOyun() {
+  _httbAskedThisGame = false; // Yeni oyun için sıfırla
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
   if (!D.skorTakip || !D.skorTakip['m'+masa] || !D.skorTakip['m'+masa].turler.length) {
     toast('Henüz tur girilmedi'); return;
