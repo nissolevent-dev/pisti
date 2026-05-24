@@ -629,6 +629,13 @@ function refreshAll() {
     document.getElementById('m-kaz').value = D.sess.mKaz;
   }
   var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active);
+  // started=true ama sessGames boşsa tutarsız durum - sıfırla ve ekran 2'ye git
+  if (reallyStarted && (!D.sessGames || D.sessGames.length === 0)) {
+    D.started = false;
+    D.round = JSON.parse(JSON.stringify(DEF.round));
+    reallyStarted = false;
+    REF.update({started: false, round: D.round});
+  }
   if (reallyStarted) {
     // Önce ekrana geç, sonra içeriği doldur
     goS(4);
@@ -745,6 +752,19 @@ function toggleSess(name) {
   var i = D.sess.players.indexOf(name);
   if (i >= 0) D.sess.players.splice(i, 1);
   else D.sess.players.push(name);
+
+  // Eğer oyun başlamamışsa ve tüm oyuncular kaldırıldıysa started'ı sıfırla
+  if (D.sess.players.length === 0 && D.started && D.sessGames && D.sessGames.length === 0) {
+    D.started = false;
+    D.round = JSON.parse(JSON.stringify(DEF.round));
+    saving = false;
+    var toSave = JSON.parse(JSON.stringify(D));
+    delete toSave.screen;
+    REF.set(toSave);
+    renderSessChips();
+    return;
+  }
+
   saveD();
   renderSessChips();
 }
