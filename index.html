@@ -1720,21 +1720,21 @@ function renderStat() {
     }).join(', ');
   }
 
-  // En çok kaybeden takım (payMap'te en büyük negatif toplam - takım bazında)
+  // En çok kaybeden kişi (kişi bazında en büyük negatif)
   var maxLossTeam = [], maxLossVal = 0, maxLossGameObj = null;
   for (var i = 0; i < games.length; i++) {
     var g = games[i];
-    var gPart = {};
-    if (g.partners) { for (var pi=0; pi<g.partners.length; pi++) gPart[g.partners[pi]] = true; }
-    // teamA toplamı
-    var lossA = 0, lossB = 0;
-    for (var j = 0; j < g.teamA.length; j++) lossA += g.payMap[g.teamA[j]] || 0;
-    for (var j = 0; j < g.teamB.length; j++) lossB += g.payMap[g.teamB[j]] || 0;
-    if (lossA < 0 && Math.abs(lossA) > maxLossVal) {
-      maxLossVal = Math.abs(lossA); maxLossTeam = g.teamA; maxLossGameObj = g;
-    }
-    if (lossB < 0 && Math.abs(lossB) > maxLossVal) {
-      maxLossVal = Math.abs(lossB); maxLossTeam = g.teamB; maxLossGameObj = g;
+    for (var p in g.payMap) {
+      var val = g.payMap[p];
+      if (val < 0 && Math.abs(val) > maxLossVal) {
+        maxLossVal = Math.abs(val);
+        // Aynı oyunda aynı tutarı kaybeden tüm kişileri bul
+        maxLossTeam = [];
+        for (var p2 in g.payMap) {
+          if (g.payMap[p2] === val) maxLossTeam.push(p2);
+        }
+        maxLossGameObj = g;
+      }
     }
   }
 
