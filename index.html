@@ -2042,7 +2042,10 @@ function renderStat() {
   var minPair = Infinity, minPairKey = null;
   for (var k in pairCount) {
     if (pairCount[k] > maxPair) { maxPair = pairCount[k]; maxPairKey = k; }
-    if (pairCount[k] < minPair) { minPair = pairCount[k]; minPairKey = k; }
+    // En az oynayan: İzel içeren çiftleri hariç tut
+    var pairPlayers = k.split('|');
+    var hasIzel = pairPlayers[0].indexOf('İzel') >= 0 || pairPlayers[1].indexOf('İzel') >= 0;
+    if (!hasIzel && pairCount[k] < minPair) { minPair = pairCount[k]; minPairKey = k; }
   }
   var pairNames = maxPairKey ? maxPairKey.split('|').map(function(p){ return p.split(' ')[0]; }).join(' & ') : '-';
   var minPairNames = minPairKey ? minPairKey.split('|').map(function(p){ return p.split(' ')[0]; }).join(' & ') : '-';
@@ -2323,7 +2326,7 @@ function renderStat() {
     rubi: {title:'En Çok Rubikon Yiyen — Top 5', items: rubiArr},
     rubiWin: {title:'En Çok Rubikon Yapan — Top 5', items: Object.keys(rubiWinCount).map(function(p){return {name:p.split(' ')[0],val:rubiWinCount[p],color:'var(--win)'};}).sort(function(a,b){return b.val-a.val;})},
     pair: {title:'En Sık Birlikte Oynayan — Top 5', items: pairArr},
-    minPair: {title:'En Az Birlikte Oynayan — Top 5', items: pairArr.slice().reverse()},
+    minPair: {title:'En Az Birlikte Oynayan — Top 5', items: pairArr.filter(function(x){ return x.name.indexOf('İzel') < 0; }).reverse()},
     sessWin: {title:'Oturumda En Çok Kazanılan — Top 5', items: sessWinArr},
     sessLoss: {title:'Oturumda En Çok Kaybedilen — Top 5', items: sessLossArr},
     partEarn: {title:'En Karlı Ortak İkilisi — Top 5', items: partEarnArr},
