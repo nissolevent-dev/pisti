@@ -98,7 +98,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .ldgv.pos{color:var(--win)}
 .ldgv.neg{color:var(--lose)}
 .ldgv.z{color:var(--tx3)}
-.stgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:13px}
+.stgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:13px}
 .stcard{background:var(--wh);border:1px solid var(--bd);border-radius:10px;padding:13px;text-align:center}
 .stv{font-size:1.9rem;font-weight:700;color:var(--tx)}
 .stl{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);margin-top:2px}
@@ -1695,26 +1695,81 @@ function renderStat() {
     return team.map(function(p) { return p.split(' ')[0]; }).join(', ');
   }
 
+  // En yüksek puan
+  var maxPts = 0, maxPtsGame = null, maxPtsTeam = null;
+  for (var i = 0; i < games.length; i++) {
+    var g = games[i];
+    for (var t = 0; t < 2; t++) {
+      if (g.pts[t] > maxPts) {
+        maxPts = g.pts[t];
+        maxPtsGame = g;
+        maxPtsTeam = t === 0 ? g.teamA : g.teamB;
+      }
+    }
+  }
+
+  // İsim listesi: ortakları italik mor, diğerleri normal
+  function nameList(team, gPartners) {
+    if (!team || !team.length) return '-';
+    return team.map(function(p) {
+      var isP = gPartners && gPartners[p];
+      var first = p.split(' ')[0];
+      return isP
+        ? '<span style="color:#7c3aed;font-style:italic">' + first + '</span>'
+        : first;
+    }).join(', ');
+  }
+
+  // En çok kaybeden takım (payMap'te en büyük negatif toplam - takım bazında)
+  var maxLossTeam = [], maxLossVal = 0, maxLossGameObj = null;
+  for (var i = 0; i < games.length; i++) {
+    var g = games[i];
+    var gPart = {};
+    if (g.partners) { for (var pi=0; pi<g.partners.length; pi++) gPart[g.partners[pi]] = true; }
+    // teamA toplamı
+    var lossA = 0, lossB = 0;
+    for (var j = 0; j < g.teamA.length; j++) lossA += g.payMap[g.teamA[j]] || 0;
+    for (var j = 0; j < g.teamB.length; j++) lossB += g.payMap[g.teamB[j]] || 0;
+    if (lossA < 0 && Math.abs(lossA) > maxLossVal) {
+      maxLossVal = Math.abs(lossA); maxLossTeam = g.teamA; maxLossGameObj = g;
+    }
+    if (lossB < 0 && Math.abs(lossB) > maxLossVal) {
+      maxLossVal = Math.abs(lossB); maxLossTeam = g.teamB; maxLossGameObj = g;
+    }
+  }
+
+  function gPartMap(g) {
+    var gPart = {};
+    if (g && g.partners) { for (var pi=0; pi<g.partners.length; pi++) gPart[g.partners[pi]] = true; }
+    return gPart;
+  }
+
   var card1 = '<div class="stcard">' +
     '<div class="stv">' + (minPts !== null ? minPts : '-') + '</div>' +
     '<div class="stl">En Düşük Puan</div>' +
-    (minPtsGame ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + shortNames(minPtsTeam) + '</div>' : '') +
+    (minPtsGame ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + nameList(minPtsTeam, gPartMap(minPtsGame)) + '</div>' : '') +
     '</div>';
 
   var card2 = '<div class="stcard">' +
-    '<div class="stv">' + maxPiDiff + '</div>' +
-    '<div class="stl">En Fazla Pişti Farkı</div>' +
-    (maxPiDiffGame ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' +
-      shortNames(maxPiDiffGame.pi[0] > maxPiDiffGame.pi[1] ? maxPiDiffGame.teamA : maxPiDiffGame.teamB) + '</div>' : '') +
+    '<div class="stv">' + maxPts + '</div>' +
+    '<div class="stl">En Yüksek Puan</div>' +
+    (maxPtsGame ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + nameList(maxPtsTeam, gPartMap(maxPtsGame)) + '</div>' : '') +
     '</div>';
 
   var card3 = '<div class="stcard">' +
-    '<div class="stv">-' + maxLoss + '₺</div>' +
-    '<div class="stl">En Çok Kaybedilen</div>' +
-    (maxLossPlayer ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + maxLossPlayer.split(' ')[0] + '</div>' : '') +
+    '<div class="stv">' + maxPiDiff + '</div>' +
+    '<div class="stl">En Fazla Pişti Farkı</div>' +
+    (maxPiDiffGame ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' +
+      nameList(maxPiDiffGame.pi[0] > maxPiDiffGame.pi[1] ? maxPiDiffGame.teamA : maxPiDiffGame.teamB, gPartMap(maxPiDiffGame)) + '</div>' : '') +
     '</div>';
 
-  document.getElementById('st-summary').innerHTML = card1 + card2 + card3;
+  var card4 = '<div class="stcard">' +
+    '<div class="stv" style="font-size:1.4rem">-' + maxLossVal + '₺</div>' +
+    '<div class="stl">En Çok Kaybedilen</div>' +
+    (maxLossGameObj ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + nameList(maxLossTeam, gPartMap(maxLossGameObj)) + '</div>' : '') +
+    '</div>';
+
+  document.getElementById('st-summary').innerHTML = card1 + card2 + card3 + card4;
 
   var ps = {};
   for (var i = 0; i < D.pool.length; i++) {
