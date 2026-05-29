@@ -2194,9 +2194,13 @@ function renderStat() {
       var mo = months[mi]; var md = monthlyData[mo];
       trendHtml += '<div style="margin-bottom:10px"><div style="font-size:.68rem;font-weight:700;color:var(--g2);margin-bottom:5px">' + mo + '</div>';
       var mPlayers = Object.keys(md).sort(function(a,b){ return md[b]-md[a]; });
+      var maxAbsVal = 1;
+      for (var pi2 = 0; pi2 < mPlayers.length; pi2++) {
+        if (Math.abs(md[mPlayers[pi2]]) > maxAbsVal) maxAbsVal = Math.abs(md[mPlayers[pi2]]);
+      }
       for (var pi2 = 0; pi2 < mPlayers.length; pi2++) {
         var mp = mPlayers[pi2]; var mv = md[mp];
-        var pct = Math.min(Math.abs(mv)/200*100, 100);
+        var pct = Math.round(Math.abs(mv)/maxAbsVal*100);
         trendHtml += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">';
         trendHtml += '<span style="font-size:.65rem;width:60px;flex-shrink:0">' + mp.split(' ')[0] + '</span>';
         trendHtml += '<div style="flex:1;background:var(--bd);border-radius:3px;height:10px;overflow:hidden">';
