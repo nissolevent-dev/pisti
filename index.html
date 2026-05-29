@@ -300,7 +300,18 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="sec">Kayitli Oturumlar</div>
   <div id="h-closed"></div>
 
+  <div class="sec">Arşiv</div>
+  <div id="h-arsiv"></div>
+
   <div class="sec">Tehlikeli Bolge</div>
+  <div class="card" style="margin-bottom:10px">
+    <div class="ctitle">Yılı Arşivle ve Sıfırla</div>
+    <p style="font-size:.78rem;color:var(--tx3);margin-bottom:10px">Tüm veriler arşivlenir, yeni yıl için sıfırlanır. Oyuncu havuzu korunur.</p>
+    <div class="fx" style="margin-bottom:0">
+      <input id="yil-adi" type="text" placeholder="Yıl adı (örn: 2026)" maxlength="20">
+      <button class="btn bp bs" style="white-space:nowrap" onclick="yiliArsivle()">Arşivle</button>
+    </div>
+  </div>
   <div class="card">
     <div class="ctitle">Verileri Sifirla</div>
     <p style="font-size:.78rem;color:var(--tx3);margin-bottom:12px">Oyuncu havuzu korunur. Tum oyunlar, hesaplar, oturumlar ve istatistikler sifirlanir.</p>
@@ -315,6 +326,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="sec">Tum Oyunlar</div>
   <div id="st-games"></div>
 </div>
+
+  <div class="sec" id="st-arsiv-sec" style="display:none">Arşiv</div>
+  <div id="st-arsiv"></div>
 
 <div class="ov" id="ov-ap">
   <div class="ovbox">
@@ -472,6 +486,7 @@ var DEF = {
   initialLdg:{},
   winLoss:{},
   skorTakip:{},
+  arsiv:[],
   closedSess:[],
   screen:1,
   started:false
@@ -547,6 +562,7 @@ REF.on('value', function(snap) {
   if (!D.ldg) D.ldg = {};
   if (!D.sessLdg) D.sessLdg = {};
   if (!D.winLoss) D.winLoss = {};
+  if (!D.arsiv) D.arsiv = [];
   if (!D.skorTakip) D.skorTakip = {};
   if (!D.closedSess) D.closedSess = [];
 
@@ -1307,6 +1323,173 @@ function resetAllData() {
   });
   return;
 }
+function yiliArsivle() {
+  var yilAdi = document.getElementById('yil-adi').value.trim();
+  if (!yilAdi) { toast('Yıl adı girin (örn: 2026)'); return; }
+  sifreSor('Arşivlemek için şifre:', function(sifre) {
+    if (sifre !== '2580') { toast('Yanlış şifre'); return; }
+    if (!confirm(yilAdi + ' verileri arşivlenip sıfırlanacak. Emin misiniz?')) return;
+
+    if (!D.arsiv) D.arsiv = [];
+    D.arsiv.push({
+      yil: yilAdi,
+      tarih: new Date().toLocaleDateString('tr-TR'),
+      allGames: JSON.parse(JSON.stringify(D.allGames || [])),
+      closedSess: JSON.parse(JSON.stringify(D.closedSess || [])),
+      ldg: JSON.parse(JSON.stringify(D.ldg || {})),
+      initialLdg: JSON.parse(JSON.stringify(D.initialLdg || {})),
+      winLoss: JSON.parse(JSON.stringify(D.winLoss || {})),
+      pool: D.pool.slice()
+    });
+
+    // Sıfırla - havuzu koru
+    var pool = D.pool.slice();
+    var arsiv = D.arsiv.slice();
+    D = JSON.parse(JSON.stringify(DEF));
+    D.pool = pool;
+    D.arsiv = arsiv;
+    saveD();
+    document.getElementById('yil-adi').value = '';
+    renderHesap();
+    toast(yilAdi + ' arşivlendi');
+  });
+}
+
+function renderArsiv() {
+  var el = document.getElementById('h-arsiv');
+  if (!D.arsiv || !D.arsiv.length) {
+    el.innerHTML = '<div class="empty">Henüz arşiv yok</div>';
+    return;
+  }
+  var html = '';
+  for (var ai = D.arsiv.length - 1; ai >= 0; ai--) {
+    var a = D.arsiv[ai];
+    var aid = 'arsiv-' + ai;
+    // Tüm zamanlar listesi
+    var allP = [];
+    var seen = {};
+    for (var p in a.ldg) { if (!seen[p]) { seen[p]=true; allP.push(p); } }
+    for (var p in a.initialLdg) { if (!seen[p]) { seen[p]=true; allP.push(p); } }
+    allP.sort(function(x,y) {
+      var tx = (a.ldg[x]||0)+(a.initialLdg[x]||0);
+      var ty = (a.ldg[y]||0)+(a.initialLdg[y]||0);
+      return ty - tx;
+    });
+    var ldgRows = '';
+    for (var i = 0; i < allP.length; i++) {
+      var p = allP[i];
+      var m = (a.ldg[p]||0) + (a.initialLdg[p]||0);
+      var wl = a.winLoss && a.winLoss[p] ? a.winLoss[p] : {w:0,l:0};
+      ldgRows += '<div class="ldgr" style="display:grid;grid-template-columns:auto 1fr auto auto auto;align-items:center;gap:0">' +
+        '<span style="font-size:.72rem;color:var(--tx3);min-width:24px;text-align:center">' + (i+1) + '</span>' +
+        '<span class="ldgnm">' + p + '</span>' +
+        '<span class="ldgv ' + (m>0?'pos':m<0?'neg':'z') + '" style="min-width:80px;text-align:right">' + (m>=0?'+':'') + 'TL' + Math.abs(m) + '</span>' +
+        '<span style="font-size:.72rem;color:var(--win);font-weight:600;min-width:36px;text-align:right;padding-left:10px">' + (wl.w||0) + 'W</span>' +
+        '<span style="font-size:.72rem;color:var(--lose);font-weight:600;min-width:32px;text-align:right;padding-left:4px">' + (wl.l||0) + 'L</span>' +
+        '</div>';
+    }
+    // Oturum listesi
+    var sessHtml = '';
+    if (a.closedSess && a.closedSess.length) {
+      var closed = a.closedSess.slice().reverse();
+      for (var ci = 0; ci < closed.length; ci++) {
+        var s = closed[ci];
+        var sid = aid + '-cs-' + ci;
+        var ps2 = s.players.slice().sort(function(x,y){ return (s.summary[y]||0)-(s.summary[x]||0); });
+        var sRows = '';
+        for (var i = 0; i < ps2.length; i++) {
+          var p = ps2[i]; var m2 = s.summary[p]||0;
+          sRows += '<div class="ldgr"><span class="ldgnm">' + p + '</span><span class="ldgv ' + (m2>0?'pos':m2<0?'neg':'z') + '">' + (m2>=0?'+':'') + 'TL' + Math.abs(m2) + '</span></div>';
+        }
+        // Oyunlar
+        var gHtml = '';
+        if (s.sessGameIds && a.allGames) {
+          for (var gi = 0; gi < a.allGames.length; gi++) {
+            var sg = a.allGames[gi];
+            if (s.sessGameIds.indexOf(sg.id) >= 0) {
+              var wA = sg.winner==='A', wB = sg.winner==='B';
+              var tA = sg.teamA.map(function(tp){ var tm=sg.payMap[tp]||0; return tp.split(' ')[0]+':'+(tm>=0?'+':'')+'TL'+Math.abs(tm); }).join(' ');
+              var tB = sg.teamB.map(function(tp){ var tm=sg.payMap[tp]||0; return tp.split(' ')[0]+':'+(tm>=0?'+':'')+'TL'+Math.abs(tm); }).join(' ');
+              gHtml += '<div style="padding:5px 0;border-bottom:1px solid var(--bd);font-size:.72rem">' +
+                '<b style="color:var(--g2)">#'+sg.num+'</b> ' +
+                '<span style="'+(wA?'color:var(--win);font-weight:700':'')+'">K: '+tA+'</span> vs ' +
+                '<span style="'+(wB?'color:var(--win);font-weight:700':'')+'">S: '+tB+'</span>' +
+                (sg.rubikon?'<span style="background:#dc2626;color:#fff;font-size:.55rem;padding:1px 4px;border-radius:3px;margin-left:4px">R</span>':'') +
+                '</div>';
+            }
+          }
+        }
+        var gDiv = gHtml ? '<div id="'+sid+'" style="display:none;padding:8px 13px;background:var(--bg2)">'+gHtml+'</div>' : '';
+        var togBtn = gHtml ? '<button onclick="toggleCS(\''+sid+'\')" style="background:none;border:none;color:var(--g2);font-size:.72rem;cursor:pointer;font-weight:600;padding:0">Oyunlar ▾</button>' : '';
+        sessHtml += '<div class="csbox"><div class="cshd"><span class="csdt">'+s.date+'</span><div style="display:flex;align-items:center;gap:10px"><span class="csinf">'+s.games+' oyun</span>'+togBtn+'</div></div><div class="ldg">'+sRows+'</div>'+gDiv+'</div>';
+      }
+    }
+
+    html += '<div class="csbox" style="margin-bottom:12px">';
+    html += '<div class="cshd" style="cursor:pointer" onclick="toggleCS(\''+aid+'\')"><span class="csdt" style="font-size:.88rem;font-weight:700;color:var(--g1)">📁 ' + a.yil + '</span><span class="csinf">' + a.tarih + ' · ' + (a.allGames?a.allGames.length:0) + ' oyun</span></div>';
+    html += '<div id="'+aid+'" style="display:none">';
+    html += '<div style="padding:10px 13px"><div class="ctitle" style="margin-bottom:8px">Tüm Zamanlar</div><div class="ldg">' + ldgRows + '</div></div>';
+    if (sessHtml) html += '<div style="padding:0 13px 10px"><div class="ctitle" style="margin-bottom:8px">Oturumlar</div>' + sessHtml + '</div>';
+    html += '</div></div>';
+  }
+  el.innerHTML = html;
+}
+
+function renderArsivStat() {
+  var el = document.getElementById('st-arsiv');
+  var sec = document.getElementById('st-arsiv-sec');
+  if (!D.arsiv || !D.arsiv.length) {
+    el.innerHTML = '';
+    if (sec) sec.style.display = 'none';
+    return;
+  }
+  if (sec) sec.style.display = 'block';
+  var html = '';
+  for (var ai = D.arsiv.length - 1; ai >= 0; ai--) {
+    var a = D.arsiv[ai];
+    var aid = 'ast-' + ai;
+    // Oyuncu istatistikleri
+    var ps = {};
+    for (var i = 0; i < (a.pool||[]).length; i++) {
+      var p = a.pool[i];
+      ps[p] = {g:0,w:0,l:0,pi:0,m:(a.ldg[p]||0)+(a.initialLdg[p]||0)};
+    }
+    for (var i = 0; i < (a.allGames||[]).length; i++) {
+      var g = a.allGames[i];
+      for (var j = 0; j < g.teamA.length; j++) {
+        var p = g.teamA[j]; if (!ps[p]) continue;
+        ps[p].g++; ps[p].pi += g.pi[0];
+        if (g.winner==='A') ps[p].w++; else if (g.winner==='B') ps[p].l++;
+      }
+      for (var j = 0; j < g.teamB.length; j++) {
+        var p = g.teamB[j]; if (!ps[p]) continue;
+        ps[p].g++; ps[p].pi += g.pi[1];
+        if (g.winner==='B') ps[p].w++; else if (g.winner==='A') ps[p].l++;
+      }
+    }
+    var active = (a.pool||[]).filter(function(p){ return ps[p] && ps[p].g > 0; });
+    active.sort(function(x,y){ return ps[y].m - ps[x].m; });
+
+    var psHtml = '';
+    for (var i = 0; i < active.length; i++) {
+      var p = active[i]; var d = ps[p]; var m = d.m;
+      var wr = d.g ? Math.round(d.w/d.g*100) : 0;
+      psHtml += '<div class="pscard"><div class="psnm">' + p + '</div>' +
+        '<div class="psrow"><span>Oyun</span><span class="psval">' + d.g + '</span></div>' +
+        '<div class="psrow"><span>Galibiyet</span><span class="psval">' + d.w + ' (%' + wr + ')</span></div>' +
+        '<div class="psrow"><span>Mağlubiyet</span><span class="psval">' + d.l + '</span></div>' +
+        '<div class="psrow"><span>Pişti</span><span class="psval">' + d.pi + '</span></div>' +
+        '<div class="psrow"><span>Para</span><span class="psval ' + (m>0?'pos':m<0?'neg':'') + '">' + (m>=0?'+':'') + 'TL' + Math.abs(m) + '</span></div></div>';
+    }
+
+    html += '<div class="csbox" style="margin-bottom:12px">';
+    html += '<div class="cshd" style="cursor:pointer" onclick="toggleCS(\''+aid+'\')"><span class="csdt" style="font-size:.88rem;font-weight:700;color:var(--g1)">📁 ' + a.yil + '</span><span class="csinf">' + a.tarih + ' · ' + (a.allGames?a.allGames.length:0) + ' oyun</span></div>';
+    html += '<div id="'+aid+'" style="display:none;padding:13px">' + psHtml + '</div>';
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
 function _resetAllDataExec() {
   if (!confirm('Emin misiniz? Tum oyunlar, hesaplar ve istatistikler silinir. Oyuncu havuzu korunur.')) return;
   var pool = D.pool.slice(); // havuzu koru
@@ -1555,6 +1738,7 @@ function renderHesap() {
     wlFormEl.innerHTML = '<div style="font-size:.72rem;color:var(--tx3);margin-bottom:8px;padding:8px 12px;background:var(--bg2);border-radius:8px">Win/Loss gecmisi kaydedildi.</div>';
   }
 
+  renderArsiv();
   var cel = document.getElementById('h-closed');
   if (!D.closedSess || !D.closedSess.length) {
     cel.innerHTML = '<div class="empty">Henuz oturum kapatilmadi</div>';
@@ -1874,6 +2058,7 @@ function renderStat() {
       '</div></div>';
   }
   sgEl.innerHTML = html;
+  renderArsivStat();
 }
 
 // ── ADD PLAYER OVERLAY ──
