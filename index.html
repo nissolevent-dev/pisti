@@ -2008,20 +2008,20 @@ function renderStat() {
     }
   }
 
-  // En çok rubikon yiyen
-  var rubiCount = {};
+  // En çok rubikon yiyen ve yapan
+  var rubiCount = {}, rubiWinCount = {};
   for (var i = 0; i < sortedGames.length; i++) {
     var g = sortedGames[i];
     if (!g.rubikon) continue;
-    var loser = g.winner === 'A' ? g.teamB : g.teamA;
-    for (var j = 0; j < loser.length; j++) {
-      rubiCount[loser[j]] = (rubiCount[loser[j]]||0) + 1;
-    }
+    var loser  = g.winner === 'A' ? g.teamB : g.teamA;
+    var winner = g.winner === 'A' ? g.teamA : g.teamB;
+    for (var j = 0; j < loser.length;  j++) rubiCount[loser[j]]    = (rubiCount[loser[j]]||0)    + 1;
+    for (var j = 0; j < winner.length; j++) rubiWinCount[winner[j]] = (rubiWinCount[winner[j]]||0) + 1;
   }
   var maxRubi = 0, maxRubiPlayer = null;
-  for (var p in rubiCount) {
-    if (rubiCount[p] > maxRubi) { maxRubi = rubiCount[p]; maxRubiPlayer = p; }
-  }
+  for (var p in rubiCount) { if (rubiCount[p] > maxRubi) { maxRubi = rubiCount[p]; maxRubiPlayer = p; } }
+  var maxRubiWin = 0, maxRubiWinPlayer = null;
+  for (var p in rubiWinCount) { if (rubiWinCount[p] > maxRubiWin) { maxRubiWin = rubiWinCount[p]; maxRubiWinPlayer = p; } }
 
   // En sık birlikte oynayan ikili
   var pairCount = {};
@@ -2039,10 +2039,14 @@ function renderStat() {
     }
   }
   var maxPair = 0, maxPairKey = null;
+  var minPair = Infinity, minPairKey = null;
   for (var k in pairCount) {
     if (pairCount[k] > maxPair) { maxPair = pairCount[k]; maxPairKey = k; }
+    if (pairCount[k] < minPair) { minPair = pairCount[k]; minPairKey = k; }
   }
   var pairNames = maxPairKey ? maxPairKey.split('|').map(function(p){ return p.split(' ')[0]; }).join(' & ') : '-';
+  var minPairNames = minPairKey ? minPairKey.split('|').map(function(p){ return p.split(' ')[0]; }).join(' & ') : '-';
+  var minPairVal = minPair === Infinity ? 0 : minPair;
 
   var card5 = '<div class="stcard" onclick="showTop5(\'winStr\')" style="cursor:pointer">' +
     '<div class="stv">' + maxWinStr + '</div>' +
@@ -2062,10 +2066,22 @@ function renderStat() {
     (maxRubiPlayer ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + maxRubiPlayer.split(' ')[0] + '</div>' : '') +
     '</div>';
 
+  var card7b = '<div class="stcard" onclick="showTop5(\'rubiWin\')" style="cursor:pointer">' +
+    '<div class="stv">' + maxRubiWin + '</div>' +
+    '<div class="stl">En Çok Rubikon Yapan</div>' +
+    (maxRubiWinPlayer ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + maxRubiWinPlayer.split(' ')[0] + '</div>' : '') +
+    '</div>';
+
   var card8 = '<div class="stcard" onclick="showTop5(\'pair\')" style="cursor:pointer">' +
     '<div class="stv" style="font-size:1.3rem">' + maxPair + 'x</div>' +
     '<div class="stl">En Sık Birlikte Oynayan</div>' +
     '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + pairNames + '</div>' +
+    '</div>';
+
+  var card8b = '<div class="stcard" onclick="showTop5(\'minPair\')" style="cursor:pointer">' +
+    '<div class="stv" style="font-size:1.3rem">' + minPairVal + 'x</div>' +
+    '<div class="stl">En Az Birlikte Oynayan</div>' +
+    '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + minPairNames + '</div>' +
     '</div>';
 
   // İkinci grid
@@ -2076,7 +2092,7 @@ function renderStat() {
     grid2El.className = 'stgrid';
     document.getElementById('st-summary').parentNode.insertBefore(grid2El, document.getElementById('st-summary').nextSibling);
   }
-  grid2El.innerHTML = card5 + card6 + card7 + card8;
+  grid2El.innerHTML = card5 + card6 + card7 + card7b + card8 + card8b;
 
   // ── Oturum & Ortak istatistikleri ──
   // Tek oturumda en çok kazanılan/kaybedilen
@@ -2151,16 +2167,24 @@ function renderStat() {
     (maxSessLossPlayer ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + maxSessLossPlayer.split(' ')[0] + ' · ' + maxSessLossDate + '</div>' : '') +
     '</div>';
 
+  // En zararlı ortak ikilisi
+  var minPartEarn = null, minPartKey = null;
+  for (var k in partnerStats) {
+    if (minPartEarn === null || partnerStats[k].earn < minPartEarn) { minPartEarn = partnerStats[k].earn; minPartKey = k; }
+  }
+  var minPartNames = minPartKey ? minPartKey.split('|').map(function(p){return p.split(' ')[0];}).join(' & ') : '-';
+  var minPartVal = minPartEarn !== null ? ((minPartEarn>=0?'+':'') + 'TL' + Math.abs(minPartEarn)) : '-';
+
   var card11 = '<div class="stcard" onclick="showTop5(\'partEarn\')" style="cursor:pointer">' +
     '<div class="stv" style="font-size:1.1rem">' + partEarnVal + '</div>' +
     '<div class="stl">En Karlı Ortak İkilisi</div>' +
     '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + partEarnNames + '</div>' +
     '</div>';
 
-  var card12 = '<div class="stcard" onclick="showTop5(\'partWR\')" style="cursor:pointer">' +
-    '<div class="stv" style="font-size:1.1rem">' + partWRVal + '</div>' +
-    '<div class="stl">En İyi Kazanma Oranlı İkili</div>' +
-    '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + partWRNames + '</div>' +
+  var card12 = '<div class="stcard" onclick="showTop5(\'partLoss\')" style="cursor:pointer">' +
+    '<div class="stv" style="font-size:1.1rem;color:var(--lose)">' + minPartVal + '</div>' +
+    '<div class="stl">En Zararlı Ortak İkilisi</div>' +
+    '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + minPartNames + '</div>' +
     '</div>';
 
   // Top5 verileri hazırla
@@ -2297,11 +2321,14 @@ function renderStat() {
     winStr: {title:'En Uzun Galibiyet Serisi — Top 5', items: winStrArr2},
     lossStr: {title:'En Uzun Mağlubiyet Serisi — Top 5', items: lossStrArr},
     rubi: {title:'En Çok Rubikon Yiyen — Top 5', items: rubiArr},
+    rubiWin: {title:'En Çok Rubikon Yapan — Top 5', items: Object.keys(rubiWinCount).map(function(p){return {name:p.split(' ')[0],val:rubiWinCount[p],color:'var(--win)'};}).sort(function(a,b){return b.val-a.val;})},
     pair: {title:'En Sık Birlikte Oynayan — Top 5', items: pairArr},
+    minPair: {title:'En Az Birlikte Oynayan — Top 5', items: pairArr.slice().reverse()},
     sessWin: {title:'Oturumda En Çok Kazanılan — Top 5', items: sessWinArr},
     sessLoss: {title:'Oturumda En Çok Kaybedilen — Top 5', items: sessLossArr},
     partEarn: {title:'En Karlı Ortak İkilisi — Top 5', items: partEarnArr},
-    partWR: {title:'En İyi Kazanma Oranlı İkili — Top 5', items: partWRArr}
+    partWR: {title:'En İyi Kazanma Oranlı İkili — Top 5', items: partWRArr},
+    partLoss: {title:'En Zararlı Ortak İkilisi — Top 5', items: partEarnArr.slice().reverse()}
   };
 
   var grid3El = document.getElementById('st-summary3');
