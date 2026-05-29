@@ -344,6 +344,17 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <div id="toast"></div>
 
+<!-- Top 5 Overlay -->
+<div class="ov" id="ov-top5">
+  <div class="ovbox" style="max-width:400px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="ovttl" id="top5-title" style="margin-bottom:0">Top 5</div>
+      <button class="btn bo bs" onclick="closeOv('ov-top5')">Kapat</button>
+    </div>
+    <div id="top5-content"></div>
+  </div>
+</div>
+
 <!-- Paylaşım Overlay -->
 <div class="ov" id="ov-share" style="align-items:center;justify-content:center">
   <div class="ovbox" style="max-height:92vh;overflow-y:auto;padding:14px">
@@ -1932,21 +1943,21 @@ function renderStat() {
     return g ? '<div style="font-size:.6rem;color:var(--g2);font-weight:700;margin-top:3px">#' + g.num + '. Oyun</div>' : '';
   }
 
-  var card1 = '<div class="stcard">' +
+  var card1 = '<div class="stcard" onclick="showTop5(\'minPts\')" style="cursor:pointer">' +
     '<div class="stv">' + (minPts !== null ? minPts : '-') + '</div>' +
     '<div class="stl">En Düşük Puan</div>' +
     gameNum(minPtsGame) +
     (minPtsGame ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:2px">' + nameList(minPtsTeam, gPartMap(minPtsGame)) + '</div>' : '') +
     '</div>';
 
-  var card2 = '<div class="stcard">' +
+  var card2 = '<div class="stcard" onclick="showTop5(\'maxPts\')" style="cursor:pointer">' +
     '<div class="stv">' + maxPts + '</div>' +
     '<div class="stl">En Yüksek Puan</div>' +
     gameNum(maxPtsGame) +
     (maxPtsGame ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:2px">' + nameList(maxPtsTeam, gPartMap(maxPtsGame)) + '</div>' : '') +
     '</div>';
 
-  var card3 = '<div class="stcard">' +
+  var card3 = '<div class="stcard" onclick="showTop5(\'piDiff\')" style="cursor:pointer">' +
     '<div class="stv">' + maxPiDiff + '</div>' +
     '<div class="stl">En Fazla Pişti Farkı</div>' +
     gameNum(maxPiDiffGame) +
@@ -1954,7 +1965,7 @@ function renderStat() {
       nameList(maxPiDiffGame.pi[0] > maxPiDiffGame.pi[1] ? maxPiDiffGame.teamA : maxPiDiffGame.teamB, gPartMap(maxPiDiffGame)) + '</div>' : '') +
     '</div>';
 
-  var card4 = '<div class="stcard">' +
+  var card4 = '<div class="stcard" onclick="showTop5(\'maxLoss\')" style="cursor:pointer">' +
     '<div class="stv" style="font-size:1.4rem">-' + maxLossVal + '₺</div>' +
     '<div class="stl">En Çok Kaybedilen</div>' +
     gameNum(maxLossGameObj) +
@@ -2033,25 +2044,25 @@ function renderStat() {
   }
   var pairNames = maxPairKey ? maxPairKey.split('|').map(function(p){ return p.split(' ')[0]; }).join(' & ') : '-';
 
-  var card5 = '<div class="stcard">' +
+  var card5 = '<div class="stcard" onclick="showTop5(\'winStr\')" style="cursor:pointer">' +
     '<div class="stv">' + maxWinStr + '</div>' +
     '<div class="stl">En Uzun Galibiyet Serisi</div>' +
     (maxWinPlayer ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + maxWinPlayer.split(' ')[0] + '</div>' : '') +
     '</div>';
 
-  var card6 = '<div class="stcard">' +
+  var card6 = '<div class="stcard" onclick="showTop5(\'lossStr\')" style="cursor:pointer">' +
     '<div class="stv">' + maxLossStr + '</div>' +
     '<div class="stl">En Uzun Mağlubiyet Serisi</div>' +
     (maxLossStrPlayer ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + maxLossStrPlayer.split(' ')[0] + '</div>' : '') +
     '</div>';
 
-  var card7 = '<div class="stcard">' +
+  var card7 = '<div class="stcard" onclick="showTop5(\'rubi\')" style="cursor:pointer">' +
     '<div class="stv">' + maxRubi + '</div>' +
     '<div class="stl">En Çok Rubikon Yiyen</div>' +
     (maxRubiPlayer ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + maxRubiPlayer.split(' ')[0] + '</div>' : '') +
     '</div>';
 
-  var card8 = '<div class="stcard">' +
+  var card8 = '<div class="stcard" onclick="showTop5(\'pair\')" style="cursor:pointer">' +
     '<div class="stv" style="font-size:1.3rem">' + maxPair + 'x</div>' +
     '<div class="stl">En Sık Birlikte Oynayan</div>' +
     '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + pairNames + '</div>' +
@@ -2128,29 +2139,170 @@ function renderStat() {
   var partWRNames = maxPartWRKey ? maxPartWRKey.split('|').map(function(p){ return p.split(' ')[0]; }).join(' & ') : '-';
   var partWRVal = maxPartWRKey ? '%' + Math.round(maxPartWR*100) + ' (' + partnerStats[maxPartWRKey].wins + '/' + partnerStats[maxPartWRKey].games + ')' : '-';
 
-  var card9 = '<div class="stcard">' +
+  var card9 = '<div class="stcard" onclick="showTop5(\'sessWin\')" style="cursor:pointer">' +
     '<div class="stv" style="font-size:1.3rem">+TL' + maxSessWin + '</div>' +
     '<div class="stl">Oturumda En Çok Kazanılan</div>' +
     (maxSessWinPlayer ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + maxSessWinPlayer.split(' ')[0] + ' · ' + maxSessWinDate + '</div>' : '') +
     '</div>';
 
-  var card10 = '<div class="stcard">' +
+  var card10 = '<div class="stcard" onclick="showTop5(\'sessLoss\')" style="cursor:pointer">' +
     '<div class="stv" style="font-size:1.3rem">-TL' + maxSessLoss + '</div>' +
     '<div class="stl">Oturumda En Çok Kaybedilen</div>' +
     (maxSessLossPlayer ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + maxSessLossPlayer.split(' ')[0] + ' · ' + maxSessLossDate + '</div>' : '') +
     '</div>';
 
-  var card11 = '<div class="stcard">' +
+  var card11 = '<div class="stcard" onclick="showTop5(\'partEarn\')" style="cursor:pointer">' +
     '<div class="stv" style="font-size:1.1rem">' + partEarnVal + '</div>' +
     '<div class="stl">En Karlı Ortak İkilisi</div>' +
     '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + partEarnNames + '</div>' +
     '</div>';
 
-  var card12 = '<div class="stcard">' +
+  var card12 = '<div class="stcard" onclick="showTop5(\'partWR\')" style="cursor:pointer">' +
     '<div class="stv" style="font-size:1.1rem">' + partWRVal + '</div>' +
     '<div class="stl">En İyi Kazanma Oranlı İkili</div>' +
     '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + partWRNames + '</div>' +
     '</div>';
+
+  // Top5 verileri hazırla
+  // En düşük puan top5
+  var minPtsArr = [];
+  for (var i = 0; i < sortedGames.length; i++) {
+    var g = sortedGames[i];
+    for (var t = 0; t < 2; t++) {
+      minPtsArr.push({name: (t===0?g.teamA:g.teamB).map(function(p){return p.split(' ')[0];}).join(', '), val: g.pts[t], sub: '#'+g.num+'. Oyun', color:'var(--tx2)'});
+    }
+  }
+  minPtsArr.sort(function(a,b){return a.val-b.val;});
+
+  // En yüksek puan top5
+  var maxPtsArr = [];
+  for (var i = 0; i < sortedGames.length; i++) {
+    var g = sortedGames[i];
+    for (var t = 0; t < 2; t++) {
+      maxPtsArr.push({name: (t===0?g.teamA:g.teamB).map(function(p){return p.split(' ')[0];}).join(', '), val: g.pts[t], sub: '#'+g.num+'. Oyun', color:'var(--win)'});
+    }
+  }
+  maxPtsArr.sort(function(a,b){return b.val-a.val;});
+
+  // En fazla pişti farkı top5
+  var piDiffArr = [];
+  for (var i = 0; i < sortedGames.length; i++) {
+    var g = sortedGames[i];
+    var pd = Math.abs(g.pi[0]-g.pi[1]);
+    var winTeam = g.pi[0]>g.pi[1]?g.teamA:g.teamB;
+    piDiffArr.push({name: winTeam.map(function(p){return p.split(' ')[0];}).join(', '), val: pd, sub: '#'+g.num+'. Oyun', color:'var(--win)'});
+  }
+  piDiffArr.sort(function(a,b){return b.val-a.val;});
+
+  // En çok kaybedilen kişi bazı top5
+  var lossArr = [];
+  for (var i = 0; i < sortedGames.length; i++) {
+    var g = sortedGames[i];
+    for (var p in g.payMap) {
+      var v = g.payMap[p];
+      if (v < 0) lossArr.push({name: p.split(' ')[0], val: '-TL'+Math.abs(v), valNum: Math.abs(v), sub: '#'+g.num+'. Oyun', color:'var(--lose)'});
+    }
+  }
+  lossArr.sort(function(a,b){return b.valNum-a.valNum;});
+
+  // Galibiyet serisi top5
+  var winStrArr = [];
+  var tempWin = {};
+  for (var i = 0; i < D.pool.length; i++) tempWin[D.pool[i]] = 0;
+  var allWinStrs = [];
+  for (var i = 0; i < sortedGames.length; i++) {
+    var g = sortedGames[i];
+    var allP3 = (g.teamA||[]).concat(g.teamB||[]);
+    var winners2 = g.winner==='A'?g.teamA:g.winner==='B'?g.teamB:[];
+    var losers2 = g.winner==='A'?g.teamB:g.winner==='B'?g.teamA:[];
+    for (var j=0; j<allP3.length; j++) {
+      var p=allP3[j];
+      if (winners2.indexOf(p)>=0) { tempWin[p]=(tempWin[p]||0)+1; allWinStrs.push({name:p.split(' ')[0],val:tempWin[p],color:'var(--win)'}); }
+      else if (losers2.indexOf(p)>=0) { tempWin[p]=0; }
+    }
+  }
+  var bestWinStr = {};
+  for (var i=0; i<allWinStrs.length; i++) {
+    var p=allWinStrs[i].name;
+    if (!bestWinStr[p] || allWinStrs[i].val > bestWinStr[p]) bestWinStr[p]=allWinStrs[i].val;
+  }
+  var winStrArr2 = Object.keys(bestWinStr).map(function(p){return {name:p,val:bestWinStr[p],color:'var(--win)'};});
+  winStrArr2.sort(function(a,b){return b.val-a.val;});
+
+  // Mağlubiyet serisi top5
+  var tempLoss2 = {};
+  for (var i = 0; i < D.pool.length; i++) tempLoss2[D.pool[i]] = 0;
+  var bestLossStr = {};
+  for (var i = 0; i < sortedGames.length; i++) {
+    var g = sortedGames[i];
+    var allP4 = (g.teamA||[]).concat(g.teamB||[]);
+    var winners3 = g.winner==='A'?g.teamA:g.winner==='B'?g.teamB:[];
+    var losers3 = g.winner==='A'?g.teamB:g.winner==='B'?g.teamA:[];
+    for (var j=0; j<allP4.length; j++) {
+      var p=allP4[j];
+      if (losers3.indexOf(p)>=0) { tempLoss2[p]=(tempLoss2[p]||0)+1; if (!bestLossStr[p]||tempLoss2[p]>bestLossStr[p]) bestLossStr[p]=tempLoss2[p]; }
+      else if (winners3.indexOf(p)>=0) { tempLoss2[p]=0; }
+    }
+  }
+  var lossStrArr = Object.keys(bestLossStr).map(function(p){return {name:p,val:bestLossStr[p],color:'var(--lose)'};});
+  lossStrArr.sort(function(a,b){return b.val-a.val;});
+
+  // Rubikon top5
+  var rubiArr = Object.keys(rubiCount).map(function(p){return {name:p.split(' ')[0],val:rubiCount[p],color:'#dc2626'};});
+  rubiArr.sort(function(a,b){return b.val-a.val;});
+
+  // En sık birlikte top5
+  var pairArr = Object.keys(pairCount).map(function(k){
+    var ns=k.split('|').map(function(p){return p.split(' ')[0];}).join(' & ');
+    return {name:ns,val:pairCount[k]+'x',valNum:pairCount[k],color:'var(--g1)'};
+  });
+  pairArr.sort(function(a,b){return b.valNum-a.valNum;});
+
+  // Oturum top5
+  var sessWinArr=[], sessLossArr=[];
+  for (var i=0; i<allSess.length; i++) {
+    var s=allSess[i];
+    for (var p in s.summary) {
+      var v=s.summary[p]||0;
+      if (v>0) sessWinArr.push({name:p.split(' ')[0],val:'+TL'+v,valNum:v,sub:s.date,color:'var(--win)'});
+      if (v<0) sessLossArr.push({name:p.split(' ')[0],val:'-TL'+Math.abs(v),valNum:Math.abs(v),sub:s.date,color:'var(--lose)'});
+    }
+  }
+  sessWinArr.sort(function(a,b){return b.valNum-a.valNum;});
+  sessLossArr.sort(function(a,b){return b.valNum-a.valNum;});
+
+  // Karlı ortak top5
+  var partEarnArr = Object.keys(partnerStats).map(function(k){
+    var ps3=partnerStats[k];
+    var ns=k.split('|').map(function(p){return p.split(' ')[0];}).join(' & ');
+    var e=ps3.earn;
+    return {name:ns,val:(e>=0?'+':'')+'TL'+Math.abs(e),valNum:e,sub:ps3.games+' oyun',color:e>=0?'var(--win)':'var(--lose)'};
+  });
+  partEarnArr.sort(function(a,b){return b.valNum-a.valNum;});
+
+  // Kazanma oranı top5 (min 3 oyun)
+  var partWRArr = Object.keys(partnerStats).filter(function(k){return partnerStats[k].games>=3;}).map(function(k){
+    var ps3=partnerStats[k];
+    var ns=k.split('|').map(function(p){return p.split(' ')[0];}).join(' & ');
+    var wr3=Math.round(ps3.wins/ps3.games*100);
+    return {name:ns,val:'%'+wr3,valNum:wr3,sub:ps3.wins+'/'+ps3.games+' oyun',color:'var(--win)'};
+  });
+  partWRArr.sort(function(a,b){return b.valNum-a.valNum;});
+
+  _top5Data = {
+    minPts: {title:'En Düşük Puan — Top 5', items: minPtsArr.map(function(x){return {name:x.name,val:x.val,sub:x.sub,color:x.color};})},
+    maxPts: {title:'En Yüksek Puan — Top 5', items: maxPtsArr.map(function(x){return {name:x.name,val:x.val,sub:x.sub,color:x.color};})},
+    piDiff: {title:'En Fazla Pişti Farkı — Top 5', items: piDiffArr},
+    maxLoss: {title:'En Çok Kaybedilen — Top 5', items: lossArr.map(function(x){return {name:x.name,val:x.val,sub:x.sub,color:x.color};})},
+    winStr: {title:'En Uzun Galibiyet Serisi — Top 5', items: winStrArr2},
+    lossStr: {title:'En Uzun Mağlubiyet Serisi — Top 5', items: lossStrArr},
+    rubi: {title:'En Çok Rubikon Yiyen — Top 5', items: rubiArr},
+    pair: {title:'En Sık Birlikte Oynayan — Top 5', items: pairArr},
+    sessWin: {title:'Oturumda En Çok Kazanılan — Top 5', items: sessWinArr},
+    sessLoss: {title:'Oturumda En Çok Kaybedilen — Top 5', items: sessLossArr},
+    partEarn: {title:'En Karlı Ortak İkilisi — Top 5', items: partEarnArr},
+    partWR: {title:'En İyi Kazanma Oranlı İkili — Top 5', items: partWRArr}
+  };
 
   var grid3El = document.getElementById('st-summary3');
   if (!grid3El) {
@@ -2803,6 +2955,31 @@ function shareImage() {
       URL.revokeObjectURL(url);
     }
   }, 'image/png');
+}
+
+// ── TOP 5 ──
+var _top5Data = {};
+
+function showTop5(key) {
+  var d = _top5Data[key];
+  if (!d) return;
+  document.getElementById('top5-title').textContent = d.title;
+  var html = '';
+  for (var i = 0; i < Math.min(d.items.length, 5); i++) {
+    var item = d.items[i];
+    var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1) + '.';
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)">';
+    html += '<span style="font-size:1.1rem;width:32px;text-align:center">' + medal + '</span>';
+    html += '<div style="flex:1">';
+    html += '<div style="font-size:.9rem;font-weight:600">' + item.name + '</div>';
+    if (item.sub) html += '<div style="font-size:.68rem;color:var(--tx3)">' + item.sub + '</div>';
+    html += '</div>';
+    html += '<div style="font-size:1rem;font-weight:700;color:' + (item.color||'var(--g1)') + '">' + item.val + '</div>';
+    html += '</div>';
+  }
+  if (!d.items.length) html = '<div class="empty">Veri yok</div>';
+  document.getElementById('top5-content').innerHTML = html;
+  document.getElementById('ov-top5').classList.add('on');
 }
 
 // ── TOAST ──
