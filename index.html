@@ -98,7 +98,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .ldgv.pos{color:var(--win)}
 .ldgv.neg{color:var(--lose)}
 .ldgv.z{color:var(--tx3)}
-.stgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:13px}
+.stgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:13px}
 .stcard{background:var(--wh);border:1px solid var(--bd);border-radius:10px;padding:13px;text-align:center}
 .stv{font-size:1.9rem;font-weight:700;color:var(--tx)}
 .stl{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);margin-top:2px}
@@ -1654,18 +1654,67 @@ function renderLdg(elId, players, ldg) {
 // ── ISTATISTIK ──
 function renderStat() {
   var games = D.allGames;
-  var totPi = 0;
-  for (var i = 0; i < games.length; i++) totPi += games[i].pi[0] + games[i].pi[1];
-  var maxPts = 0;
+
+  // En düşük puan (kazanan takımın puanı değil, herhangi bir takımın en düşük puanı)
+  var minPts = null, minPtsGame = null, minPtsTeam = null;
+  // Bir oyunda en fazla pişti farkı
+  var maxPiDiff = 0, maxPiDiffGame = null;
+  // Bir oyunda en çok kaybedilen tutar (tek kişi bazında)
+  var maxLoss = 0, maxLossPlayer = null, maxLossGame = null;
+
   for (var i = 0; i < games.length; i++) {
-    if (games[i].pts[0] > maxPts) maxPts = games[i].pts[0];
-    if (games[i].pts[1] > maxPts) maxPts = games[i].pts[1];
+    var g = games[i];
+    // En düşük puan
+    for (var t = 0; t < 2; t++) {
+      if (minPts === null || g.pts[t] < minPts) {
+        minPts = g.pts[t];
+        minPtsGame = g;
+        minPtsTeam = t === 0 ? g.teamA : g.teamB;
+      }
+    }
+    // En fazla pişti farkı
+    var piDiff = Math.abs(g.pi[0] - g.pi[1]);
+    if (piDiff > maxPiDiff) {
+      maxPiDiff = piDiff;
+      maxPiDiffGame = g;
+    }
+    // En çok kaybedilen tutar
+    for (var p in g.payMap) {
+      var loss = g.payMap[p];
+      if (loss < 0 && Math.abs(loss) > maxLoss) {
+        maxLoss = Math.abs(loss);
+        maxLossPlayer = p;
+        maxLossGame = g;
+      }
+    }
   }
-  document.getElementById('st-summary').innerHTML =
-    '<div class="stcard"><div class="stv">' + games.length + '</div><div class="stl">Toplam Oyun</div></div>' +
-    '<div class="stcard"><div class="stv">' + totPi + '</div><div class="stl">Toplam Pisti</div></div>' +
-    '<div class="stcard"><div class="stv">' + maxPts + '</div><div class="stl">En Yuksek Puan</div></div>' +
-    '<div class="stcard"><div class="stv">' + D.pool.length + '</div><div class="stl">Oyuncu Havuzu</div></div>';
+
+  // İsim kısaltma yardımcı fonksiyon
+  function shortNames(team) {
+    if (!team || !team.length) return '-';
+    return team.map(function(p) { return p.split(' ')[0]; }).join(', ');
+  }
+
+  var card1 = '<div class="stcard">' +
+    '<div class="stv">' + (minPts !== null ? minPts : '-') + '</div>' +
+    '<div class="stl">En Düşük Puan</div>' +
+    (minPtsGame ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + shortNames(minPtsTeam) + '</div>' : '') +
+    '</div>';
+
+  var card2 = '<div class="stcard">' +
+    '<div class="stv">' + maxPiDiff + '</div>' +
+    '<div class="stl">En Fazla Pişti Farkı</div>' +
+    (maxPiDiffGame ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' +
+      shortNames(maxPiDiffGame.pi[0] > maxPiDiffGame.pi[1] ? maxPiDiffGame.teamA : maxPiDiffGame.teamB) + '</div>' : '') +
+    '</div>';
+
+  var card3 = '<div class="stcard">' +
+    '<div class="stv">-' + maxLoss + '₺</div>' +
+    '<div class="stl">En Çok Kaybedilen</div>' +
+    (maxLossPlayer ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + maxLossPlayer.split(' ')[0] + '</div>' : '') +
+    '</div>';
+
+  document.getElementById('st-summary').innerHTML = card1 + card2 + card3;
 
   var ps = {};
   for (var i = 0; i < D.pool.length; i++) {
