@@ -1744,29 +1744,37 @@ function renderStat() {
     return gPart;
   }
 
+  function gameNum(g) {
+    return g ? '<div style="font-size:.6rem;color:var(--g2);font-weight:700;margin-top:3px">#' + g.num + '. Oyun</div>' : '';
+  }
+
   var card1 = '<div class="stcard">' +
     '<div class="stv">' + (minPts !== null ? minPts : '-') + '</div>' +
     '<div class="stl">En Düşük Puan</div>' +
-    (minPtsGame ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + nameList(minPtsTeam, gPartMap(minPtsGame)) + '</div>' : '') +
+    gameNum(minPtsGame) +
+    (minPtsGame ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:2px">' + nameList(minPtsTeam, gPartMap(minPtsGame)) + '</div>' : '') +
     '</div>';
 
   var card2 = '<div class="stcard">' +
     '<div class="stv">' + maxPts + '</div>' +
     '<div class="stl">En Yüksek Puan</div>' +
-    (maxPtsGame ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + nameList(maxPtsTeam, gPartMap(maxPtsGame)) + '</div>' : '') +
+    gameNum(maxPtsGame) +
+    (maxPtsGame ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:2px">' + nameList(maxPtsTeam, gPartMap(maxPtsGame)) + '</div>' : '') +
     '</div>';
 
   var card3 = '<div class="stcard">' +
     '<div class="stv">' + maxPiDiff + '</div>' +
     '<div class="stl">En Fazla Pişti Farkı</div>' +
-    (maxPiDiffGame ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' +
+    gameNum(maxPiDiffGame) +
+    (maxPiDiffGame ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:2px">' +
       nameList(maxPiDiffGame.pi[0] > maxPiDiffGame.pi[1] ? maxPiDiffGame.teamA : maxPiDiffGame.teamB, gPartMap(maxPiDiffGame)) + '</div>' : '') +
     '</div>';
 
   var card4 = '<div class="stcard">' +
     '<div class="stv" style="font-size:1.4rem">-' + maxLossVal + '₺</div>' +
     '<div class="stl">En Çok Kaybedilen</div>' +
-    (maxLossGameObj ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + nameList(maxLossTeam, gPartMap(maxLossGameObj)) + '</div>' : '') +
+    gameNum(maxLossGameObj) +
+    (maxLossGameObj ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:2px">' + nameList(maxLossTeam, gPartMap(maxLossGameObj)) + '</div>' : '') +
     '</div>';
 
   document.getElementById('st-summary').innerHTML = card1 + card2 + card3 + card4;
