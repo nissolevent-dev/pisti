@@ -2041,13 +2041,15 @@ function renderStat() {
   var maxRubiWin = 0, maxRubiWinPlayer = null;
   for (var p in rubiWinCount) { if (rubiWinCount[p] > maxRubiWin) { maxRubiWin = rubiWinCount[p]; maxRubiWinPlayer = p; } }
 
-  // En sık birlikte oynayan ikili
+  // En sık birlikte oynayan ikili - dışarıdan ortak hariç
   var pairCount = {};
   for (var i = 0; i < sortedGames.length; i++) {
     var g = sortedGames[i];
+    var partnerSet2 = {};
+    if (g.partners) { for (var pi4=0; pi4<g.partners.length; pi4++) partnerSet2[g.partners[pi4]] = true; }
     var teams = [g.teamA||[], g.teamB||[]];
     for (var t = 0; t < teams.length; t++) {
-      var team = teams[t];
+      var team = teams[t].filter(function(p) { return !partnerSet2[p]; });
       for (var a2 = 0; a2 < team.length; a2++) {
         for (var b2 = a2+1; b2 < team.length; b2++) {
           var key2 = [team[a2], team[b2]].sort().join('|');
