@@ -2657,6 +2657,16 @@ function addTur() {
   var spi = parseInt(document.getElementById('tur-spi').value) || 0;
   if (!k && !s && !kpi && !spi) { toast('En az bir değer girin'); return; }
 
+  // Skor doğrulama: toplam puan = toplam pişti x 10 + 13 veya + 16
+  var turToplam = k + s;
+  var turPisti = kpi + spi;
+  var beklenen1 = turPisti * 10 + 13;
+  var beklenen2 = turPisti * 10 + 16;
+  if (turToplam !== beklenen1 && turToplam !== beklenen2) {
+    toast('Hatalı skor girdiniz, lütfen kontrol ediniz');
+    return;
+  }
+
   var tur = {k:k, s:s, kpi:kpi, spi:spi};
 
   if (!D.skorTakip) D.skorTakip = {};
