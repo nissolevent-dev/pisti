@@ -396,6 +396,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </div>
     </div>
 
+    <!-- Dağıtıcı seçimi -->
+    <div id="dagitici-sec" style="margin-bottom:12px;padding:10px 12px;background:var(--bg2);border-radius:9px">
+      <div style="font-size:.7rem;font-weight:700;color:var(--g2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.08em">İlk kim dağıtıyor?</div>
+      <div id="dagitici-butonlar" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+
     <!-- Takım başlıkları -->
     <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;margin-bottom:8px;align-items:center">
       <div style="width:28px"></div>
@@ -2526,12 +2532,46 @@ function renderAPChips() {
 // ── SKOR TAKİP ──
 // Firebase'de D.skorTakip[masa] = {turler:[{k,s,kpi,spi}], active:true}
 
+var _dagitici = null;
+
 function showSkorTakip() {
   if (!D.skorTakip) D.skorTakip = {};
   var masa = activeMasa || 1;
   document.getElementById('skor-masa-sel').value = masa;
   renderSkorTakip();
+  renderDagitici(masa);
   document.getElementById('ov-skor').classList.add('on');
+}
+
+function renderDagitici(masa) {
+  var masaData = masa === 1 ? D.round.masa1 : D.round.masa2;
+  _dagiticiPlayers = masaData ? (masaData.A || []).concat(masaData.B || []) : [];
+  var container = document.getElementById('dagitici-butonlar');
+  if (!container) return;
+  var html = '';
+  for (var i = 0; i < _dagiticiPlayers.length; i++) {
+    var p = _dagiticiPlayers[i];
+    var initial = p.trim()[0];
+    var isSelected = (_dagitici === p);
+    var borderColor = isSelected ? 'var(--g1)' : 'var(--bd2)';
+    var bgColor = isSelected ? 'var(--g1)' : 'var(--wh)';
+    var txtColor = isSelected ? '#fff' : 'var(--tx2)';
+    var fontSize = isSelected ? '1.5rem' : '.85rem';
+    var fontWeight = isSelected ? '900' : '500';
+    var firstName = p.split(' ')[0];
+    html += '<button onclick="secDagitici(' + i + ')" style="border:2px solid ' + borderColor + ';background:' + bgColor + ';color:' + txtColor + ';border-radius:8px;padding:6px 10px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">';
+    html += '<span style="font-size:' + fontSize + ';font-weight:' + fontWeight + '">' + initial + '</span>';
+    if (!isSelected) html += '<span style="font-size:.72rem;color:var(--tx3)">' + firstName + '</span>';
+    html += '</button>';
+  }
+  container.innerHTML = html;
+}
+
+function secDagitici(idx) {
+  var name = _dagiticiPlayers[idx];
+  _dagitici = (_dagitici === name) ? null : name;
+  var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+  renderDagitici(masa);
 }
 
 function getInitials(players) {
@@ -2544,6 +2584,7 @@ function getInitials(players) {
 function renderSkorTakip() {
   if (!D.skorTakip) D.skorTakip = {};
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+  renderDagitici(masa);
   var masaData = masa === 1 ? D.round.masa1 : D.round.masa2;
   var kIsim = masaData ? getInitials(masaData.A) : 'K';
   var sIsim = masaData ? getInitials(masaData.B) : 'S';
@@ -2704,6 +2745,7 @@ var _lastSavedGame = null; // Geri alma için son kaydedilen oyun
 
 function bitirOyun() {
   _httbAskedThisGame = false; // Yeni oyun için sıfırla
+  _dagitici = null;
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
   if (!D.skorTakip || !D.skorTakip['m'+masa] || !D.skorTakip['m'+masa].turler.length) {
     toast('Henüz tur girilmedi'); return;
