@@ -2060,7 +2060,8 @@ function renderStat() {
     // En az oynayan: İzel içeren ve 5'ten az oynayan çiftleri hariç tut
     var pairPlayers = k.split('|');
     var hasIzel = pairPlayers[0].indexOf('İzel') >= 0 || pairPlayers[1].indexOf('İzel') >= 0;
-    if (!hasIzel && pairCount[k] >= 5 && pairCount[k] < minPair) { minPair = pairCount[k]; minPairKey = k; }
+    var hasElvi = pairPlayers[0].indexOf('Elvi') >= 0 || pairPlayers[1].indexOf('Elvi') >= 0;
+    if (!hasIzel && !hasElvi && pairCount[k] >= 5 && pairCount[k] < minPair) { minPair = pairCount[k]; minPairKey = k; }
   }
   var pairNames = maxPairKey ? maxPairKey.split('|').map(function(p){ return p.split(' ')[0]; }).join(' & ') : '-';
   var minPairNames = minPairKey ? minPairKey.split('|').map(function(p){ return p.split(' ')[0]; }).join(' & ') : '-';
@@ -2126,26 +2127,26 @@ function renderStat() {
     }
   }
 
-  // Ortak ikilisi istatistikleri (dışarıda kalanlar - partners)
-  var partnerStats = {}; // "A|B": {games, wins, losses}
+  // Ortak ikilisi istatistikleri - sadece aynı masada aynı takımda oynayan ikililer
+  var partnerStats = {};
   for (var i = 0; i < sortedGames.length; i++) {
     var g = sortedGames[i];
-    if (!g.partners || !g.partners.length) continue;
-    // partners dizisi varsa ikili bul
-    var parts = g.partners;
-    for (var a2 = 0; a2 < parts.length; a2++) {
-      for (var b2 = a2+1; b2 < parts.length; b2++) {
-        var pk = [parts[a2], parts[b2]].sort().join('|');
-        if (!partnerStats[pk]) partnerStats[pk] = {games:0, wins:0, losses:0, earn:0};
-        partnerStats[pk].games++;
-        // Bu ikilinin aynı takımda mı olduğuna bak
-        var inTeamA = g.teamA && g.teamA.indexOf(parts[a2]) >= 0 && g.teamA.indexOf(parts[b2]) >= 0;
-        var inTeamB = g.teamB && g.teamB.indexOf(parts[a2]) >= 0 && g.teamB.indexOf(parts[b2]) >= 0;
-        if (inTeamA || inTeamB) {
-          var won = (inTeamA && g.winner==='A') || (inTeamB && g.winner==='B');
-          if (won) partnerStats[pk].wins++;
+    var partnerSet = {};
+    if (g.partners) { for (var pi3=0; pi3<g.partners.length; pi3++) partnerSet[g.partners[pi3]] = true; }
+
+    var teams = [g.teamA || [], g.teamB || []];
+    var teamWinner = [g.winner === 'A', g.winner === 'B'];
+    for (var t = 0; t < teams.length; t++) {
+      // Sadece masada oynayan (ortak olmayan) kişileri filtrele
+      var tablePlayers = teams[t].filter(function(p) { return !partnerSet[p]; });
+      for (var a2 = 0; a2 < tablePlayers.length; a2++) {
+        for (var b2 = a2+1; b2 < tablePlayers.length; b2++) {
+          var pk = [tablePlayers[a2], tablePlayers[b2]].sort().join('|');
+          if (!partnerStats[pk]) partnerStats[pk] = {games:0, wins:0, losses:0, earn:0};
+          partnerStats[pk].games++;
+          if (teamWinner[t]) partnerStats[pk].wins++;
           else partnerStats[pk].losses++;
-          var earn = ((g.payMap[parts[a2]]||0) + (g.payMap[parts[b2]]||0));
+          var earn = (g.payMap[tablePlayers[a2]]||0) + (g.payMap[tablePlayers[b2]]||0);
           partnerStats[pk].earn += earn;
         }
       }
@@ -2341,7 +2342,7 @@ function renderStat() {
     rubi: {title:'En Çok Rubikon Yiyen — Top 5', items: rubiArr},
     rubiWin: {title:'En Çok Rubikon Yapan — Top 5', items: Object.keys(rubiWinCount).map(function(p){return {name:p.split(' ')[0],val:rubiWinCount[p],color:'var(--win)'};}).sort(function(a,b){return b.val-a.val;})},
     pair: {title:'En Sık Birlikte Oynayan — Top 5', items: pairArr},
-    minPair: {title:'En Az Birlikte Oynayan — Top 5', items: pairArr.filter(function(x){ return x.name.indexOf('İzel') < 0 && x.valNum >= 5; }).reverse()},
+    minPair: {title:'En Az Birlikte Oynayan — Top 5', items: pairArr.filter(function(x){ return x.name.indexOf('İzel') < 0 && x.name.indexOf('Elvi') < 0 && x.valNum >= 5; }).reverse()},
     sessWin: {title:'Oturumda En Çok Kazanılan — Top 5', items: sessWinArr},
     sessLoss: {title:'Oturumda En Çok Kaybedilen — Top 5', items: sessLossArr},
     partEarn: {title:'En Karlı Ortak İkilisi — Top 5', items: partEarnArr},
