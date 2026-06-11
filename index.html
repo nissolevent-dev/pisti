@@ -2576,7 +2576,20 @@ function showSkorTakip() {
 
 function renderDagitici(masa) {
   var masaData = masa === 1 ? D.round.masa1 : D.round.masa2;
-  _dagiticiPlayers = masaData ? (masaData.A || []).concat(masaData.B || []) : [];
+  // Dışarıdan ortakları hariç tut
+  var partnerSet = {};
+  if (D.round && D.round.partners) {
+    for (var p in D.round.partners) {
+      var pv = D.round.partners[p];
+      if (pv && typeof pv === 'object') {
+        var inThisMasa = (masa === 1 && (pv.m1 === 'A' || pv.m1 === 'B')) ||
+                         (masa === 2 && (pv.m2 === 'A' || pv.m2 === 'B'));
+        if (inThisMasa) partnerSet[p] = true;
+      }
+    }
+  }
+  var allPlayers = masaData ? (masaData.A || []).concat(masaData.B || []) : [];
+  _dagiticiPlayers = allPlayers.filter(function(p) { return !partnerSet[p]; });
   var container = document.getElementById('dagitici-butonlar');
   if (!container) return;
   var html = '';
