@@ -397,10 +397,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div class="ovttl" style="margin-bottom:0">📊 Skor Takip</div>
       <div style="display:flex;gap:6px">
-        <select id="skor-masa-sel" style="font-size:.82rem;padding:8px 28px 8px 10px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit;min-width:90px;-webkit-appearance:none;appearance:none;background:var(--wh) url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'7\'%3E%3Cpath d=\'M1 1l4 4 4-4\' stroke=\'%232d6a4f\' stroke-width=\'1.8\' fill=\'none\' stroke-linecap=\'round\'/%3E%3C/svg%3E') no-repeat right 8px center" onchange="renderSkorTakip()">
-          <option value="1">Masa 1</option>
-          <option value="2">Masa 2</option>
-        </select>
+<div style="display:flex;gap:4px">
+          <button id="skor-masa-btn1" class="btn bp bs" style="font-size:.78rem;padding:6px 10px" onclick="setSkorMasa(1)">Masa 1</button>
+          <button id="skor-masa-btn2" class="btn bo bs" style="font-size:.78rem;padding:6px 10px" onclick="setSkorMasa(2)">Masa 2</button>
+        </div>
+        <input type="hidden" id="skor-masa-sel" value="1">
         <button class="btn bo bs" onclick="closeOv('ov-skor')">Kapat</button>
       </div>
     </div>
@@ -1010,6 +1011,8 @@ function startPlay() {
   saveD();
   renderGameCards();
   goS(4);
+  // Direkt skor ekranını aç
+  setTimeout(function() { showSkorTakip(); }, 100);
 }
 
 // ── PARA HESABI ──
@@ -2543,11 +2546,26 @@ function renderAPChips() {
 // Firebase'de D.skorTakip[masa] = {turler:[{k,s,kpi,spi}], active:true}
 
 var _dagitici = null;
+var _skorMasa = 1;
+
+function setSkorMasa(masa) {
+  _skorMasa = masa;
+  document.getElementById('skor-masa-sel').value = masa;
+  var btn1 = document.getElementById('skor-masa-btn1');
+  var btn2 = document.getElementById('skor-masa-btn2');
+  if (btn1 && btn2) {
+    btn1.className = masa === 1 ? 'btn bp bs' : 'btn bo bs';
+    btn2.className = masa === 2 ? 'btn bp bs' : 'btn bo bs';
+    btn1.style.fontSize = '.78rem'; btn1.style.padding = '6px 10px';
+    btn2.style.fontSize = '.78rem'; btn2.style.padding = '6px 10px';
+  }
+  renderSkorTakip();
+}
 
 function showSkorTakip() {
   if (!D.skorTakip) D.skorTakip = {};
   var masa = activeMasa || 1;
-  document.getElementById('skor-masa-sel').value = masa;
+  setSkorMasa(masa);
   renderSkorTakip();
   renderDagitici(masa);
   document.getElementById('ov-skor').classList.add('on');
@@ -2594,6 +2612,9 @@ function getInitials(players) {
 function renderSkorTakip() {
   if (!D.skorTakip) D.skorTakip = {};
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+  // Masa 2 butonu sadece masa2active ise göster
+  var btn2 = document.getElementById('skor-masa-btn2');
+  if (btn2) btn2.style.display = D.round && D.round.masa2active ? '' : 'none';
   renderDagitici(masa);
   var masaData = masa === 1 ? D.round.masa1 : D.round.masa2;
   var kIsim = masaData ? getInitials(masaData.A) : 'K';
