@@ -2545,7 +2545,7 @@ function renderAPChips() {
 // ── SKOR TAKİP ──
 // Firebase'de D.skorTakip[masa] = {turler:[{k,s,kpi,spi}], active:true}
 
-var _dagitici = null;
+var _dagitici = {};  // masa bazlı: {1: 'Nisso Levent', 2: 'Ari Ovadya'}
 var _skorMasa = 1;
 
 function setSkorMasa(masa) {
@@ -2580,7 +2580,7 @@ function renderDagitici(masa) {
   for (var i = 0; i < _dagiticiPlayers.length; i++) {
     var p = _dagiticiPlayers[i];
     var initial = p.trim()[0];
-    var isSelected = (_dagitici === p);
+    var isSelected = (_dagitici[masa] === p);
     var borderColor = isSelected ? 'var(--g1)' : 'var(--bd2)';
     var bgColor = isSelected ? 'var(--g1)' : 'var(--wh)';
     var txtColor = isSelected ? '#fff' : 'var(--tx2)';
@@ -2597,8 +2597,8 @@ function renderDagitici(masa) {
 
 function secDagitici(idx) {
   var name = _dagiticiPlayers[idx];
-  _dagitici = (_dagitici === name) ? null : name;
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+  _dagitici[masa] = (_dagitici[masa] === name) ? null : name;
   renderDagitici(masa);
 }
 
@@ -2786,7 +2786,8 @@ var _lastSavedGame = null; // Geri alma için son kaydedilen oyun
 
 function bitirOyun() {
   _httbAskedThisGame = false; // Yeni oyun için sıfırla
-  _dagitici = null;
+  var _bm = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+  _dagitici[_bm] = null;
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
   if (!D.skorTakip || !D.skorTakip['m'+masa] || !D.skorTakip['m'+masa].turler.length) {
     toast('Henüz tur girilmedi'); return;
