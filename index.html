@@ -345,6 +345,17 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <div id="toast"></div>
 
+<!-- Onay Overlay -->
+<div class="ov" id="ov-onay" style="z-index:1001">
+  <div class="ovbox" style="max-width:320px;text-align:center">
+    <div id="onay-mesaj" style="font-size:.95rem;font-weight:600;color:var(--tx1);margin-bottom:20px">Emin misiniz?</div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button id="onay-evet" class="btn bd_btn" style="min-width:90px">Evet</button>
+      <button class="btn bo" style="min-width:90px" onclick="closeOv('ov-onay')">Vazgeç</button>
+    </div>
+  </div>
+</div>
+
 <!-- Hata Overlay -->
 <div class="ov" id="ov-hata" style="z-index:1001">
   <div class="ovbox" style="max-width:320px;text-align:center">
@@ -2776,17 +2787,18 @@ function saveSkorTakip() {
 }
 
 function delTur(idx) {
-  var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
-  if (!D.skorTakip || !D.skorTakip['m'+masa]) return;
-  // Silinen tur HTTB içeriyorsa flag'i sıfırla
-  var tur = D.skorTakip['m'+masa].turler[idx];
-  if (tur && tur.httb) {
-    _httbAskedThisGame = false;
-  }
-  D.skorTakip['m'+masa].turler.splice(idx, 1);
-  saveSkorTakip();
-  renderSkorTakip();
-  toast('Tur silindi');
+  onaySor('Turu silmek istiyor musunuz?', function() {
+    var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+    if (!D.skorTakip || !D.skorTakip['m'+masa]) return;
+    var tur = D.skorTakip['m'+masa].turler[idx];
+    if (tur && tur.httb) {
+      _httbAskedThisGame = false;
+    }
+    D.skorTakip['m'+masa].turler.splice(idx, 1);
+    saveSkorTakip();
+    renderSkorTakip();
+    toast('Tur silindi');
+  });
 }
 
 function resetSkor() {
@@ -3111,6 +3123,17 @@ function showTop5(key) {
   if (!d.items.length) html = '<div class="empty">Veri yok</div>';
   document.getElementById('top5-content').innerHTML = html;
   document.getElementById('ov-top5').classList.add('on');
+}
+
+// ── ONAY ──
+function onaySor(mesaj, callback) {
+  document.getElementById('onay-mesaj').textContent = mesaj;
+  var btn = document.getElementById('onay-evet');
+  btn.onclick = function() {
+    closeOv('ov-onay');
+    callback();
+  };
+  document.getElementById('ov-onay').classList.add('on');
 }
 
 // ── ALARM ──
