@@ -3257,6 +3257,19 @@ function saveManualSession() {
   closeOv('ov-manual');
   renderHesap();
   toast('Oturum sonucu kaydedildi');
+
+  // Paylaşım görseli için veri hazırla
+  var shareData = {
+    date: dateStr,
+    games: 0,
+    players: players,
+    summary: summary,
+    allLdg: JSON.parse(JSON.stringify(D.ldg)),
+    initialLdg: JSON.parse(JSON.stringify(D.initialLdg || {})),
+    pool: D.pool.slice(),
+    winLoss: JSON.parse(JSON.stringify(D.winLoss || {}))
+  };
+  setTimeout(function() { showShareCard(shareData); }, 400);
 }
 
 // ── ONAY ──
