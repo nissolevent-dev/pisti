@@ -299,6 +299,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div id="h-init-form" style="margin-bottom:10px"></div>
   <div id="h-all-ldg"></div>
   <div class="sec">Kayitli Oturumlar</div>
+  <div style="margin-bottom:10px">
+    <button class="btn bo bfw" onclick="showManualSession()">+ Eski Oturum Sonucu Gir</button>
+  </div>
   <div id="h-closed"></div>
 
   <div class="sec">Arşiv</div>
@@ -344,6 +347,28 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <div id="toast"></div>
+
+<!-- Manuel Oturum Girişi Overlay -->
+<div class="ov" id="ov-manual">
+  <div class="ovbox" style="max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="ovttl" style="margin-bottom:0">Eski Oturum Sonucu Gir</div>
+      <button class="btn bo bs" onclick="closeOv('ov-manual')">Kapat</button>
+    </div>
+    <p style="font-size:.78rem;color:var(--tx3);margin-bottom:14px">Uygulama kullanılmadan oynanan bir oturumun kişi başı kazanç/kayıp tutarlarını girin. Oyun detayı kaydedilmez.</p>
+
+    <div style="margin-bottom:10px">
+      <label>Tarih</label>
+      <input type="date" id="manual-date" style="width:100%;padding:9px;border:1.5px solid var(--bd2);border-radius:8px;font-family:inherit;font-size:.9rem">
+    </div>
+
+    <div class="ctitle" style="margin-top:14px;margin-bottom:8px">Katılımcılar ve Tutarlar</div>
+    <div id="manual-players"></div>
+    <button class="btn bo bs" style="margin-top:8px" onclick="addManualPlayerRow()">+ Oyuncu Ekle</button>
+
+    <button class="btn bp bfw" style="margin-top:16px" onclick="saveManualSession()">Kaydet</button>
+  </div>
+</div>
 
 <!-- Onay Overlay -->
 <div class="ov" id="ov-onay" style="z-index:1001">
@@ -1798,8 +1823,8 @@ function renderHesap() {
       // O oturuma ait oyunlar - sessGameIds varsa onunla, yoksa tarihe gore bul
       var sessGamesHtml = '';
       var matchIds = s.sessGameIds || [];
-      // sessGameIds yoksa tarihe gore eşleştir (eski oturumlar)
-      if (!matchIds.length) {
+      // sessGameIds yoksa tarihe gore eşleştir (eski oturumlar) - manuel girişlerde yapma
+      if (!matchIds.length && !s.manual) {
         for (var gi4 = 0; gi4 < D.allGames.length; gi4++) {
           if (D.allGames[gi4].date === s.date) matchIds.push(D.allGames[gi4].id);
         }
@@ -3124,6 +3149,94 @@ function showTop5(key) {
   if (!d.items.length) html = '<div class="empty">Veri yok</div>';
   document.getElementById('top5-content').innerHTML = html;
   document.getElementById('ov-top5').classList.add('on');
+}
+
+// ── MANUEL OTURUM GİRİŞİ ──
+var _manualRowCount = 0;
+
+function showManualSession() {
+  _manualRowCount = 0;
+  document.getElementById('manual-players').innerHTML = '';
+  document.getElementById('manual-date').valueAsDate = new Date();
+  // Varsayılan 4 satır ekle
+  for (var i = 0; i < 4; i++) addManualPlayerRow();
+  document.getElementById('ov-manual').classList.add('on');
+}
+
+function addManualPlayerRow() {
+  var idx = _manualRowCount++;
+  var container = document.getElementById('manual-players');
+  var row = document.createElement('div');
+  row.id = 'manual-row-' + idx;
+  row.style = 'display:flex;gap:6px;margin-bottom:8px;align-items:center';
+
+  var poolOptions = '<option value="">- Oyuncu Seç -</option>';
+  for (var i = 0; i < D.pool.length; i++) {
+    poolOptions += '<option value="' + D.pool[i] + '">' + D.pool[i] + '</option>';
+  }
+
+  row.innerHTML =
+    '<select id="manual-name-' + idx + '" style="flex:1.4;padding:8px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit;font-size:.85rem">' + poolOptions + '</select>' +
+    '<input type="number" id="manual-amt-' + idx + '" placeholder="±TL" style="flex:1;padding:8px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit;font-size:.85rem;text-align:center">' +
+    '<button onclick="document.getElementById(\'manual-row-' + idx + '\').remove()" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:1rem;padding:4px 8px">×</button>';
+
+  container.appendChild(row);
+}
+
+function saveManualSession() {
+  var dateInput = document.getElementById('manual-date').value;
+  if (!dateInput) { toast('Tarih girin'); return; }
+  var dateObj = new Date(dateInput);
+  var dateStr = dateObj.toLocaleDateString('tr-TR');
+
+  var summary = {};
+  var rows = document.querySelectorAll('[id^="manual-row-"]');
+  for (var i = 0; i < rows.length; i++) {
+    var rowId = rows[i].id.replace('manual-row-', '');
+    var nameEl = document.getElementById('manual-name-' + rowId);
+    var amtEl = document.getElementById('manual-amt-' + rowId);
+    if (!nameEl || !amtEl) continue;
+    var name = nameEl.value;
+    var amt = parseFloat(amtEl.value);
+    if (!name || isNaN(amt)) continue;
+    summary[name] = (summary[name] || 0) + amt;
+  }
+
+  var players = Object.keys(summary);
+  if (players.length < 2) { toast('En az 2 oyuncu girin'); return; }
+
+  // Toplam sıfır mı kontrol et (opsiyonel uyarı)
+  var total = 0;
+  for (var p in summary) total += summary[p];
+  if (Math.abs(total) > 0.01) {
+    if (!confirm('Toplam tutarlar sıfır olmuyor (fark: ' + total.toFixed(0) + 'TL). Devam edilsin mi?')) return;
+  }
+
+  // ldg ve winLoss güncelle
+  if (!D.winLoss) D.winLoss = {};
+  for (var p in summary) {
+    D.ldg[p] = (D.ldg[p] || 0) + summary[p];
+    if (!D.winLoss[p]) D.winLoss[p] = {w:0, l:0};
+    if (summary[p] > 0) D.winLoss[p].w = (D.winLoss[p].w || 0) + 1;
+    else if (summary[p] < 0) D.winLoss[p].l = (D.winLoss[p].l || 0) + 1;
+  }
+
+  // Kayıtlı Oturumlar'a ekle (oyun detayı olmadan)
+  if (!D.closedSess) D.closedSess = [];
+  D.closedSess.push({
+    id: Date.now(),
+    date: dateStr,
+    games: 0,
+    players: players,
+    summary: summary,
+    sessGameIds: [],
+    manual: true
+  });
+
+  saveD();
+  closeOv('ov-manual');
+  renderHesap();
+  toast('Oturum sonucu kaydedildi');
 }
 
 // ── ONAY ──
