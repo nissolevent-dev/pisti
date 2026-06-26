@@ -2415,6 +2415,18 @@ function renderStat() {
       monthlyData[monthKey][p] = (monthlyData[monthKey][p]||0) + g.payMap[p];
     }
   }
+  // Manuel oturumları da trende ekle
+  for (var i = 0; i < allSess.length; i++) {
+    var s = allSess[i];
+    if (!s.manual || !s.date) continue;
+    var partsM = s.date.split('.');
+    if (partsM.length < 3) continue;
+    var monthKeyM = partsM[1] + '.' + partsM[2];
+    if (!monthlyData[monthKeyM]) monthlyData[monthKeyM] = {};
+    for (var p in s.summary) {
+      monthlyData[monthKeyM][p] = (monthlyData[monthKeyM][p]||0) + s.summary[p];
+    }
+  }
   var months = Object.keys(monthlyData).sort(function(a,b){
     var ap = a.split('.'); var bp = b.split('.');
     return (ap[1]*12+parseInt(ap[0])) - (bp[1]*12+parseInt(bp[0]));
