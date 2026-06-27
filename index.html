@@ -3183,12 +3183,29 @@ function addManualPlayerRow() {
   row.style = 'display:flex;gap:6px;margin-bottom:8px;align-items:center';
 
   row.innerHTML =
-    '<select id="manual-name-' + idx + '" onchange="updateManualDropdowns()" style="flex:1.4;padding:8px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit;font-size:.85rem"></select>' +
-    '<input type="number" id="manual-amt-' + idx + '" placeholder="±TL" inputmode="numeric" style="flex:1;padding:8px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit;font-size:.85rem;text-align:center">' +
+    '<select id="manual-name-' + idx + '" onchange="updateManualDropdowns()" style="flex:1.3;padding:8px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit;font-size:.85rem"></select>' +
+    '<button id="manual-sign-' + idx + '" data-sign="1" onclick="toggleManualSign(' + idx + ')" style="width:34px;height:34px;border:1.5px solid var(--bd2);border-radius:7px;background:var(--winbg);color:var(--win);font-weight:700;font-size:1rem;cursor:pointer">+</button>' +
+    '<input type="text" id="manual-amt-' + idx + '" placeholder="TL" inputmode="decimal" pattern="[0-9]*" style="flex:1;padding:8px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit;font-size:.85rem;text-align:center">' +
     '<button onclick="document.getElementById(\'manual-row-' + idx + '\').remove();updateManualDropdowns()" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:1rem;padding:4px 8px">×</button>';
 
   container.appendChild(row);
   updateManualDropdowns();
+}
+
+function toggleManualSign(idx) {
+  var btn = document.getElementById('manual-sign-' + idx);
+  var isPos = btn.getAttribute('data-sign') === '1';
+  if (isPos) {
+    btn.setAttribute('data-sign', '-1');
+    btn.textContent = '−';
+    btn.style.background = 'var(--losebg)';
+    btn.style.color = 'var(--lose)';
+  } else {
+    btn.setAttribute('data-sign', '1');
+    btn.textContent = '+';
+    btn.style.background = 'var(--winbg)';
+    btn.style.color = 'var(--win)';
+  }
 }
 
 function updateManualDropdowns() {
@@ -3227,10 +3244,13 @@ function saveManualSession() {
     var rowId = rows[i].id.replace('manual-row-', '');
     var nameEl = document.getElementById('manual-name-' + rowId);
     var amtEl = document.getElementById('manual-amt-' + rowId);
+    var signEl = document.getElementById('manual-sign-' + rowId);
     if (!nameEl || !amtEl) continue;
     var name = nameEl.value;
     var amt = parseFloat(amtEl.value);
     if (!name || isNaN(amt)) continue;
+    var sign = signEl ? parseInt(signEl.getAttribute('data-sign')) : 1;
+    amt = Math.abs(amt) * sign;
     summary[name] = (summary[name] || 0) + amt;
   }
 
