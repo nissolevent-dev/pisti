@@ -3184,7 +3184,7 @@ function addManualPlayerRow() {
 
   row.innerHTML =
     '<select id="manual-name-' + idx + '" onchange="updateManualDropdowns()" style="flex:1.4;padding:8px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit;font-size:.85rem"></select>' +
-    '<input type="number" id="manual-amt-' + idx + '" placeholder="±TL" style="flex:1;padding:8px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit;font-size:.85rem;text-align:center">' +
+    '<input type="number" id="manual-amt-' + idx + '" placeholder="±TL" inputmode="numeric" style="flex:1;padding:8px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit;font-size:.85rem;text-align:center">' +
     '<button onclick="document.getElementById(\'manual-row-' + idx + '\').remove();updateManualDropdowns()" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:1rem;padding:4px 8px">×</button>';
 
   container.appendChild(row);
