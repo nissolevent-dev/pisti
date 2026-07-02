@@ -348,6 +348,28 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <div id="toast"></div>
 
+<!-- Oyun Modu Seçim Overlay -->
+<div class="ov" id="ov-oyun-modu" style="z-index:500">
+  <div class="ovbox" style="max-width:340px;text-align:center">
+    <div class="ovttl" style="margin-bottom:8px">Oyun Türü</div>
+    <p style="font-size:.82rem;color:var(--tx3);margin-bottom:20px">5 oyuncu seçildi. Nasıl oynamak istersiniz?</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn bp bfw" onclick="baslaNormal()">Normal Oyun</button>
+      <button class="btn bo bfw" onclick="showSiraliSiralama()">Sıralı Oyun</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sıralı Oyun Sıralama Overlay -->
+<div class="ov" id="ov-sirali" style="z-index:500">
+  <div class="ovbox" style="max-width:360px">
+    <div class="ovttl" style="margin-bottom:8px">Sıralı Oyun — Sıralama</div>
+    <p style="font-size:.78rem;color:var(--tx3);margin-bottom:14px">Oyuncuları 1'den 5'e sıralayın. Masalar otomatik kurulacak.</p>
+    <div id="sirali-siralama"></div>
+    <button class="btn bp bfw" style="margin-top:14px" onclick="baslaSirali()">Başla</button>
+  </div>
+</div>
+
 <!-- Manuel Oturum Girişi Overlay -->
 <div class="ov" id="ov-manual">
   <div class="ovbox" style="max-height:90vh;overflow-y:auto">
@@ -855,8 +877,96 @@ function toS3() {
   D.sess.mPişti = parseFloat(document.getElementById('m-pişti').value) || 0;
   D.sess.mKaz = parseFloat(document.getElementById('m-kaz').value) || 0;
   saveD();
+  // 5 oyuncu seçiliyse oyun modu sor
+  if (D.sess.players.length === 5) {
+    document.getElementById('ov-oyun-modu').classList.add('on');
+  } else {
+    buildSeats();
+    goS(3);
+  }
+}
+
+function baslaNormal() {
+  closeOv('ov-oyun-modu');
+  D.siraliMod = false;
   buildSeats();
   goS(3);
+}
+
+function showSiraliSiralama() {
+  closeOv('ov-oyun-modu');
+  var players = D.sess.players;
+  var html = '';
+  for (var i = 0; i < 5; i++) {
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
+    html += '<span style="font-size:.9rem;font-weight:700;color:var(--g1);min-width:20px">' + (i+1) + '.</span>';
+    html += '<select id="sirali-p' + i + '" style="flex:1;padding:8px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit;font-size:.85rem">';
+    html += '<option value="">- Seç -</option>';
+    for (var j = 0; j < players.length; j++) {
+      html += '<option value="' + players[j] + '">' + players[j] + '</option>';
+    }
+    html += '</select></div>';
+  }
+  document.getElementById('sirali-siralama').innerHTML = html;
+  document.getElementById('ov-sirali').classList.add('on');
+}
+
+// Rotasyon tablosu (0-indexed)
+var ROTASYON = [
+  [0,1,2,3,4],  // K=1+2, S=3+4, D=5
+  [3,4,1,2,0],  // K=4+5, S=2+3, D=1
+  [2,4,0,3,1],  // K=3+5, S=1+4, D=2
+  [3,1,4,0,2],  // K=4+2, S=5+1, D=3
+  [0,2,4,1,3],  // K=1+3, S=5+2, D=4
+];
+var _siraliSira = [];
+var _siraliOyunIdx = 0;
+
+function baslaSirali() {
+  var sira = [];
+  for (var i = 0; i < 5; i++) {
+    var val = document.getElementById('sirali-p' + i).value;
+    if (!val || sira.indexOf(val) >= 0) { toast((i+1) + '. sıra boş veya tekrarlı'); return; }
+    sira.push(val);
+  }
+  _siraliSira = sira;
+  _siraliOyunIdx = 0;
+  D.siraliMod = true;
+  closeOv('ov-sirali');
+  kurSiraliOyun();
+}
+
+function kurSiraliOyun() {
+  if (_siraliOyunIdx >= 5) {
+    D.siraliMod = false;
+    saveD();
+    document.getElementById('ov-oyun-modu').classList.add('on');
+    return;
+  }
+  var rot = ROTASYON[_siraliOyunIdx];
+  var k1 = _siraliSira[rot[0]], k2 = _siraliSira[rot[1]];
+  var s1 = _siraliSira[rot[2]], s2 = _siraliSira[rot[3]];
+  var dis = _siraliSira[rot[4]];
+
+  D.round.masa1 = { A: [k1, k2], B: [s1, s2] };
+  D.round.masa1active = true;
+  D.round.masa2active = false;
+  D.round.partners = {};
+  D.round.partners[dis] = { m1: 'B' };
+
+  if (!D.started) D.started = true;
+  saveD();
+  updateMasaLabels();
+  renderSessChips();
+  renderGameCards();
+  goS(4);
+  setTimeout(function() {
+    setSkorMasa(1);
+    renderSkorTakip();
+    renderDagitici(1);
+    document.getElementById('ov-skor').classList.add('on');
+  }, 150);
+  toast((_siraliOyunIdx + 1) + '. oyun kuruldu');
 }
 
 // ── SEATS ──
@@ -2888,6 +2998,13 @@ function bitirOyun() {
 
   // Otomatik kaydet
   saveGame(masa);
+
+  // Sıralı modda sonraki oyuna geç
+  if (D.siraliMod) {
+    _siraliOyunIdx++;
+    setTimeout(function() { kurSiraliOyun(); }, 600);
+    return;
+  }
 
   // Geri alma butonu göster
   showUndoToast(masa, savedTurler);
