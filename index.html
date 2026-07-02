@@ -948,11 +948,11 @@ function kurSiraliOyun() {
   var s1 = _siraliSira[rot[2]], s2 = _siraliSira[rot[3]];
   var dis = _siraliSira[rot[4]];
 
-  D.round.masa1 = { A: [k1, k2], B: [s1, s2] };
+  D.round.masa1 = { A: [k1, k2], B: [s1, s2, dis] };
   D.round.masa1active = true;
   D.round.masa2active = false;
   D.round.partners = {};
-  D.round.partners[dis] = { m1: 'B' };
+  D.round.partners[dis] = { m1: 'B', m2: null };
 
   if (!D.started) D.started = true;
   saveD();
