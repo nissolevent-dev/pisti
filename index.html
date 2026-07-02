@@ -900,7 +900,7 @@ function showSiraliSiralama() {
   for (var i = 0; i < 5; i++) {
     html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
     html += '<span style="font-size:.9rem;font-weight:700;color:var(--g1);min-width:20px">' + (i+1) + '.</span>';
-    html += '<select id="sirali-p' + i + '" onchange="updateSiraliDropdowns()" style="flex:1;padding:8px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit;font-size:.85rem">';
+    html += '<select id="sirali-p' + i + '" onchange="updateSiraliDropdowns()" oninput="updateSiraliDropdowns()" style="flex:1;padding:8px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit;font-size:.85rem">';
     html += '<option value="">- Seç -</option>';
     for (var j = 0; j < players.length; j++) {
       html += '<option value="' + players[j] + '">' + players[j] + '</option>';
@@ -916,7 +916,7 @@ function updateSiraliDropdowns() {
   var selected = {};
   for (var i = 0; i < 5; i++) {
     var sel = document.getElementById('sirali-p' + i);
-    if (sel && sel.value) selected[sel.value] = i;
+    if (sel && sel.value) selected[sel.value] = String(i);
   }
   for (var i = 0; i < 5; i++) {
     var sel = document.getElementById('sirali-p' + i);
@@ -925,7 +925,7 @@ function updateSiraliDropdowns() {
     var opts = '<option value="">- Seç -</option>';
     for (var j = 0; j < players.length; j++) {
       var p = players[j];
-      if (!selected[p] || selected[p] === i) {
+      if (!selected[p] || selected[p] === String(i)) {
         opts += '<option' + (p === cur ? ' selected' : '') + ' value="' + p + '">' + p + '</option>';
       }
     }
