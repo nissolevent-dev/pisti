@@ -572,6 +572,7 @@ var DEF = {
   initialLdg:{},
   winLoss:{},
   skorTakip:{},
+  dagitici:{},
   arsiv:[],
   closedSess:[],
   screen:1,
@@ -650,7 +651,19 @@ REF.on('value', function(snap) {
   if (!D.winLoss) D.winLoss = {};
   if (!D.arsiv) D.arsiv = [];
   if (!D.skorTakip) D.skorTakip = {};
+  if (!D.dagitici) D.dagitici = {};
   if (!D.closedSess) D.closedSess = [];
+
+  // Dagitici seçimini senkronize et
+  if (val && val.dagitici) {
+    for (var dm in val.dagitici) {
+      _dagitici[parseInt(dm)] = val.dagitici[dm];
+    }
+    if (document.getElementById('ov-skor') && document.getElementById('ov-skor').classList.contains('on')) {
+      var curMasa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+      renderDagitici(curMasa);
+    }
+  }
 
   syncDot('#22c55e');
   if (firstLoad) {
@@ -2795,6 +2808,10 @@ function secDagitici(idx) {
   var name = _dagiticiPlayers[idx];
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
   _dagitici[masa] = (_dagitici[masa] === name) ? null : name;
+  // Firebase'e kaydet
+  if (!D.dagitici) D.dagitici = {};
+  D.dagitici[masa] = _dagitici[masa] || null;
+  REF.child('dagitici').set(D.dagitici);
   renderDagitici(masa);
 }
 
