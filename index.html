@@ -2949,7 +2949,8 @@ function addTur() {
     var cumFark = Math.abs(cumK - cumS);
     var onde51Gecti = (cumK >= 51 || cumS >= 51);
     var birTarafKaybetti = (cumK < 51 || cumS < 51);
-    if (onde51Gecti && birTarafKaybetti && cumFark > 40) {
+    var oyunBitmedi = (cumK < 101 && cumS < 101);
+    if (onde51Gecti && birTarafKaybetti && cumFark > 40 && oyunBitmedi) {
       _httbPendingTur = turler2.length - 1;
       _httbMasa = masa;
       playAlarm();
