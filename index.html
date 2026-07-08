@@ -998,6 +998,11 @@ function kurSiraliOyun() {
 
   if (!D.started) D.started = true;
   saveD();
+  // Dağıtıcı seçimini sıfırla
+  _dagitici = {};
+  if (!D.dagitici) D.dagitici = {};
+  D.dagitici[1] = null;
+  REF.child('dagitici').set({});
   updateMasaLabels();
   renderSessChips();
   renderGameCards();
@@ -1427,6 +1432,9 @@ function _delGameExec(id) {
   // Tüm oturum oyunları silindiyse started'ı sıfırla
   if (D.sessGames.length === 0) {
     D.started = false;
+    D.siraliMod = false;
+    _siraliSira = [];
+    _siraliOyunIdx = 0;
     D.round = {
       masa1: {A:[], B:[]},
       masa2: {A:[], B:[]},
@@ -1513,6 +1521,9 @@ function _closeSessionExec() {
   D.sessGames = []; D.sessLdg = {}; D.sess.players = [];
   D.round = JSON.parse(JSON.stringify(DEF.round));
   D.started = false;
+  D.siraliMod = false;
+  _siraliSira = [];
+  _siraliOyunIdx = 0;
   saveD();
   renderPool();
   switchToOyun();
