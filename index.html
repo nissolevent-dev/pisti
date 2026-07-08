@@ -576,6 +576,7 @@ var DEF = {
   winLoss:{},
   skorTakip:{},
   dagitici:{},
+  siraliMod: false,
   arsiv:[],
   closedSess:[],
   screen:1,
@@ -905,6 +906,9 @@ function toS3() {
 function baslaNormal() {
   closeOv('ov-oyun-modu');
   D.siraliMod = false;
+  _siraliSira = [];
+  _siraliOyunIdx = 0;
+  saveD();
   buildSeats();
   goS(3);
 }
@@ -1322,12 +1326,14 @@ function saveGame(masa, turler) {
   // Ama artık masa kurulumu bitti, D.round'dan okuyamayız
   // Çözüm: partners listesindeki kişiler = D.round.partners'ta bu masa için seçili olanlar
   var partners_in_game = [];
+  var masaPlayers = (masaData.A || []).concat(masaData.B || []);
   for (var pi2 in D.round.partners) {
     var pval = D.round.partners[pi2];
     if (pval && typeof pval === 'object') {
       var inThisMasa = (masa === 1 && (pval.m1 === 'A' || pval.m1 === 'B')) ||
                        (masa === 2 && (pval.m2 === 'A' || pval.m2 === 'B'));
-      if (inThisMasa) partners_in_game.push(pi2);
+      // Masada zaten oturuyorsa partners'a ekleme
+      if (inThisMasa && masaPlayers.indexOf(pi2) < 0) partners_in_game.push(pi2);
     }
   }
 
@@ -3058,7 +3064,7 @@ function bitirOyun() {
   saveGame(masa, savedTurler);
 
   // Sıralı modda sonraki oyuna geç
-  if (D.siraliMod) {
+  if (D.siraliMod && _siraliSira && _siraliSira.length === 5) {
     _siraliOyunIdx++;
     setTimeout(function() { kurSiraliOyun(); }, 600);
     return;
