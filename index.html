@@ -3075,22 +3075,23 @@ function showUndoToast(masa, turler) {
 }
 
 function undoGame(gameId) {
-  // Oyunu bul
   var game = null;
   for (var i = D.allGames.length-1; i >= 0; i--) {
     if (D.allGames[i].id === gameId) { game = D.allGames[i]; break; }
   }
   if (!game) { toast('Oyun bulunamadı'); return; }
 
-  onaySor('Bu oyunu geri alıp skor ekranına dönmek istiyor musunuz?', function() {
+  var mesaj = D.siraliMod
+    ? 'Bu oyunu geri alıp önceki oyunun ortaklarına dönmek istiyor musunuz?'
+    : 'Bu oyunu geri alıp skor ekranına dönmek istiyor musunuz?';
+
+  onaySor(mesaj, function() {
     var masa = game.masa || 1;
 
-    // Piyasayı geri al
     for (var p in game.payMap) {
       D.ldg[p] = (D.ldg[p] || 0) - game.payMap[p];
       D.sessLdg[p] = (D.sessLdg[p] || 0) - game.payMap[p];
     }
-    // allGames ve sessGames'den çıkar
     for (var i = D.allGames.length-1; i >= 0; i--) {
       if (D.allGames[i].id === gameId) { D.allGames.splice(i, 1); break; }
     }
@@ -3098,17 +3099,27 @@ function undoGame(gameId) {
       if (D.sessGames[i].id === gameId) { D.sessGames.splice(i, 1); break; }
     }
 
-    // Skor takibi: o oyunun turlerini geri yükle
+    // Sıralı modda: önceki oyuna dön
+    if (D.siraliMod && _siraliOyunIdx > 0) {
+      _siraliOyunIdx--;
+      var rot = ROTASYON[_siraliOyunIdx];
+      var k1 = _siraliSira[rot[0]], k2 = _siraliSira[rot[1]];
+      var s1 = _siraliSira[rot[2]], s2 = _siraliSira[rot[3]];
+      var dis = _siraliSira[rot[4]];
+      D.round.masa1 = { A: [k1, k2], B: [s1, s2, dis] };
+      D.round.masa1active = true;
+      D.round.masa2active = false;
+      D.round.partners = {};
+      D.round.partners[dis] = { m1: 'B', m2: null };
+      updateMasaLabels();
+    }
+
     if (!D.skorTakip) D.skorTakip = {};
-    // turler varsa sakla, yoksa boş başlat
-    var savedTurler = game.turler || [];
-    D.skorTakip['m'+masa] = {turler: savedTurler};
+    D.skorTakip['m'+masa] = {turler: game.turler || []};
 
     saveD();
     renderGameCards();
     closeOv('ov-skor');
-
-    // Skor ekranını aç
     switchMasa(masa);
     setSkorMasa(masa);
     renderSkorTakip();
@@ -3117,7 +3128,6 @@ function undoGame(gameId) {
     toast('Oyun geri alındı');
   });
 }
-
 function undoLastGame() {
   if (!D.sessGames.length) { toast('Geri alınacak oyun yok'); return; }
   var lastGame = D.sessGames[D.sessGames.length - 1];
