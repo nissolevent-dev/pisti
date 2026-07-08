@@ -1461,10 +1461,15 @@ function _closeSessionExec() {
 
   var summary = {};
   if (!D.winLoss) D.winLoss = {};
+  // sessLdg'deki tüm oyuncuları dahil et (oturumdan ayrılanlar da)
+  var allSessPlayers = Object.keys(D.sessLdg).filter(function(p){ return D.sessLdg[p] !== 0; });
+  // Mevcut oyuncuları da ekle (sessLdg'de 0 olanlar dahil)
   for (var i = 0; i < D.sess.players.length; i++) {
-    var p = D.sess.players[i];
+    if (allSessPlayers.indexOf(D.sess.players[i]) < 0) allSessPlayers.push(D.sess.players[i]);
+  }
+  for (var i = 0; i < allSessPlayers.length; i++) {
+    var p = allSessPlayers[i];
     summary[p] = D.sessLdg[p] || 0;
-    // Oturum sonucu pozitif = win, negatif = loss
     var sessResult = D.sessLdg[p] || 0;
     if (!D.winLoss[p]) D.winLoss[p] = {w:0, l:0};
     if (sessResult > 0) D.winLoss[p].w = (D.winLoss[p].w || 0) + 1;
@@ -1478,7 +1483,7 @@ function _closeSessionExec() {
     id: sessId,
     date: new Date().toLocaleDateString('tr-TR'),
     games: D.sessGames.length,
-    players: D.sess.players.slice(),
+    players: allSessPlayers,
     summary: summary,
     sessGameIds: sessIds
   });
@@ -1487,7 +1492,7 @@ function _closeSessionExec() {
   var shareData = {
     date: new Date().toLocaleDateString('tr-TR'),
     games: D.sessGames.length,
-    players: D.sess.players.slice(),
+    players: allSessPlayers,
     summary: summary,
     allLdg: JSON.parse(JSON.stringify(D.ldg)),
     initialLdg: JSON.parse(JSON.stringify(D.initialLdg || {})),
