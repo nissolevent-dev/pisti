@@ -527,7 +527,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
     <!-- Oyunu Bitir -->
     <div style="margin-top:10px;display:flex;gap:8px">
-      <button class="btn bp bfw" style="background:#166534" onclick="bitirOyun()">✓ Oyunu Bitir ve Kaydet</button>
+      <button id="bitir-btn" class="btn bp bfw" style="background:#166534;opacity:0.4;cursor:not-allowed" onclick="bitirOyun()" disabled>✓ Oyunu Bitir ve Kaydet</button>
       <button class="btn bd_btn" onclick="resetSkor()">Sıfırla</button>
     </div>
   </div>
@@ -1259,7 +1259,7 @@ function clearEntry(masa) {
   document.getElementById('pv-m'+masa+'B').textContent = '-';
 }
 
-function saveGame(masa) {
+function saveGame(masa, turler) {
   var pA = gv('m'+masa+'-Apts'), piA = gv('m'+masa+'-Api');
   var pB = gv('m'+masa+'-Bpts'), piB = gv('m'+masa+'-Bpi');
   if (!pA && !pB && !piA && !piB) { toast('En az bir deger girin'); return; }
@@ -1341,6 +1341,7 @@ function saveGame(masa) {
     teamA: masaData.A.slice(),
     teamB: masaData.B.slice(),
     partners: partners_in_game,
+    turler: turler || [],
     date: new Date().toLocaleDateString('tr-TR')
   };
 
@@ -1385,7 +1386,7 @@ function renderGameCards() {
 
     html += '<div class="gcard">';
     var masaLbl = g.masa ? ' <span style="background:var(--g2);color:#fff;font-size:.58rem;padding:2px 5px;border-radius:3px">M' + g.masa + '</span>' : '';
-    html += '<div class="ghd"><span class="gnum">' + g.snum + '. Oyun' + masaLbl + (g.rubikon ? '<span class="rubi">RUBIKON</span>' : '') + '</span><span style="font-size:.68rem;color:var(--tx3)">' + g.date + '</span><button class="gdel" onclick="delGame(' + g.id + ')">x</button></div>';
+    html += '<div class="ghd"><span class="gnum">' + g.snum + '. Oyun' + masaLbl + (g.rubikon ? '<span class="rubi">RUBIKON</span>' : '') + '</span><span style="font-size:.68rem;color:var(--tx3)">' + g.date + '</span><div style="display:flex;gap:2px"><button class="gdel" onclick="undoGame(' + g.id + ')" style="background:none;border:none;color:var(--g2);cursor:pointer;font-size:.85rem;padding:3px 6px">↩</button><button class="gdel" onclick="delGame(' + g.id + ')">x</button></div></div>';
     html += '<div class="gbody">';
     html += '<div class="gteam' + (wA ? ' won' : '') + '"><div class="gtlbl">Kırmızı Takım' + (wA ? ' W' : '') + '</div><div class="gtnm">' + g.teamA.join(', ') + '</div><div class="gtpt">' + g.pts[0] + '</div>' + (g.pi[0] ? '<div class="gtpi">' + g.pi[0] + ' pişti</div>' : '') + '<div class="plines">' + payA + '</div></div>';
     html += '<div class="gvs">vs</div>';
@@ -2887,6 +2888,15 @@ function renderSkorTakip() {
   sEl.innerHTML = totS + (totSpi ? ' <span style="opacity:.85">+'+totSpi+'P</span>' : '');
   kEl.style.color = totK > totS ? '#e8c96a' : 'white';
   sEl.style.color = totS > totK ? '#e8c96a' : 'white';
+
+  // Oyunu Bitir butonu - en az bir takım 101'e geldiyse aktif
+  var bitirBtn = document.getElementById('bitir-btn');
+  if (bitirBtn) {
+    var birTakim101 = (totK >= 101 || totS >= 101);
+    bitirBtn.disabled = !birTakim101;
+    bitirBtn.style.opacity = birTakim101 ? '1' : '0.4';
+    bitirBtn.style.cursor = birTakim101 ? 'pointer' : 'not-allowed';
+  }
 }
 
 function updateTurPrev() {
@@ -3040,8 +3050,8 @@ function bitirOyun() {
   document.getElementById('m'+masa+'-Bpi').value  = totSpi;
   updatePrev(masa);
 
-  // Otomatik kaydet
-  saveGame(masa);
+  // Otomatik kaydet (turları da sakla geri alma için)
+  saveGame(masa, savedTurler);
 
   // Sıralı modda sonraki oyuna geç
   if (D.siraliMod) {
@@ -3060,15 +3070,52 @@ var _undoTurler = null;
 function showUndoToast(masa, turler) {
   _undoMasa = masa;
   _undoTurler = turler ? turler.slice() : [];
-  var t = document.getElementById('toast');
-  t.innerHTML = 'Oyun kaydedildi <button onclick="undoLastGame()" style="margin-left:10px;background:rgba(255,255,255,0.25);border:1.5px solid rgba(255,255,255,0.6);color:#fff;border-radius:7px;padding:6px 14px;cursor:pointer;font-family:inherit;font-size:.85rem;font-weight:600">↩ Geri Al</button>';
-  t.classList.add('on');
-  clearTimeout(_tt);
-  _tt = setTimeout(function() {
-    t.classList.remove('on');
-    _undoMasa = null;
-    _undoTurler = null;
-  }, 8000);
+  // Artık toast gösterme - her oyunda kalıcı geri al butonu var
+  toast('Oyun kaydedildi');
+}
+
+function undoGame(gameId) {
+  // Oyunu bul
+  var game = null;
+  for (var i = D.allGames.length-1; i >= 0; i--) {
+    if (D.allGames[i].id === gameId) { game = D.allGames[i]; break; }
+  }
+  if (!game) { toast('Oyun bulunamadı'); return; }
+
+  onaySor('Bu oyunu geri alıp skor ekranına dönmek istiyor musunuz?', function() {
+    var masa = game.masa || 1;
+
+    // Piyasayı geri al
+    for (var p in game.payMap) {
+      D.ldg[p] = (D.ldg[p] || 0) - game.payMap[p];
+      D.sessLdg[p] = (D.sessLdg[p] || 0) - game.payMap[p];
+    }
+    // allGames ve sessGames'den çıkar
+    for (var i = D.allGames.length-1; i >= 0; i--) {
+      if (D.allGames[i].id === gameId) { D.allGames.splice(i, 1); break; }
+    }
+    for (var i = D.sessGames.length-1; i >= 0; i--) {
+      if (D.sessGames[i].id === gameId) { D.sessGames.splice(i, 1); break; }
+    }
+
+    // Skor takibi: o oyunun turlerini geri yükle
+    if (!D.skorTakip) D.skorTakip = {};
+    // turler varsa sakla, yoksa boş başlat
+    var savedTurler = game.turler || [];
+    D.skorTakip['m'+masa] = {turler: savedTurler};
+
+    saveD();
+    renderGameCards();
+    closeOv('ov-skor');
+
+    // Skor ekranını aç
+    switchMasa(masa);
+    setSkorMasa(masa);
+    renderSkorTakip();
+    renderDagitici(masa);
+    document.getElementById('ov-skor').classList.add('on');
+    toast('Oyun geri alındı');
+  });
 }
 
 function undoLastGame() {
