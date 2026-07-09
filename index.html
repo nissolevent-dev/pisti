@@ -998,22 +998,24 @@ function kurSiraliOyun() {
 
   if (!D.started) D.started = true;
   saveD();
-  // Dağıtıcı seçimini sıfırla
+  // Dağıtıcı seçimini sıfırla - yazma tamamlanınca skor ekranını aç
   _dagitici = {};
   if (!D.dagitici) D.dagitici = {};
-  D.dagitici[1] = null;
-  REF.child('dagitici').set({});
-  updateMasaLabels();
-  renderSessChips();
-  renderGameCards();
-  goS(4);
-  setTimeout(function() {
-    setSkorMasa(1);
-    renderSkorTakip();
-    renderDagitici(1);
-    document.getElementById('ov-skor').classList.add('on');
-  }, 150);
-  toast((_siraliOyunIdx + 1) + '. oyun kuruldu');
+  D.dagitici = {};
+  REF.child('dagitici').set({}).then(function() {
+    updateMasaLabels();
+    renderSessChips();
+    renderGameCards();
+    goS(4);
+    setTimeout(function() {
+      setSkorMasa(1);
+      renderSkorTakip();
+      renderDagitici(1);
+      document.getElementById('ov-skor').classList.add('on');
+    }, 150);
+    toast((_siraliOyunIdx + 1) + '. oyun kuruldu');
+  });
+  return;
 }
 
 // ── SEATS ──
@@ -2787,6 +2789,12 @@ function setSkorMasa(masa) {
 function showSkorTakip() {
   if (!D.skorTakip) D.skorTakip = {};
   var masa = activeMasa || 1;
+  // Dağıtıcıyı Firebase'den al
+  if (D.dagitici) {
+    for (var m in D.dagitici) {
+      _dagitici[parseInt(m)] = D.dagitici[m];
+    }
+  }
   setSkorMasa(masa);
   renderSkorTakip();
   renderDagitici(masa);
