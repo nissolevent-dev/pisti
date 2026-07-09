@@ -621,8 +621,12 @@ REF.on('value', function(snap) {
 
   var isOwnSave = saving;
   var isSkorSave = savingSkor;
+  var isDagiticiSave = savingDagitici;
 
-  if (isSkorSave) {
+  if (isDagiticiSave) {
+    // Sadece dagitici kaydediliyor - hiçbir şeye dokunma
+    if (val.dagitici) D.dagitici = val.dagitici;
+  } else if (isSkorSave) {
     // Sadece skorTakip kaydediliyor - started/round/ldg'ye dokunma
     if (val.skorTakip) D.skorTakip = val.skorTakip;
   } else if (!isOwnSave) {
@@ -673,6 +677,12 @@ REF.on('value', function(snap) {
   if (firstLoad) {
     firstLoad = false;
     refreshAll();
+  } else if (isDagiticiSave) {
+    // Sadece dagitici kaydedildi - skor ekranı açıksa dagitici güncelle
+    if (document.getElementById('ov-skor').classList.contains('on')) {
+      var curMasa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+      renderDagitici(curMasa);
+    }
   } else if (!isOwnSave) {
     // Başka cihazdan gelen güncelleme
     if (document.getElementById('ov-skor').classList.contains('on')) {
@@ -2848,7 +2858,10 @@ function secDagitici(idx) {
   // Firebase'e kaydet
   if (!D.dagitici) D.dagitici = {};
   D.dagitici[masa] = _dagitici[masa] || null;
-  REF.child('dagitici').set(D.dagitici);
+  savingDagitici = true;
+  REF.child('dagitici').set(D.dagitici).then(function() {
+    savingDagitici = false;
+  }).catch(function() { savingDagitici = false; });
   renderDagitici(masa);
 }
 
@@ -3021,6 +3034,7 @@ function httbCevap(evet) {
 }
 
 var savingSkor = false;
+var savingDagitici = false;
 
 function saveSkorTakip() {
   savingSkor = true;
