@@ -2902,15 +2902,17 @@ function renderSkorTakip() {
   if (kHeader) kHeader.textContent = kIsim;
   if (sHeader) sHeader.textContent = sIsim;
 
-  // Eğer hâlâ K/S ise 300ms sonra tekrar güncelle
+  // Eğer hâlâ K/S ise Firebase'den direkt oku
   if (kIsim === 'K' || sIsim === 'S') {
-    setTimeout(function() {
-      var md = masa === 1 ? D.round.masa1 : D.round.masa2;
+    REF.child('round/masa' + masa).once('value', function(snap) {
+      var md = snap.val();
       if (md && md.A && md.A.length) {
+        D.round['masa' + masa] = md;
         if (kHeader) kHeader.textContent = getInitials(md.A);
         if (sHeader) sHeader.textContent = getInitials(md.B);
+        renderDagitici(masa);
       }
-    }, 300);
+    });
   }
 
   var st = D.skorTakip['m' + masa] || {turler:[]};
