@@ -1217,11 +1217,24 @@ function startPlay() {
   _dagitici = {};
   D.dagitici = {};
   REF.child('dagitici').set({});
-  saveD();
-  renderGameCards();
-  goS(4);
-  // Direkt skor ekranını aç - round verisi yüklendikten sonra
-  setTimeout(function() { showSkorTakip(); }, 400);
+  // saveD tamamlanınca skor ekranını aç
+  saving = true;
+  syncDot('#f59e0b');
+  var toSave = JSON.parse(JSON.stringify(D));
+  delete toSave.screen;
+  REF.set(toSave).then(function() {
+    saving = false;
+    syncDot('#22c55e');
+    renderGameCards();
+    goS(4);
+    setTimeout(function() { showSkorTakip(); }, 100);
+  }).catch(function(e) {
+    saving = false;
+    syncDot('#ef4444');
+    renderGameCards();
+    goS(4);
+    setTimeout(function() { showSkorTakip(); }, 100);
+  });
 }
 
 // ── PARA HESABI ──
