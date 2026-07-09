@@ -1204,6 +1204,9 @@ function startPlay() {
   else switchMasa(2);
 
   D.started = true;
+  _dagitici = {};
+  D.dagitici = {};
+  REF.child('dagitici').set({});
   saveD();
   renderGameCards();
   goS(4);
