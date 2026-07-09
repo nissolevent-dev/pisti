@@ -1210,8 +1210,8 @@ function startPlay() {
   saveD();
   renderGameCards();
   goS(4);
-  // Direkt skor ekranını aç
-  setTimeout(function() { showSkorTakip(); }, 100);
+  // Direkt skor ekranını aç - round verisi yüklendikten sonra
+  setTimeout(function() { showSkorTakip(); }, 400);
 }
 
 // ── PARA HESABI ──
@@ -2867,14 +2867,25 @@ function renderSkorTakip() {
   if (btn2) btn2.style.display = D.round && D.round.masa2active ? '' : 'none';
   renderDagitici(masa);
   var masaData = masa === 1 ? D.round.masa1 : D.round.masa2;
-  var kIsim = masaData ? getInitials(masaData.A) : 'K';
-  var sIsim = masaData ? getInitials(masaData.B) : 'S';
+  var kIsim = (masaData && masaData.A && masaData.A.length) ? getInitials(masaData.A) : 'K';
+  var sIsim = (masaData && masaData.B && masaData.B.length) ? getInitials(masaData.B) : 'S';
 
   // Başlık etiketlerini güncelle
   var kHeader = document.querySelector('#ov-skor .skor-k-hdr');
   var sHeader = document.querySelector('#ov-skor .skor-s-hdr');
   if (kHeader) kHeader.textContent = kIsim;
   if (sHeader) sHeader.textContent = sIsim;
+
+  // Eğer hâlâ K/S ise 300ms sonra tekrar güncelle
+  if (kIsim === 'K' || sIsim === 'S') {
+    setTimeout(function() {
+      var md = masa === 1 ? D.round.masa1 : D.round.masa2;
+      if (md && md.A && md.A.length) {
+        if (kHeader) kHeader.textContent = getInitials(md.A);
+        if (sHeader) sHeader.textContent = getInitials(md.B);
+      }
+    }, 300);
+  }
 
   var st = D.skorTakip['m' + masa] || {turler:[]};
   var turler = st.turler || [];
