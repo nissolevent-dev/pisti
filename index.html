@@ -1007,24 +1007,20 @@ function kurSiraliOyun() {
   D.round.partners[dis] = { m1: 'B', m2: null };
 
   if (!D.started) D.started = true;
-  saveD();
-  // Dağıtıcı seçimini sıfırla - yazma tamamlanınca skor ekranını aç
   _dagitici = {};
-  if (!D.dagitici) D.dagitici = {};
   D.dagitici = {};
-  REF.child('dagitici').set({}).then(function() {
-    updateMasaLabels();
-    renderSessChips();
-    renderGameCards();
-    goS(4);
-    setTimeout(function() {
-      setSkorMasa(1);
-      renderSkorTakip();
-      renderDagitici(1);
-      document.getElementById('ov-skor').classList.add('on');
-    }, 150);
-    toast((_siraliOyunIdx + 1) + '. oyun kuruldu');
-  });
+  saveD();
+  updateMasaLabels();
+  renderSessChips();
+  renderGameCards();
+  goS(4);
+  setTimeout(function() {
+    setSkorMasa(1);
+    renderSkorTakip();
+    renderDagitici(1);
+    document.getElementById('ov-skor').classList.add('on');
+  }, 150);
+  toast((_siraliOyunIdx + 1) + '. oyun kuruldu');
   return;
 }
 
@@ -2867,13 +2863,9 @@ function secDagitici(idx) {
   var name = _dagiticiPlayers[idx];
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
   _dagitici[masa] = (_dagitici[masa] === name) ? null : name;
-  // Firebase'e kaydet
+  // Lokal tut, Firebase'e ayrı yazma - listener sorun çıkarıyor
   if (!D.dagitici) D.dagitici = {};
   D.dagitici[masa] = _dagitici[masa] || null;
-  savingDagitici = true;
-  REF.child('dagitici').set(D.dagitici).then(function() {
-    savingDagitici = false;
-  }).catch(function() { savingDagitici = false; });
   renderDagitici(masa);
 }
 
