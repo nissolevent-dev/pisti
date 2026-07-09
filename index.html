@@ -1216,8 +1216,7 @@ function startPlay() {
   D.started = true;
   _dagitici = {};
   D.dagitici = {};
-  REF.child('dagitici').set({});
-  // saveD tamamlanınca skor ekranını aç
+  // saveD tamamlanınca skor ekranını aç (dagitici de aynı anda kaydedilsin)
   saving = true;
   syncDot('#f59e0b');
   var toSave = JSON.parse(JSON.stringify(D));
