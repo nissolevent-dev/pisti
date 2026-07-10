@@ -1379,6 +1379,7 @@ function saveGame(masa, turler) {
     teamB: masaData.B.slice(),
     partners: partners_in_game,
     turler: turler || [],
+    roundSnapshot: JSON.parse(JSON.stringify(D.round)),
     date: new Date().toLocaleDateString('tr-TR')
   };
 
@@ -3174,6 +3175,10 @@ function undoGame(gameId) {
       D.round.masa2active = false;
       D.round.partners = {};
       D.round.partners[dis] = { m1: 'B', m2: null };
+      updateMasaLabels();
+    } else if (game.roundSnapshot) {
+      // Normal oyun: kayıt anındaki masa düzenine dön
+      D.round = JSON.parse(JSON.stringify(game.roundSnapshot));
       updateMasaLabels();
     }
 
