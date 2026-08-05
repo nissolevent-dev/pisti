@@ -3665,7 +3665,7 @@ function renderKartEkrani() {
     var color = eslesen || secili ? '#fff' : 'var(--tx1)';
     var label = p.split(' ')[0];
     if (eslesen) label += ' ' + eslesen.sembol;
-    oyHtml += '<button onclick="kartOyuncuSec('' + i + '')" ' +
+    oyHtml += '<button onclick="kartOyuncuSec(' + i + ')" ' +
       'style="padding:8px 12px;border:2px solid ' + (secili ? 'var(--g2)' : 'var(--bd2)') + ';' +
       'background:' + bg + ';color:' + color + ';border-radius:8px;cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:600">' +
       label + '</button>';
