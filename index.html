@@ -353,12 +353,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="ovbox" style="max-height:92vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div class="ovttl" style="margin-bottom:0">🃏 Masa Kurma — Kart Çek</div>
-      <button class="btn bo bs" onclick="closeOv('ov-kart');buildSeats();goS(3)">Vazgeç</button>
+      <button class="btn bo bs" onclick="closeOv('ov-kart');goS(2)">Vazgeç</button>
     </div>
     <p style="font-size:.76rem;color:var(--tx3);margin-bottom:14px">Önce ismine tıkla, sonra bir kart seç.</p>
 
     <!-- Oyuncu listesi -->
-    <div id="kart-oyuncular" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
+    <div id="kart-oyuncular" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:16px"></div>
 
     <!-- Kartlar -->
     <div id="kart-kartlar" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px"></div>
@@ -3636,10 +3636,10 @@ function showKartCekme() {
     {id:1, tip:'as',    renk:'kirmizi', sembol:'♦', label:'K♦'},
     {id:2, tip:'as',    renk:'siyah',   sembol:'♠', label:'S♠'},
     {id:3, tip:'as',    renk:'siyah',   sembol:'♣', label:'S♣'},
-    {id:4, tip:'papaz', renk:'kirmizi', sembol:'♥', label:'K♥'},
-    {id:5, tip:'papaz', renk:'kirmizi', sembol:'♦', label:'K♦'},
-    {id:6, tip:'papaz', renk:'siyah',   sembol:'♠', label:'S♠'},
-    {id:7, tip:'papaz', renk:'siyah',   sembol:'♣', label:'S♣'},
+    {id:4, tip:'kral', renk:'kirmizi', sembol:'♥', label:'K♥'},
+    {id:5, tip:'kral', renk:'kirmizi', sembol:'♦', label:'K♦'},
+    {id:6, tip:'kral', renk:'siyah',   sembol:'♠', label:'S♠'},
+    {id:7, tip:'kral', renk:'siyah',   sembol:'♣', label:'S♣'},
   ];
   // Fisher-Yates karıştır
   for (var i = deste.length - 1; i > 0; i--) {
@@ -3682,7 +3682,7 @@ function renderKartEkrani() {
     }
     if (k.acik) {
       var krenk = k.renk === 'kirmizi' ? '#cc0000' : '#111';
-      var tipLabel = k.tip === 'as' ? 'A' : 'J';
+      var tipLabel = k.tip === 'as' ? 'A' : 'K';
       kartHtml += '<div style="border:2px solid ' + krenk + ';border-radius:10px;padding:8px;text-align:center;background:#fff">' +
         '<div style="font-size:1.4rem;color:' + krenk + ';font-weight:900">' + tipLabel + k.sembol + '</div>' +
         '<div style="font-size:.62rem;color:var(--tx3);margin-top:2px">' + eslenenOyuncu + '</div>' +
@@ -3730,8 +3730,8 @@ function renderKartSonuc() {
     var k = _kartEslesmeler[p];
     if (k.tip === 'as'    && k.renk === 'kirmizi') m1K.push(p);
     else if (k.tip === 'as'    && k.renk === 'siyah')   m1S.push(p);
-    else if (k.tip === 'papaz' && k.renk === 'kirmizi') m2K.push(p);
-    else if (k.tip === 'papaz' && k.renk === 'siyah')   m2S.push(p);
+    else if (k.tip === 'kral' && k.renk === 'kirmizi') m2K.push(p);
+    else if (k.tip === 'kral' && k.renk === 'siyah')   m2S.push(p);
   }
 
   var html = '<div style="margin-bottom:8px"><b style="color:#cc0000">Masa 1 Kırmızı:</b> ' + m1K.map(function(p){return p.split(' ')[0];}).join(', ') + '</div>';
@@ -3750,8 +3750,8 @@ function kartOnayla() {
     var k = _kartEslesmeler[p];
     if (k.tip === 'as'    && k.renk === 'kirmizi') m1K.push(p);
     else if (k.tip === 'as'    && k.renk === 'siyah')   m1S.push(p);
-    else if (k.tip === 'papaz' && k.renk === 'kirmizi') m2K.push(p);
-    else if (k.tip === 'papaz' && k.renk === 'siyah')   m2S.push(p);
+    else if (k.tip === 'kral' && k.renk === 'kirmizi') m2K.push(p);
+    else if (k.tip === 'kral' && k.renk === 'siyah')   m2S.push(p);
   }
 
   D.round.masa1 = { A: m1K, B: m1S };
