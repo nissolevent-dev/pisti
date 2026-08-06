@@ -3681,7 +3681,6 @@ function showKartCekme() {
     return {id:k.id, tip:k.tip, renk:k.renk, sembol:k.sembol, acik:false};
   });
 
-  console.log('Deste:', _kDeste.length, 'kart, dam:', _kDeste.filter(function(k){return k.tip==='dam';}).length);
   renderKartEkrani();
   document.getElementById('ov-kart').classList.add('on');
 }
@@ -3974,11 +3973,11 @@ function toast(msg) {
 
 // ── iOS HINT ──
 var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.navigator.standalone;
-if (isIOS && !localStorage.getItem('pişti_ios')) {
+if (isIOS && !localStorage.getItem('pisti_ios')) {
   document.getElementById('hint-ios').style.display = 'block';
   document.getElementById('hint-ios').onclick = function() {
     this.style.display = 'none';
-    localStorage.setItem('pişti_ios', '1');
+    localStorage.setItem('pisti_ios', '1');
   };
 }
 
