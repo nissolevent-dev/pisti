@@ -3730,14 +3730,14 @@ function renderKartAsamasi1() {
   document.getElementById('kart-sonuc').style.display='none';
 }
 
-function kP1(idx) {
+window.kP1 = function(idx) {
   var p=D.sess.players[idx];
   if(_kEslesen[p]) return;
   _kSecilen=(_kSecilen===p)?null:p;
   renderKartAsamasi1();
 }
 
-function kK1(idx) {
+window.kK1 = function(idx) {
   if(!_kSecilen) return;
   var k=_kDeste1[idx];
   if(k.acik) return;
@@ -3794,13 +3794,13 @@ function renderKartAsamasi2() {
   document.getElementById('kart-sonuc').style.display='none';
 }
 
-function kP2(idx) {
+window.kP2 = function(idx) {
   var p=_kDamlar[idx];
   _kDamSecilen=(_kDamSecilen===p)?null:p;
   renderKartAsamasi2();
 }
 
-function kK2(idx) {
+window.kK2 = function(idx) {
   if(!_kDamSecilen) return;
   var k=_kDeste2[idx];
   if(k.acik) return;
