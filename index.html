@@ -3652,9 +3652,11 @@ function showKartCekme() {
     {id:5, tip:'kral', renk:'kirmizi', sembol:'♦'},
     {id:6, tip:'kral', renk:'siyah',   sembol:'♠'},
     {id:7, tip:'kral', renk:'siyah',   sembol:'♣'},
+    {id:8, tip:'dam',  renk:'kirmizi', sembol:'♥'},  // hep dahil et
+    {id:9, tip:'dam',  renk:'siyah',   sembol:'♠'},  // hep dahil et
   ];
-  if (playerCount >= 9)  deste.push({id:8, tip:'dam', renk:'kirmizi', sembol:'♥'});
-  if (playerCount >= 10) deste.push({id:9, tip:'dam', renk:'siyah',   sembol:'♠'});
+  // Sadece gerekli sayıda kart al (8/9/10 kişiye göre)
+  deste = deste.slice(0, playerCount);
 
   for (var i = deste.length - 1; i > 0; i--) {
     var j = Math.floor(Math.random() * (i + 1));
@@ -3870,13 +3872,13 @@ function renderMasaOnay() {
     else if (k.tip === 'kral' && k.renk === 'siyah')   m2S.push(p);
   }
 
-  // Dam oyuncuları - ortak olarak ekle
+  // Dam oyuncuları - sadece partners'a ekle (masaya değil)
   for (var p in _kartDamEslesmeler) {
     var k = _kartDamEslesmeler[p];
-    if (k.tip === 'as'   && k.renk === 'kirmizi') { partners[p] = 'm1K'; m1K.push(p); }
-    else if (k.tip === 'as'   && k.renk === 'siyah')   { partners[p] = 'm1S'; m1S.push(p); }
-    else if (k.tip === 'kral' && k.renk === 'kirmizi') { partners[p] = 'm2K'; m2K.push(p); }
-    else if (k.tip === 'kral' && k.renk === 'siyah')   { partners[p] = 'm2S'; m2S.push(p); }
+    if (k.tip === 'as'   && k.renk === 'kirmizi') partners[p] = 'm1K';
+    else if (k.tip === 'as'   && k.renk === 'siyah')   partners[p] = 'm1S';
+    else if (k.tip === 'kral' && k.renk === 'kirmizi') partners[p] = 'm2K';
+    else if (k.tip === 'kral' && k.renk === 'siyah')   partners[p] = 'm2S';
   }
 
   var damIsimleri = _kartDamOyuncular.map(function(p){ return p.split(' ')[0]; }).join(', ');
@@ -3903,6 +3905,13 @@ function kartOnayla() {
   var m2K = _kartMasaGruplari.m2K || [];
   var m2S = _kartMasaGruplari.m2S || [];
   var damPartners = _kartMasaGruplari.partners || {};
+
+  // Dam oyuncularını masa dizilerinden çıkar (sadece partners olacaklar)
+  var damList = Object.keys(damPartners);
+  m1K = m1K.filter(function(p){ return damList.indexOf(p) < 0; });
+  m1S = m1S.filter(function(p){ return damList.indexOf(p) < 0; });
+  m2K = m2K.filter(function(p){ return damList.indexOf(p) < 0; });
+  m2S = m2S.filter(function(p){ return damList.indexOf(p) < 0; });
 
   D.round.masa1 = { A: m1K, B: m1S };
   D.round.masa2 = { A: m2K, B: m2S };
