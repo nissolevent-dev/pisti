@@ -3622,28 +3622,25 @@ function saveManualSession() {
 }
 
 // ── KART ÇEKME ──
-// Kartlar: 4 as (kırmızı/siyah) + 4 papaz (kırmızı/siyah) - rastgele karışık
-// Kırmızı as → Masa1 Kırmızı, Siyah as → Masa1 Siyah
-// Kırmızı papaz → Masa2 Kırmızı, Siyah papaz → Masa2 Siyah
-
-var _kartSecilen = null;
-var _kartDamOyuncular = [];
-var _kartMasaGruplari = {};
-var _kartDamEslesmeler = {};
-var _kartAsamasi = 1;    // Seçili oyuncu adı
-var _kartEslesmeler = {};   // {oyuncu: kart}
-var _kartDeste = [];        // [{id, tip, renk, acik}]
+// Değişkenler
+var _kSecilen = null;      // seçili oyuncu adı
+var _kEslesen = {};        // {oyuncu: {id,tip,renk,sembol}} - ana kart eşleşmeleri
+var _kDamlar = [];         // dam çeken oyuncular
+var _kDamEslesen = {};     // {oyuncu: {id,tip,renk,sembol}} - dam oyuncularının ortak kartları
+var _kAsama = 1;           // 1: ana kart, 2: dam ortak seçimi
+var _kDeste = [];          // [{id,tip,renk,sembol,acik}]
 
 function showKartCekme() {
-  _kartSecilen = null;
-  _kartEslesmeler = {};
-  _kartDamOyuncular = [];
-  _kartDamEslesmeler = {};
-  _kartAsamasi = 1;
+  _kSecilen = null;
+  _kEslesen = {};
+  _kDamlar = [];
+  _kDamEslesen = {};
+  _kAsama = 1;
 
-  var playerCount = D.sess.players.length;
+  var n = D.sess.players.length; // 8, 9 veya 10
 
-  var deste = [
+  // Tam deste: 4as + 4kral + 2dam = 10 kart
+  var tamDeste = [
     {id:0, tip:'as',   renk:'kirmizi', sembol:'♥'},
     {id:1, tip:'as',   renk:'kirmizi', sembol:'♦'},
     {id:2, tip:'as',   renk:'siyah',   sembol:'♠'},
@@ -3652,288 +3649,255 @@ function showKartCekme() {
     {id:5, tip:'kral', renk:'kirmizi', sembol:'♦'},
     {id:6, tip:'kral', renk:'siyah',   sembol:'♠'},
     {id:7, tip:'kral', renk:'siyah',   sembol:'♣'},
-    {id:8, tip:'dam',  renk:'kirmizi', sembol:'♥'},  // hep dahil et
-    {id:9, tip:'dam',  renk:'siyah',   sembol:'♠'},  // hep dahil et
+    {id:8, tip:'dam',  renk:'kirmizi', sembol:'♥'},
+    {id:9, tip:'dam',  renk:'siyah',   sembol:'♠'},
   ];
-  // Sadece gerekli sayıda kart al (8/9/10 kişiye göre)
-  deste = deste.slice(0, playerCount);
 
-  for (var i = deste.length - 1; i > 0; i--) {
+  // n kadar kart al - önce karıştır, sonra n al
+  // Fisher-Yates
+  for (var i = tamDeste.length - 1; i > 0; i--) {
     var j = Math.floor(Math.random() * (i + 1));
-    var tmp = deste[i]; deste[i] = deste[j]; deste[j] = tmp;
+    var t = tamDeste[i]; tamDeste[i] = tamDeste[j]; tamDeste[j] = t;
   }
-  _kartDeste = deste.map(function(k) { return Object.assign({}, k, {acik: false}); });
+  // n kadar al
+  _kDeste = tamDeste.slice(0, n).map(function(k) {
+    return {id:k.id, tip:k.tip, renk:k.renk, sembol:k.sembol, acik:false};
+  });
 
   renderKartEkrani();
   document.getElementById('ov-kart').classList.add('on');
 }
 
 function renderKartEkrani() {
-  var players = D.sess.players;
+  var baslik = document.querySelector('#ov-kart .ovttl');
+  var aciklama = document.querySelector('#ov-kart p');
 
-  // 2. aşama: sadece dam oyuncuları göster
-  if (_kartAsamasi === 2) {
-    var baslik = document.querySelector('#ov-kart .ovttl');
-    if (baslik) baslik.textContent = '🃏 Ortak Kartı Seç';
-    var aciklama = document.querySelector('#ov-kart p');
+  if (_kAsama === 2) {
+    if (baslik) baslik.textContent = '🃏 Ortak Seçimi';
     if (aciklama) aciklama.textContent = 'Dışarıda kalan oyuncu hangi takıma ortak olacak?';
 
-    var oyHtml2 = '';
-    for (var i = 0; i < _kartDamOyuncular.length; i++) {
-      var p2 = _kartDamOyuncular[i];
-      var eslesen2 = _kartDamEslesmeler[p2];
-      var secili2 = _kartSecilen === p2;
-      var bg2 = eslesen2 ? 'var(--g1)' : secili2 ? 'var(--g2)' : 'var(--bg2)';
-      var color2 = eslesen2 || secili2 ? '#fff' : 'var(--tx1)';
-      var label2 = p2.split(' ')[0];
-      if (eslesen2) label2 += ' ' + eslesen2.sembol;
-      oyHtml2 += '<button onclick="kartOyuncuSec2(' + i + ')" ' +
-        'style="padding:8px 12px;border:2px solid ' + (secili2 ? 'var(--g2)' : 'var(--bd2)') + ';' +
-        'background:' + bg2 + ';color:' + color2 + ';border-radius:8px;cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:600">' +
-        label2 + '</button>';
+    // Dam oyuncuları butonları
+    var oyHtml = '';
+    for (var i = 0; i < _kDamlar.length; i++) {
+      var p = _kDamlar[i];
+      var esl = _kDamEslesen[p];
+      var sel = _kSecilen === p;
+      var tamamlandi = !!esl;
+      var bg = tamamlandi ? 'var(--g1)' : sel ? 'var(--g2)' : 'var(--bg2)';
+      var col = (tamamlandi || sel) ? '#fff' : 'var(--tx1)';
+      var lbl = p.split(' ')[0];
+      if (esl) lbl += ' ' + esl.sembol;
+      oyHtml += '<button onclick="_kSecilen2(' + i + ')" style="padding:8px 12px;border:2px solid ' +
+        (sel ? 'var(--g2)' : 'var(--bd2)') + ';background:' + bg + ';color:' + col +
+        ';border-radius:8px;cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:600">' + lbl + '</button>';
     }
-    document.getElementById('kart-oyuncular').innerHTML = oyHtml2;
+    document.getElementById('kart-oyuncular').innerHTML = oyHtml;
 
-    // 2. aşama kartları
-    var kartHtml2 = '';
-    for (var i = 0; i < _kartDeste.length; i++) {
-      var k = _kartDeste[i];
-      var eslenenP = '';
-      for (var p2 in _kartDamEslesmeler) {
-        if (_kartDamEslesmeler[p2].id === k.id) { eslenenP = p2.split(' ')[0]; break; }
+    // 4 kapalı kart (kırmızı as, siyah as, kırmızı kral, siyah kral)
+    var kartHtml = '';
+    for (var i = 0; i < _kDeste.length; i++) {
+      var k = _kDeste[i];
+      var sahibi = '';
+      for (var p2 in _kDamEslesen) {
+        if (_kDamEslesen[p2].id === k.id) { sahibi = p2.split(' ')[0]; break; }
       }
+      var kr = k.renk === 'kirmizi' ? '#cc0000' : '#111';
+      var tl = k.tip === 'as' ? 'A' : 'K';
+      var masaLbl = '';
+      if (k.tip === 'as'   && k.renk === 'kirmizi') masaLbl = 'M1 Kırm.';
+      else if (k.tip === 'as'   && k.renk === 'siyah')   masaLbl = 'M1 Siyah';
+      else if (k.tip === 'kral' && k.renk === 'kirmizi') masaLbl = 'M2 Kırm.';
+      else if (k.tip === 'kral' && k.renk === 'siyah')   masaLbl = 'M2 Siyah';
       if (k.acik) {
-        var kr = k.renk === 'kirmizi' ? '#cc0000' : '#111';
-        var tl = k.tip === 'as' ? 'A' : 'K';
-        var masaLabel = '';
-        if (k.tip === 'as'   && k.renk === 'kirmizi') masaLabel = 'M1 Kırmızı';
-        else if (k.tip === 'as'   && k.renk === 'siyah')   masaLabel = 'M1 Siyah';
-        else if (k.tip === 'kral' && k.renk === 'kirmizi') masaLabel = 'M2 Kırmızı';
-        else if (k.tip === 'kral' && k.renk === 'siyah')   masaLabel = 'M2 Siyah';
-        kartHtml2 += '<div style="border:2px solid ' + kr + ';border-radius:10px;padding:8px;text-align:center;background:#fff">' +
+        kartHtml += '<div style="border:2px solid ' + kr + ';border-radius:10px;padding:8px;text-align:center;background:#fff">' +
           '<div style="font-size:1.4rem;color:' + kr + ';font-weight:900">' + tl + k.sembol + '</div>' +
-          '<div style="font-size:.58rem;color:var(--tx3)">' + masaLabel + '</div>' +
-          '<div style="font-size:.62rem;color:var(--tx3)">' + eslenenP + '</div>' +
-          '</div>';
+          '<div style="font-size:.58rem;color:var(--tx3)">' + masaLbl + '</div>' +
+          '<div style="font-size:.62rem;color:var(--g2);font-weight:600">' + sahibi + '</div></div>';
       } else {
-        var dis2 = !_kartSecilen;
-        kartHtml2 += '<button onclick="kartSec(' + i + ')" ' +
-          'style="border:2px solid var(--bd2);border-radius:10px;padding:12px 8px;background:var(--g1);cursor:' + (dis2 ? 'default' : 'pointer') + ';opacity:' + (dis2 ? '0.5' : '1') + '" ' +
-          (dis2 ? 'disabled' : '') + '>' +
-          '<div style="font-size:1.6rem">🂠</div></button>';
+        var disabled = !_kSecilen;
+        kartHtml += '<button onclick="_kSec2(' + i + ')" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 8px;' +
+          'background:var(--g1);cursor:' + (disabled ? 'default' : 'pointer') + ';opacity:' + (disabled ? '0.5' : '1') + '"' +
+          (disabled ? ' disabled' : '') + '><div style="font-size:1.6rem">🂠</div></button>';
       }
     }
-    document.getElementById('kart-kartlar').innerHTML = kartHtml2;
+    document.getElementById('kart-kartlar').innerHTML = kartHtml;
+    document.getElementById('kart-sonuc').style.display = 'none';
     return;
   }
 
-  // Oyuncu butonları (1. aşama)
+  // Aşama 1: normal kart çekme
+  if (baslik) baslik.textContent = '🃏 Masa Kurma — Kart Çek';
+  if (aciklama) aciklama.textContent = 'Önce ismine tıkla, sonra bir kart seç.';
+
+  var players = D.sess.players;
   var oyHtml = '';
   for (var i = 0; i < players.length; i++) {
     var p = players[i];
-    var eslesen = _kartEslesmeler[p];
-    var secili = _kartSecilen === p;
-    var bg = eslesen ? 'var(--g1)' : secili ? 'var(--g2)' : 'var(--bg2)';
-    var color = eslesen || secili ? '#fff' : 'var(--tx1)';
-    var label = p.split(' ')[0];
-    if (eslesen) label += ' ' + eslesen.sembol;
-    oyHtml += '<button onclick="kartOyuncuSec(' + i + ')" ' +
-      'style="padding:8px 12px;border:2px solid ' + (secili ? 'var(--g2)' : 'var(--bd2)') + ';' +
-      'background:' + bg + ';color:' + color + ';border-radius:8px;cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:600">' +
-      label + '</button>';
+    var esl = _kEslesen[p];
+    var sel = _kSecilen === p;
+    var bg = esl ? 'var(--g1)' : sel ? 'var(--g2)' : 'var(--bg2)';
+    var col = (esl || sel) ? '#fff' : 'var(--tx1)';
+    var lbl = p.split(' ')[0];
+    if (esl) {
+      var tipKisa = esl.tip === 'as' ? 'A' : esl.tip === 'kral' ? 'K' : 'Q';
+      lbl += ' ' + tipKisa + esl.sembol;
+    }
+    oyHtml += '<button onclick="_kSec1P(' + i + ')" style="padding:8px 12px;border:2px solid ' +
+      (sel ? 'var(--g2)' : 'var(--bd2)') + ';background:' + bg + ';color:' + col +
+      ';border-radius:8px;cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:600">' + lbl + '</button>';
   }
   document.getElementById('kart-oyuncular').innerHTML = oyHtml;
 
-  // Kartlar
   var kartHtml = '';
-  for (var i = 0; i < _kartDeste.length; i++) {
-    var k = _kartDeste[i];
-    var eslenenOyuncu = '';
-    for (var p in _kartEslesmeler) {
-      if (_kartEslesmeler[p].id === k.id) { eslenenOyuncu = p.split(' ')[0]; break; }
+  for (var i = 0; i < _kDeste.length; i++) {
+    var k = _kDeste[i];
+    var sahibi = '';
+    for (var p2 in _kEslesen) {
+      if (_kEslesen[p2].id === k.id) { sahibi = p2.split(' ')[0]; break; }
     }
+    var kr = k.renk === 'kirmizi' ? '#cc0000' : k.renk === 'siyah' ? '#111' : '#7c3aed';
+    var tipKisa = k.tip === 'as' ? 'A' : k.tip === 'kral' ? 'K' : 'Q';
     if (k.acik) {
-      var krenk = k.renk === 'kirmizi' ? '#cc0000' : '#111';
-      var tipLabel = k.tip === 'as' ? 'A' : 'K';
-      kartHtml += '<div style="border:2px solid ' + krenk + ';border-radius:10px;padding:8px;text-align:center;background:#fff">' +
-        '<div style="font-size:1.4rem;color:' + krenk + ';font-weight:900">' + tipLabel + k.sembol + '</div>' +
-        '<div style="font-size:.62rem;color:var(--tx3);margin-top:2px">' + eslenenOyuncu + '</div>' +
-        '</div>';
+      kartHtml += '<div style="border:2px solid ' + kr + ';border-radius:10px;padding:8px;text-align:center;background:#fff">' +
+        '<div style="font-size:1.4rem;color:' + kr + ';font-weight:900">' + tipKisa + k.sembol + '</div>' +
+        '<div style="font-size:.62rem;color:var(--tx3)">' + sahibi + '</div></div>';
     } else {
-      var disabled = !_kartSecilen || eslenenOyuncu;
-      kartHtml += '<button onclick="kartSec(' + i + ')" ' +
-        'style="border:2px solid var(--bd2);border-radius:10px;padding:12px 8px;background:var(--g1);cursor:' + (disabled ? 'default' : 'pointer') + ';opacity:' + (disabled && !eslenenOyuncu ? '0.5' : '1') + '" ' +
-        (disabled ? 'disabled' : '') + '>' +
-        '<div style="font-size:1.6rem">🂠</div>' +
-        '</button>';
+      var disabled = !_kSecilen;
+      kartHtml += '<button onclick="_kSec1K(' + i + ')" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 8px;' +
+        'background:var(--g1);cursor:' + (disabled ? 'default' : 'pointer') + ';opacity:' + (disabled ? '0.5' : '1') + '"' +
+        (disabled ? ' disabled' : '') + '><div style="font-size:1.6rem">🂠</div></button>';
     }
   }
   document.getElementById('kart-kartlar').innerHTML = kartHtml;
 
-  // Tüm eşleşmeler tamam mı?
-  if (Object.keys(_kartEslesmeler).length === 8) {
-    renderKartSonuc();
+  // Tüm eşleştiler mi?
+  if (Object.keys(_kEslesen).length === D.sess.players.length) {
+    // Dam var mı?
+    if (_kDamlar.length > 0) {
+      // 2. aşama: dam ortak seçimi
+      // Ortak desteyi hazırla: kırmızı as, siyah as, kırmızı kral, siyah kral
+      var ortakDeste = [
+        {id:20, tip:'as',   renk:'kirmizi', sembol:'♥', acik:false},
+        {id:21, tip:'as',   renk:'siyah',   sembol:'♠', acik:false},
+        {id:22, tip:'kral', renk:'kirmizi', sembol:'♥', acik:false},
+        {id:23, tip:'kral', renk:'siyah',   sembol:'♠', acik:false},
+      ];
+      // Karıştır
+      for (var i = ortakDeste.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = ortakDeste[i]; ortakDeste[i] = ortakDeste[j]; ortakDeste[j] = t;
+      }
+      _kDeste = ortakDeste;
+      _kAsama = 2;
+      _kSecilen = null;
+      renderKartEkrani();
+    } else {
+      renderKartSonuc1();
+    }
   }
 }
 
-function kartOyuncuSec(idx) {
-  var p = D.sess.players[parseInt(idx)];
-  if (_kartEslesmeler[p]) return;
-  _kartSecilen = (_kartSecilen === p) ? null : p;
+function _kSec1P(idx) {
+  var p = D.sess.players[idx];
+  if (_kEslesen[p]) return;
+  _kSecilen = (_kSecilen === p) ? null : p;
   renderKartEkrani();
 }
 
-function kartOyuncuSec2(idx) {
-  var p = _kartDamOyuncular[idx];
-  if (_kartDamEslesmeler[p]) return;
-  _kartSecilen = (_kartSecilen === p) ? null : p;
-  renderKartEkrani();
-}
-
-function kartSec(idx) {
-  if (_kartAsamasi === 2) {
-    // Dam oyuncusu ortak kartı seçiyor
-    kartDamSec(idx);
-    return;
-  }
-  if (!_kartSecilen) return;
-  var k = _kartDeste[idx];
+function _kSec1K(idx) {
+  if (!_kSecilen) return;
+  var k = _kDeste[idx];
   if (k.acik) return;
-
-  _kartEslesmeler[_kartSecilen] = k;
-  _kartDeste[idx].acik = true;
-
-  // Dam çektiyse dam listesine ekle
-  if (k.tip === 'dam') {
-    _kartDamOyuncular.push(_kartSecilen);
-  }
-
-  _kartSecilen = null;
+  _kDeste[idx].acik = true;
+  _kEslesen[_kSecilen] = {id:k.id, tip:k.tip, renk:k.renk, sembol:k.sembol};
+  if (k.tip === 'dam') _kDamlar.push(_kSecilen);
+  _kSecilen = null;
   renderKartEkrani();
 }
 
-function renderKartSonuc() {
-  // Dam oyuncusu varsa 2. aşamaya geç
-  if (_kartDamOyuncular.length > 0) {
-    gecisDamAsamasi();
-    return;
-  }
-  renderMasaOnay();
-}
-
-function gecisDamAsamasi() {
-  _kartAsamasi = 2;
-  _kartSecilen = null;
-
-  // 2. aşama desteyi oluştur: 1 kırmızı as, 1 siyah as, 1 kırmızı kral, 1 siyah kral
-  var damDeste = [
-    {id:10, tip:'as',   renk:'kirmizi', sembol:'♥'},
-    {id:11, tip:'as',   renk:'siyah',   sembol:'♠'},
-    {id:12, tip:'kral', renk:'kirmizi', sembol:'♥'},
-    {id:13, tip:'kral', renk:'siyah',   sembol:'♠'},
-  ];
-  // Karıştır
-  for (var i = damDeste.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i + 1));
-    var tmp = damDeste[i]; damDeste[i] = damDeste[j]; damDeste[j] = tmp;
-  }
-  _kartDeste = damDeste.map(function(k) { return Object.assign({}, k, {acik: false}); });
+function _kSecilen2(idx) {
+  var p = _kDamlar[idx];
+  if (_kDamEslesen[p]) return;
+  _kSecilen = (_kSecilen === p) ? null : p;
   renderKartEkrani();
 }
 
-function kartDamSec(idx) {
-  if (!_kartSecilen) return;
-  var k = _kartDeste[idx];
+function _kSec2(idx) {
+  if (!_kSecilen) return;
+  var k = _kDeste[idx];
   if (k.acik) return;
-
-  _kartDamEslesmeler[_kartSecilen] = k;
-  _kartDeste[idx].acik = true;
-  _kartSecilen = null;
-
-  // Tüm dam oyuncuları seçtiyse sonuca geç
-  var secenSayisi = Object.keys(_kartDamEslesmeler).length;
-  if (secenSayisi >= _kartDamOyuncular.length) {
-    renderMasaOnay();
+  _kDeste[idx].acik = true;
+  _kDamEslesen[_kSecilen] = {id:k.id, tip:k.tip, renk:k.renk, sembol:k.sembol};
+  _kSecilen = null;
+  // Tüm dam oyuncuları seçtiyse sonuç
+  if (Object.keys(_kDamEslesen).length >= _kDamlar.length) {
+    renderKartSonuc1();
   } else {
     renderKartEkrani();
   }
 }
 
-function renderMasaOnay() {
+function renderKartSonuc1() {
   var m1K = [], m1S = [], m2K = [], m2S = [];
-  var partners = {};
-
-  // Ana kart çekenler
-  for (var p in _kartEslesmeler) {
-    var k = _kartEslesmeler[p];
+  // Ana kart eşleşmeleri
+  for (var p in _kEslesen) {
+    var k = _kEslesen[p];
     if (k.tip === 'as'   && k.renk === 'kirmizi') m1K.push(p);
     else if (k.tip === 'as'   && k.renk === 'siyah')   m1S.push(p);
     else if (k.tip === 'kral' && k.renk === 'kirmizi') m2K.push(p);
     else if (k.tip === 'kral' && k.renk === 'siyah')   m2S.push(p);
+    // dam çekenler bu listelere dahil değil
   }
 
-  // Dam oyuncuları - sadece partners'a ekle (masaya değil)
-  for (var p in _kartDamEslesmeler) {
-    var k = _kartDamEslesmeler[p];
-    if (k.tip === 'as'   && k.renk === 'kirmizi') partners[p] = 'm1K';
-    else if (k.tip === 'as'   && k.renk === 'siyah')   partners[p] = 'm1S';
-    else if (k.tip === 'kral' && k.renk === 'kirmizi') partners[p] = 'm2K';
-    else if (k.tip === 'kral' && k.renk === 'siyah')   partners[p] = 'm2S';
-  }
-
-  var damIsimleri = _kartDamOyuncular.map(function(p){ return p.split(' ')[0]; }).join(', ');
+  // _kMasaGruplari sakla
+  window._kMasaGruplari = {m1K:m1K, m1S:m1S, m2K:m2K, m2S:m2S};
 
   var html = '';
-  if (_kartDamOyuncular.length > 0) {
-    html += '<div style="margin-bottom:8px;color:var(--tx3);font-size:.78rem">Dışarıdan: <b>' + damIsimleri + '</b></div>';
+  if (_kDamlar.length > 0) {
+    html += '<div style="margin-bottom:8px;font-size:.78rem;color:var(--tx3)">Dışarıdan ortak: <b>' +
+      _kDamlar.map(function(p){ return p.split(' ')[0]; }).join(', ') + '</b></div>';
   }
-  html += '<div style="margin-bottom:8px"><b style="color:#cc0000">Masa 1 Kırmızı:</b> ' + m1K.map(function(p){return p.split(' ')[0];}).join(', ') + '</div>';
-  html += '<div style="margin-bottom:8px"><b>Masa 1 Siyah:</b> ' + m1S.map(function(p){return p.split(' ')[0];}).join(', ') + '</div>';
-  html += '<div style="margin-bottom:8px"><b style="color:#cc0000">Masa 2 Kırmızı:</b> ' + m2K.map(function(p){return p.split(' ')[0];}).join(', ') + '</div>';
+  html += '<div style="margin-bottom:6px"><b style="color:#cc0000">Masa 1 Kırmızı:</b> ' + m1K.map(function(p){return p.split(' ')[0];}).join(', ') + '</div>';
+  html += '<div style="margin-bottom:6px"><b>Masa 1 Siyah:</b> ' + m1S.map(function(p){return p.split(' ')[0];}).join(', ') + '</div>';
+  html += '<div style="margin-bottom:6px"><b style="color:#cc0000">Masa 2 Kırmızı:</b> ' + m2K.map(function(p){return p.split(' ')[0];}).join(', ') + '</div>';
   html += '<div><b>Masa 2 Siyah:</b> ' + m2S.map(function(p){return p.split(' ')[0];}).join(', ') + '</div>';
-
-  // _masaGrupları sakla - kartOnayla kullanacak
-  _kartMasaGruplari = {m1K:m1K, m1S:m1S, m2K:m2K, m2S:m2S, partners:partners};
 
   document.getElementById('kart-masa-onay').innerHTML = html;
   document.getElementById('kart-sonuc').style.display = 'block';
 }
 
 function kartOnayla() {
-  var m1K = _kartMasaGruplari.m1K || [];
-  var m1S = _kartMasaGruplari.m1S || [];
-  var m2K = _kartMasaGruplari.m2K || [];
-  var m2S = _kartMasaGruplari.m2S || [];
-  var damPartners = _kartMasaGruplari.partners || {};
+  var g = window._kMasaGruplari || {m1K:[], m1S:[], m2K:[], m2S:[]};
 
-  // Dam oyuncularını masa dizilerinden çıkar (sadece partners olacaklar)
-  var damList = Object.keys(damPartners);
-  m1K = m1K.filter(function(p){ return damList.indexOf(p) < 0; });
-  m1S = m1S.filter(function(p){ return damList.indexOf(p) < 0; });
-  m2K = m2K.filter(function(p){ return damList.indexOf(p) < 0; });
-  m2S = m2S.filter(function(p){ return damList.indexOf(p) < 0; });
-
-  D.round.masa1 = { A: m1K, B: m1S };
-  D.round.masa2 = { A: m2K, B: m2S };
+  D.round.masa1 = { A: g.m1K.slice(), B: g.m1S.slice() };
+  D.round.masa2 = { A: g.m2K.slice(), B: g.m2S.slice() };
   D.round.masa1active = true;
   D.round.masa2active = true;
-
-  // Dam oyuncularının ortak bilgilerini ekle
   D.round.partners = {};
-  for (var p in damPartners) {
-    var role = damPartners[p];
-    if (role === 'm1K') D.round.partners[p] = {m1: 'A', m2: null};
-    else if (role === 'm1S') D.round.partners[p] = {m1: 'B', m2: null};
-    else if (role === 'm2K') D.round.partners[p] = {m1: null, m2: 'A'};
-    else if (role === 'm2S') D.round.partners[p] = {m1: null, m2: 'B'};
+
+  // Dam oyuncularının ortak bilgilerini ekle + masaya da ekle
+  for (var p in _kDamEslesen) {
+    var k = _kDamEslesen[p];
+    if (k.tip === 'as' && k.renk === 'kirmizi') {
+      D.round.partners[p] = {m1:'A', m2:null};
+      D.round.masa1.A.push(p);
+    } else if (k.tip === 'as' && k.renk === 'siyah') {
+      D.round.partners[p] = {m1:'B', m2:null};
+      D.round.masa1.B.push(p);
+    } else if (k.tip === 'kral' && k.renk === 'kirmizi') {
+      D.round.partners[p] = {m1:null, m2:'A'};
+      D.round.masa2.A.push(p);
+    } else if (k.tip === 'kral' && k.renk === 'siyah') {
+      D.round.partners[p] = {m1:null, m2:'B'};
+      D.round.masa2.B.push(p);
+    }
   }
 
   closeOv('ov-kart');
 
-  // Oturumu başlat
-  D.sess.mPuan = parseFloat(document.getElementById('m-puan').value) || 0;
+  D.sess.mPuan  = parseFloat(document.getElementById('m-puan').value)  || 0;
   D.sess.mPişti = parseFloat(document.getElementById('m-pişti').value) || 0;
-  D.sess.mKaz = parseFloat(document.getElementById('m-kaz').value) || 0;
+  D.sess.mKaz   = parseFloat(document.getElementById('m-kaz').value)   || 0;
 
   D.started = true;
   _dagitici = {};
@@ -3956,6 +3920,7 @@ function kartOnayla() {
     syncDot('#ef4444');
   });
 }
+
 
 // ── ONAY ──
 function onaySor(mesaj, callback) {
