@@ -3688,7 +3688,20 @@ function showKartCekme() {
   });
 
   renderKartEkrani();
-  document.getElementById('ov-kart').classList.add('on');
+  var ov = document.getElementById('ov-kart');
+  ov.classList.add('on');
+  document.getElementById('kart-kartlar').onclick = function(e) {
+    var btn = e.target.closest('[data-kidx]');
+    if (!btn) return;
+    var idx = parseInt(btn.getAttribute('data-kidx'));
+    if (_kAsama === 2) kartSec2(idx); else kartSec1K(idx);
+  };
+  document.getElementById('kart-oyuncular').onclick = function(e) {
+    var btn = e.target.closest('[data-pidx]');
+    if (!btn) return;
+    var idx = parseInt(btn.getAttribute('data-pidx'));
+    if (_kAsama === 2) kartSecilen2(idx); else kartSec1P(idx);
+  };
 }
 
 function renderKartEkrani() {
