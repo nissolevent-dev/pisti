@@ -1921,7 +1921,12 @@ function _saveInitLdgExec() {
 }
 
 function renderHesap() {
-  renderLdg('h-sess-ldg', D.sess.players, D.sessLdg);
+  // Bu oturumda oynayan herkes (şu an oturumda olmayanlar da dahil)
+  var sessPlayers = D.sess.players.slice();
+  for (var sp in D.sessLdg) {
+    if (sessPlayers.indexOf(sp) < 0) sessPlayers.push(sp);
+  }
+  renderLdg('h-sess-ldg', sessPlayers, D.sessLdg);
 
   var el = document.getElementById('h-sess-detail');
   if (!D.sessGames.length) {
@@ -2106,7 +2111,7 @@ function renderLdg(elId, players, ldg) {
   var el = document.getElementById(elId);
   var active = [];
   for (var i = 0; i < players.length; i++) {
-    if (ldg[players[i]] !== undefined) active.push(players[i]);
+    if (ldg[players[i]] !== undefined || players[i]) active.push(players[i]);
   }
   if (!active.length) { el.innerHTML = '<div class="empty">Veri yok</div>'; return; }
   active.sort(function(a,b) { return (ldg[b]||0)-(ldg[a]||0); });
@@ -3708,7 +3713,7 @@ function renderKartEkrani() {
       var col = (tamamlandi || sel) ? '#fff' : 'var(--tx1)';
       var lbl = p.split(' ')[0];
       if (esl) lbl += ' ' + esl.sembol;
-      oyHtml += '<button onclick="_kSecilen2(' + i + ')" style="padding:8px 12px;border:2px solid ' +
+      oyHtml += '<button onclick="kartSecilen2(' + i + ')" style="padding:8px 12px;border:2px solid ' +
         (sel ? 'var(--g2)' : 'var(--bd2)') + ';background:' + bg + ';color:' + col +
         ';border-radius:8px;cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:600">' + lbl + '</button>';
     }
@@ -3729,14 +3734,23 @@ function renderKartEkrani() {
       else if (k.tip === 'as'   && k.renk === 'siyah')   masaLbl = 'M1 Siyah';
       else if (k.tip === 'kral' && k.renk === 'kirmizi') masaLbl = 'M2 Kırm.';
       else if (k.tip === 'kral' && k.renk === 'siyah')   masaLbl = 'M2 Siyah';
+      // Seçilen kart mı kontrol et
+      var isSecilen = false;
+      for (var p3 in _kDamEslesen) {
+        if (_kDamEslesen[p3].id === k.id) { isSecilen = true; break; }
+      }
+      var borderColor = isSecilen ? 'var(--g1)' : kr;
+      var borderWidth = isSecilen ? '3px' : '2px';
       if (k.acik) {
-        kartHtml += '<div style="border:2px solid ' + kr + ';border-radius:10px;padding:8px;text-align:center;background:#fff">' +
+        kartHtml += '<div style="border:' + borderWidth + ' solid ' + borderColor + ';border-radius:10px;padding:8px;text-align:center;background:' + (isSecilen ? '#f0faf4' : '#fff') + '">' +
           '<div style="font-size:1.4rem;color:' + kr + ';font-weight:900">' + tl + k.sembol + '</div>' +
           '<div style="font-size:.58rem;color:var(--tx3)">' + masaLbl + '</div>' +
-          '<div style="font-size:.62rem;color:var(--g2);font-weight:600">' + sahibi + '</div></div>';
+          '<div style="font-size:.62rem;color:var(--g2);font-weight:600">' + sahibi + '</div>' +
+          (isSecilen ? '<div style="font-size:.55rem;color:var(--g1);font-weight:700">✓ Seçildi</div>' : '') +
+          '</div>';
       } else {
         var disabled = !_kSecilen;
-        kartHtml += '<button onclick="_kSec2(' + i + ')" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 8px;' +
+        kartHtml += '<button onclick="kartSec2(' + i + ')" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 8px;' +
           'background:var(--g1);cursor:' + (disabled ? 'default' : 'pointer') + ';opacity:' + (disabled ? '0.5' : '1') + '"' +
           (disabled ? ' disabled' : '') + '><div style="font-size:1.6rem">🂠</div></button>';
       }
@@ -3763,7 +3777,7 @@ function renderKartEkrani() {
       var tipKisa = esl.tip === 'as' ? 'A' : esl.tip === 'kral' ? 'K' : 'Q';
       lbl += ' ' + tipKisa + esl.sembol;
     }
-    oyHtml += '<button onclick="_kSec1P(' + i + ')" style="padding:8px 12px;border:2px solid ' +
+    oyHtml += '<button onclick="kartSec1P(' + i + ')" style="padding:8px 12px;border:2px solid ' +
       (sel ? 'var(--g2)' : 'var(--bd2)') + ';background:' + bg + ';color:' + col +
       ';border-radius:8px;cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:600">' + lbl + '</button>';
   }
@@ -3784,7 +3798,7 @@ function renderKartEkrani() {
         '<div style="font-size:.62rem;color:var(--tx3)">' + sahibi + '</div></div>';
     } else {
       var disabled = !_kSecilen;
-      kartHtml += '<button onclick="_kSec1K(' + i + ')" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 8px;' +
+      kartHtml += '<button onclick="kartSec1K(' + i + ')" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 8px;' +
         'background:var(--g1);cursor:' + (disabled ? 'default' : 'pointer') + ';opacity:' + (disabled ? '0.5' : '1') + '"' +
         (disabled ? ' disabled' : '') + '><div style="font-size:1.6rem">🂠</div></button>';
     }
@@ -3819,14 +3833,14 @@ function renderKartEkrani() {
   }
 }
 
-function _kSec1P(idx) {
+function kartSec1P(idx) {
   var p = D.sess.players[idx];
   if (_kEslesen[p]) return;
   _kSecilen = (_kSecilen === p) ? null : p;
   renderKartEkrani();
 }
 
-function _kSec1K(idx) {
+function kartSec1K(idx) {
   if (!_kSecilen) return;
   var k = _kDeste[idx];
   if (k.acik) return;
@@ -3837,24 +3851,28 @@ function _kSec1K(idx) {
   renderKartEkrani();
 }
 
-function _kSecilen2(idx) {
+function kartSecilen2(idx) {
   var p = _kDamlar[idx];
   if (_kDamEslesen[p]) return;
   _kSecilen = (_kSecilen === p) ? null : p;
   renderKartEkrani();
 }
 
-function _kSec2(idx) {
+function kartSec2(idx) {
   if (!_kSecilen) return;
   var k = _kDeste[idx];
   if (k.acik) return;
-  _kDeste[idx].acik = true;
-  _kDamEslesen[_kSecilen] = {id:k.id, tip:k.tip, renk:k.renk, sembol:k.sembol};
+
+  // Seçilen kartı kaydet
+  _kDamEslesen[_kSecilen] = {id:k.id, tip:k.tip, renk:k.renk, sembol:k.sembol, secilenIdx:idx};
+  // Tüm kartları aç
+  for (var i = 0; i < _kDeste.length; i++) {
+    _kDeste[i].acik = true;
+  }
   _kSecilen = null;
-  // Önce kartı açık göster, sonra sonuca geç
   renderKartEkrani();
   if (Object.keys(_kDamEslesen).length >= _kDamlar.length) {
-    setTimeout(function() { renderKartSonuc1(); }, 800);
+    setTimeout(function() { renderKartSonuc1(); }, 1200);
   }
 }
 
