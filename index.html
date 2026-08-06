@@ -3681,6 +3681,7 @@ function showKartCekme() {
     return {id:k.id, tip:k.tip, renk:k.renk, sembol:k.sembol, acik:false};
   });
 
+  console.log('Deste:', _kDeste.length, 'kart, dam:', _kDeste.filter(function(k){return k.tip==='dam';}).length);
   renderKartEkrani();
   document.getElementById('ov-kart').classList.add('on');
 }
