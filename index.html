@@ -2109,10 +2109,7 @@ function renderHesap() {
 
 function renderLdg(elId, players, ldg) {
   var el = document.getElementById(elId);
-  var active = [];
-  for (var i = 0; i < players.length; i++) {
-    if (ldg[players[i]] !== undefined || players[i]) active.push(players[i]);
-  }
+  var active = players.slice(); // Tüm oyuncuları dahil et
   if (!active.length) { el.innerHTML = '<div class="empty">Veri yok</div>'; return; }
   active.sort(function(a,b) { return (ldg[b]||0)-(ldg[a]||0); });
   var isAllTime = (elId === 'h-all-ldg');
