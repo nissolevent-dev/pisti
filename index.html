@@ -3748,8 +3748,8 @@ function renderKartEkrani() {
       } else {
         var disabled = !_kSecilen;
         kartHtml += '<button onclick="kartSec2(' + i + ')" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 8px;' +
-          'background:var(--g1);cursor:' + (disabled ? 'default' : 'pointer') + ';opacity:' + (disabled ? '0.5' : '1') + '"' +
-          (disabled ? ' disabled' : '') + '><div style="font-size:1.6rem">🂠</div></button>';
+          'background:var(--g1);cursor:' + (disabled ? 'default' : 'pointer') + ';opacity:' + (disabled ? '0.5' : '1') + '">' +
+          '<div style="font-size:1.6rem">🂠</div></button>';
       }
     }
     document.getElementById('kart-kartlar').innerHTML = kartHtml;
@@ -3796,8 +3796,8 @@ function renderKartEkrani() {
     } else {
       var disabled = !_kSecilen;
       kartHtml += '<button onclick="kartSec1K(' + i + ')" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 8px;' +
-        'background:var(--g1);cursor:' + (disabled ? 'default' : 'pointer') + ';opacity:' + (disabled ? '0.5' : '1') + '"' +
-        (disabled ? ' disabled' : '') + '><div style="font-size:1.6rem">🂠</div></button>';
+        'background:var(--g1);cursor:' + (disabled ? 'default' : 'pointer') + ';opacity:' + (disabled ? '0.5' : '1') + '">' +
+        '<div style="font-size:1.6rem">🂠</div></button>';
     }
   }
   document.getElementById('kart-kartlar').innerHTML = kartHtml;
