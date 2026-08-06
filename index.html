@@ -3639,8 +3639,8 @@ function showKartCekme() {
 
   var n = D.sess.players.length; // 8, 9 veya 10
 
-  // Tam deste: 4as + 4kral + 2dam = 10 kart
-  var tamDeste = [
+  // 8 normal kart + gerekli dam
+  var normalDeste = [
     {id:0, tip:'as',   renk:'kirmizi', sembol:'♥'},
     {id:1, tip:'as',   renk:'kirmizi', sembol:'♦'},
     {id:2, tip:'as',   renk:'siyah',   sembol:'♠'},
@@ -3649,18 +3649,35 @@ function showKartCekme() {
     {id:5, tip:'kral', renk:'kirmizi', sembol:'♦'},
     {id:6, tip:'kral', renk:'siyah',   sembol:'♠'},
     {id:7, tip:'kral', renk:'siyah',   sembol:'♣'},
-    {id:8, tip:'dam',  renk:'kirmizi', sembol:'♥'},
-    {id:9, tip:'dam',  renk:'siyah',   sembol:'♠'},
+  ];
+  var damDeste = [
+    {id:8, tip:'dam', renk:'kirmizi', sembol:'♥'},
+    {id:9, tip:'dam', renk:'siyah',   sembol:'♠'},
   ];
 
-  // n kadar kart al - önce karıştır, sonra n al
-  // Fisher-Yates
-  for (var i = tamDeste.length - 1; i > 0; i--) {
+  // Normal kartları karıştır
+  for (var i = normalDeste.length - 1; i > 0; i--) {
     var j = Math.floor(Math.random() * (i + 1));
-    var t = tamDeste[i]; tamDeste[i] = tamDeste[j]; tamDeste[j] = t;
+    var t = normalDeste[i]; normalDeste[i] = normalDeste[j]; normalDeste[j] = t;
   }
-  // n kadar al
-  _kDeste = tamDeste.slice(0, n).map(function(k) {
+
+  // Dam kartlarını karıştır
+  for (var i = damDeste.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = damDeste[i]; damDeste[i] = damDeste[j]; damDeste[j] = t;
+  }
+
+  // Birleştir: 8 normal + kaç dam gerekiyorsa
+  var damSayisi = n - 8; // 9→1, 10→2
+  var deste = normalDeste.concat(damDeste.slice(0, damSayisi));
+
+  // Tekrar karıştır (dam'ların konumu rastgele olsun)
+  for (var i = deste.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = deste[i]; deste[i] = deste[j]; deste[j] = t;
+  }
+
+  _kDeste = deste.map(function(k) {
     return {id:k.id, tip:k.tip, renk:k.renk, sembol:k.sembol, acik:false};
   });
 
