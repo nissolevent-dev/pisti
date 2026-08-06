@@ -1959,6 +1959,10 @@ function renderHesap() {
   for (var p0 in D.initialLdg) {
     if (!seen[p0]) { seen[p0] = true; allP.push(p0); }
   }
+  // Pool'daki herkesi ekle (hiç oynamamış olsalar bile)
+  for (var pi0 = 0; pi0 < D.pool.length; pi0++) {
+    if (!seen[D.pool[pi0]]) { seen[D.pool[pi0]] = true; allP.push(D.pool[pi0]); }
+  }
   // Toplam = initialLdg + ldg
   var totalLdg = {};
   for (var p1 in D.initialLdg) totalLdg[p1] = D.initialLdg[p1] || 0;
@@ -3789,28 +3793,29 @@ function renderKartEkrani() {
 
   // Tüm eşleştiler mi?
   if (Object.keys(_kEslesen).length === D.sess.players.length) {
-    // Dam var mı?
-    if (_kDamlar.length > 0) {
-      // 2. aşama: dam ortak seçimi
-      // Ortak desteyi hazırla: kırmızı as, siyah as, kırmızı kral, siyah kral
-      var ortakDeste = [
-        {id:20, tip:'as',   renk:'kirmizi', sembol:'♥', acik:false},
-        {id:21, tip:'as',   renk:'siyah',   sembol:'♠', acik:false},
-        {id:22, tip:'kral', renk:'kirmizi', sembol:'♥', acik:false},
-        {id:23, tip:'kral', renk:'siyah',   sembol:'♠', acik:false},
-      ];
-      // Karıştır
-      for (var i = ortakDeste.length - 1; i > 0; i--) {
-        var j = Math.floor(Math.random() * (i + 1));
-        var t = ortakDeste[i]; ortakDeste[i] = ortakDeste[j]; ortakDeste[j] = t;
+    // Önce son kartı açık göster
+    renderKartEkrani();
+    setTimeout(function() {
+      if (_kDamlar.length > 0) {
+        var ortakDeste = [
+          {id:20, tip:'as',   renk:'kirmizi', sembol:'♥', acik:false},
+          {id:21, tip:'as',   renk:'siyah',   sembol:'♠', acik:false},
+          {id:22, tip:'kral', renk:'kirmizi', sembol:'♥', acik:false},
+          {id:23, tip:'kral', renk:'siyah',   sembol:'♠', acik:false},
+        ];
+        for (var i = ortakDeste.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var t = ortakDeste[i]; ortakDeste[i] = ortakDeste[j]; ortakDeste[j] = t;
+        }
+        _kDeste = ortakDeste;
+        _kAsama = 2;
+        _kSecilen = null;
+        renderKartEkrani();
+      } else {
+        renderKartSonuc1();
       }
-      _kDeste = ortakDeste;
-      _kAsama = 2;
-      _kSecilen = null;
-      renderKartEkrani();
-    } else {
-      renderKartSonuc1();
-    }
+    }, 800);
+    return;
   }
 }
 
@@ -3846,11 +3851,10 @@ function _kSec2(idx) {
   _kDeste[idx].acik = true;
   _kDamEslesen[_kSecilen] = {id:k.id, tip:k.tip, renk:k.renk, sembol:k.sembol};
   _kSecilen = null;
-  // Tüm dam oyuncuları seçtiyse sonuç
+  // Önce kartı açık göster, sonra sonuca geç
+  renderKartEkrani();
   if (Object.keys(_kDamEslesen).length >= _kDamlar.length) {
-    renderKartSonuc1();
-  } else {
-    renderKartEkrani();
+    setTimeout(function() { renderKartSonuc1(); }, 800);
   }
 }
 
