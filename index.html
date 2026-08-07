@@ -3850,13 +3850,15 @@ function _kKartTik(idx){
     _kDamKartlar.push({oyuncu:_kDamSecilen,kart:{id:k.id,tip:k.tip,renk:k.renk,sembol:k.sembol}});
     _kDamSecilen=null;
     // Eğer ilk seçim saklandıysa (9 kişi evet durumu), onu da ekle
+    var wasIkinciMasa=false;
     if(window._kIlkSecim){
       _kDamKartlar.push(window._kIlkSecim);
       window._kIlkSecim=null;
+      wasIkinciMasa=true;
     }
     if(_kDamKartlar.length>=_kDamlar.length){
-      // 9 kişi: tek dam var, ikinci masaya ortak olmak ister mi diye sor
-      if(D.sess.players.length===9 && _kDamlar.length===1){
+      // 9 kişi: tek dam var, ikinci masaya ortak olmak ister mi? (sadece ilk seçimde sor)
+      if(!wasIkinciMasa && D.sess.players.length===9 && _kDamlar.length===1){
         _kRender();
         document.getElementById('kart-ikinci-masa').style.display='block';
       } else {
