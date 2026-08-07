@@ -788,11 +788,19 @@ function refreshAll() {
     document.getElementById('m-pişti').value = D.sess.mPişti;
     document.getElementById('m-kaz').value = D.sess.mKaz;
   }
-  var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active) && D.sessGames && D.sessGames.length > 0;
+  var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active);
   // started=true ama sessGames boşsa tutarsız durum - sıfırla ve ekran 2'ye git
   // NOT: sessGames boş ama masa kuruluysa sıfırlama - ilk oyun oynanmamış olabilir
   // Bu kontrolü kaldırıyoruz, masa aktifliği yeterli
   if (reallyStarted) {
+    // Dağıtıcı sırasını yükle
+    if (D.dagitici) {
+      var _am = (D.round && D.round.masa1active) ? 1 : 2;
+      if (D.dagitici[_am + '_sira'] && D.dagitici[_am + '_sira'].length) {
+        _dagiticiSira = D.dagitici[_am + '_sira'].slice();
+        _dagiticiIdx = D.dagitici[_am + '_idx'] || 0;
+      }
+    }
     // Önce ekrana geç, sonra içeriği doldur
     goS(4);
     updateMasaLabels();
