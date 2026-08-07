@@ -129,7 +129,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <div class="hdr">
   <div>
-    <h1>PİŞTİ</h1>
+    <h1>PİŞTİ <span style="font-size:.45em;font-weight:400;opacity:.6;letter-spacing:.05em">v2</span></h1>
     <small>ORTAKLI TAKİP</small>
   </div>
   <div class="hdr-r">
@@ -809,6 +809,8 @@ function refreshAll() {
     // Aktif masaya göre sekme seç
     if (D.round && D.round.masa1active) switchMasa(1);
     else if (D.round && D.round.masa2active) switchMasa(2);
+    // Skor ekranını aç
+    setTimeout(function(){ showSkorTakip(); }, 150);
   } else if (D.pool.length > 0) {
     renderSessChips();
     goS(2);
