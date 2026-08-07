@@ -2869,7 +2869,16 @@ function setSkorMasa(masa) {
     btn1.style.fontSize = '.78rem'; btn1.style.padding = '6px 10px';
     btn2.style.fontSize = '.78rem'; btn2.style.padding = '6px 10px';
   }
+  // Masaya göre dağıtıcı sırasını güncelle
+  if (D.dagitici && D.dagitici[masa + '_sira'] && D.dagitici[masa + '_sira'].length) {
+    _dagiticiSira = D.dagitici[masa + '_sira'].slice();
+    _dagiticiIdx = D.dagitici[masa + '_idx'] || 0;
+  } else {
+    _dagiticiSira = [];
+    _dagiticiIdx = 0;
+  }
   renderSkorTakip();
+  renderDagitici(masa);
 }
 
 function showSkorTakip() {
