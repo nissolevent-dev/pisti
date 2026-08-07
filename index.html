@@ -1922,8 +1922,11 @@ function _saveInitLdgExec() {
 function renderHesap() {
   // Bu oturumda oynayan herkes (şu an oturumda olmayanlar da dahil)
   var sessPlayers = D.sess.players.slice();
-  for (var sp in D.sessLdg) {
-    if (sessPlayers.indexOf(sp) < 0) sessPlayers.push(sp);
+  // Sadece aktif oturumdaki sessLdg'yi ekle (oyuncu seçilmişse)
+  if (D.sess.players.length > 0 || D.started) {
+    for (var sp in D.sessLdg) {
+      if (sessPlayers.indexOf(sp) < 0) sessPlayers.push(sp);
+    }
   }
   renderLdg('h-sess-ldg', sessPlayers, D.sessLdg);
 
