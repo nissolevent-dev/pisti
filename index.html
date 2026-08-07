@@ -3628,12 +3628,12 @@ function saveManualSession() {
 }
 
 // ── KART ÇEKME ──
-var _kAsama=1, _kDeste1=[], _kDeste2=[], _kEslesen={}, _kDamlar=[], _kSecilen=null, _kDamSecilen=null, _kDamKart=null;
+var _kAsama=1, _kDeste1=[], _kDeste2=[], _kEslesen={}, _kDamlar=[], _kSecilen=null, _kDamSecilen=null, _kDamKartlar=[];
 
 function _kShuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
 
 function showKartCekme(){
-  _kAsama=1; _kEslesen={}; _kDamlar=[]; _kSecilen=null; _kDamSecilen=null; _kDamKart=null;
+  _kAsama=1; _kEslesen={}; _kDamlar=[]; _kSecilen=null; _kDamSecilen=null; _kDamKartlar=[];
   var n=D.sess.players.length;
   var normal=[
     {id:0,tip:'as',renk:'k',sembol:'♥'},{id:1,tip:'as',renk:'k',sembol:'♦'},
@@ -3708,12 +3708,18 @@ function _kKartTik(idx){
     if(!_kDamSecilen)return;
     var k=_kDeste2[idx];
     if(k.acik)return;
+    // Bu dam oyuncusu zaten seçtiyse izin verme
+    for(var di=0;di<_kDamKartlar.length;di++){if(_kDamKartlar[di].oyuncu===_kDamSecilen)return;}
     _kDeste2[idx].acik=true;
-    _kDamKart={oyuncu:_kDamSecilen,kart:{id:k.id,tip:k.tip,renk:k.renk,sembol:k.sembol}};
+    _kDamKartlar.push({oyuncu:_kDamSecilen,kart:{id:k.id,tip:k.tip,renk:k.renk,sembol:k.sembol}});
     _kDamSecilen=null;
-    _kAsama=3;
-    _kRender();
-    setTimeout(function(){_kSonuc();},1200);
+    if(_kDamKartlar.length>=_kDamlar.length){
+      _kAsama=3;
+      _kRender();
+      setTimeout(function(){_kSonuc();},1200);
+    } else {
+      _kRender();
+    }
   }
 }
 
