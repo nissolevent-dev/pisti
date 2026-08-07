@@ -2870,7 +2870,7 @@ function setSkorMasa(masa) {
     btn2.style.fontSize = '.78rem'; btn2.style.padding = '6px 10px';
   }
   // Masaya göre dağıtıcı sırasını güncelle
-  if (D.dagitici && D.dagitici[masa + '_sira'] && D.dagitici[masa + '_sira'].length) {
+  if (D.dagitici && D.dagitici[masa + '_sira']) {
     _dagiticiSira = D.dagitici[masa + '_sira'].slice();
     _dagiticiIdx = D.dagitici[masa + '_idx'] || 0;
   } else {
@@ -2981,11 +2981,14 @@ function setSiraBtn(idx) {
   } else {
     _dagiticiSira.push(p);
   }
-  // Tüm oyuncular seçildiyse sırayı kaydet
+
+  // Her adımda D.dagitici'ye yaz (hem kısmi hem tam seçim)
+  D.dagitici = D.dagitici || {};
+  D.dagitici[masa + '_sira'] = _dagiticiSira.slice();
+
+  // Tüm oyuncular seçildiyse Firebase'e kaydet
   if (_dagiticiSira.length === _dagiticiPlayers.length) {
     _dagiticiIdx = 0;
-    D.dagitici = D.dagitici || {};
-    D.dagitici[masa + '_sira'] = _dagiticiSira.slice();
     D.dagitici[masa + '_idx'] = 0;
     savingDagitici = true;
     REF.child('dagitici').set(D.dagitici).then(function(){savingDagitici=false;}).catch(function(){savingDagitici=false;});
