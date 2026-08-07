@@ -2957,10 +2957,26 @@ function renderDagitici(masa) {
 
 function setSiraBtn(idx) {
   if (!_dagiticiSira) _dagiticiSira = [];
+  var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+  // _dagiticiPlayers'ı mevcut masaya göre güncelle
+  var masaData = masa === 1 ? D.round.masa1 : D.round.masa2;
+  var partnerSet = {};
+  if (D.round && D.round.partners) {
+    for (var pp in D.round.partners) {
+      var pv = D.round.partners[pp];
+      if (pv && typeof pv === 'object') {
+        var inThisMasa = (masa === 1 && (pv.m1 === 'A' || pv.m1 === 'B')) ||
+                         (masa === 2 && (pv.m2 === 'A' || pv.m2 === 'B'));
+        if (inThisMasa) partnerSet[pp] = true;
+      }
+    }
+  }
+  var allPlayers = masaData ? (masaData.A || []).concat(masaData.B || []) : [];
+  _dagiticiPlayers = allPlayers.filter(function(p) { return !partnerSet[p]; });
+
   var p = _dagiticiPlayers[idx];
   var pos = _dagiticiSira.indexOf(p);
   if (pos >= 0) {
-    // Seçimi geri al - bu ve sonrasını sil
     _dagiticiSira = _dagiticiSira.slice(0, pos);
   } else {
     _dagiticiSira.push(p);
@@ -2968,15 +2984,13 @@ function setSiraBtn(idx) {
   // Tüm oyuncular seçildiyse sırayı kaydet
   if (_dagiticiSira.length === _dagiticiPlayers.length) {
     _dagiticiIdx = 0;
-    var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
     D.dagitici = D.dagitici || {};
     D.dagitici[masa + '_sira'] = _dagiticiSira.slice();
     D.dagitici[masa + '_idx'] = 0;
-    // Firebase'e kaydet
     savingDagitici = true;
     REF.child('dagitici').set(D.dagitici).then(function(){savingDagitici=false;}).catch(function(){savingDagitici=false;});
   }
-  renderDagitici(parseInt(document.getElementById('skor-masa-sel').value) || 1);
+  renderDagitici(masa);
 }
 
 function secDagitici(idx) {
