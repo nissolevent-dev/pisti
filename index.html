@@ -3849,6 +3849,11 @@ function _kKartTik(idx){
     }
     _kDamKartlar.push({oyuncu:_kDamSecilen,kart:{id:k.id,tip:k.tip,renk:k.renk,sembol:k.sembol}});
     _kDamSecilen=null;
+    // Eğer ilk seçim saklandıysa (9 kişi evet durumu), onu da ekle
+    if(window._kIlkSecim){
+      _kDamKartlar.push(window._kIlkSecim);
+      window._kIlkSecim=null;
+    }
     if(_kDamKartlar.length>=_kDamlar.length){
       // 9 kişi: tek dam var, ikinci masaya ortak olmak ister mi diye sor
       if(D.sess.players.length===9 && _kDamlar.length===1){
@@ -3979,13 +3984,11 @@ function _kIkinciMasaHayir(){
 
 function _kIkinciMasaEvet(){
   document.getElementById('kart-ikinci-masa').style.display='none';
-  // İlk seçilen kartın tipini bul
-  var ilkTip=_kDamKartlar[0].kart.tip; // 'as' veya 'kral'
-  var karsiTip=ilkTip==='as'?'kral':'as';
-  // İlk seçimi sakla
+  // İlk seçilen kartı sakla
   var ilkSecim=_kDamKartlar[0];
+  var ilkTip=ilkSecim.kart.tip; // 'as' veya 'kral'
   var ilkOyuncu=ilkSecim.oyuncu;
-  // _kDeste2'yi sıfırla: ilkTip'tekileri engelle, karsiTip'tekileri kapalı bırak
+  // _kDeste2: ilkTip'tekileri engelle, diğerlerini kapalı bırak
   for(var ki=0;ki<_kDeste2.length;ki++){
     if(_kDeste2[ki].tip===ilkTip){
       _kDeste2[ki].acik=true;
@@ -3995,18 +3998,21 @@ function _kIkinciMasaEvet(){
       _kDeste2[ki].engellendi=false;
     }
   }
-  // İlk seçimin kartını da tekrar işaretle (seçildi olarak)
+  // İlk seçilen kartı "seçildi" olarak işaretle (engellendi değil)
   for(var ki=0;ki<_kDeste2.length;ki++){
     if(_kDeste2[ki].id===ilkSecim.kart.id){
       _kDeste2[ki].acik=true;
-      _kDeste2[ki].engellendi=false; // seçildi göster
+      _kDeste2[ki].engellendi=false;
     }
   }
-  // damKartlar'ı koruyup ikinci seçim için hazırla
-  _kDamKartlar=[ilkSecim]; // ilk seçimi koru
-  _kDamlar=[ilkOyuncu,ilkOyuncu]; // aynı oyuncu 2 kez seçecek
+  // İlk seçimi global olarak sakla, damKartlar'ı temizle
+  window._kIlkSecim=ilkSecim;
+  _kDamKartlar=[];
+  // Dam listesi: sadece bu oyuncu, ama "seçmiş" kontrolü bypass için flag
+  _kDamlar=[ilkOyuncu];
   _kDamSecilen=null;
   _kAsama=2;
+  _kListen();
   _kRender();
 }
 
