@@ -3680,6 +3680,33 @@ function showKartCekme() {
 
   renderKartAsamasi1();
   document.getElementById('ov-kart').classList.add('on');
+
+  // iOS için touchstart ve click event'leri
+  function addTapHandler(el, fn) {
+    el.addEventListener('touchstart', function(e) {
+      var t = e.target.closest('[data-fn]');
+      if (!t) return;
+      e.preventDefault();
+      var fnName = t.getAttribute('data-fn');
+      var idx = parseInt(t.getAttribute('data-idx'));
+      if (fnName === 'kP1') window.kP1(idx);
+      else if (fnName === 'kK1') window.kK1(idx);
+      else if (fnName === 'kP2') window.kP2(idx);
+      else if (fnName === 'kK2') window.kK2(idx);
+    }, {passive: false});
+    el.addEventListener('click', function(e) {
+      var t = e.target.closest('[data-fn]');
+      if (!t) return;
+      var fnName = t.getAttribute('data-fn');
+      var idx = parseInt(t.getAttribute('data-idx'));
+      if (fnName === 'kP1') window.kP1(idx);
+      else if (fnName === 'kK1') window.kK1(idx);
+      else if (fnName === 'kP2') window.kP2(idx);
+      else if (fnName === 'kK2') window.kK2(idx);
+    });
+  }
+  addTapHandler(document.getElementById('kart-oyuncular'), null);
+  addTapHandler(document.getElementById('kart-kartlar'), null);
 }
 
 function shuffle(arr) {
