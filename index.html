@@ -649,12 +649,13 @@ REF.on('value', function(snap) {
   if (isDagiticiSave) {
     // Sadece dagitici kaydediliyor - hiçbir şeye dokunma
     if (val.dagitici) D.dagitici = val.dagitici;
-    // dagitici sırasını hafızaya al
+    // Mevcut aktif masanın sırasını güncelle
     if (D.dagitici) {
-      var _sm = 1;
-      if (D.dagitici[_sm + '_sira'] && D.dagitici[_sm + '_sira'].length) {
+      var _sm = parseInt((document.getElementById('skor-masa-sel') || {}).value) || _skorMasa || 1;
+      if (D.dagitici[_sm + '_sira']) {
         _dagiticiSira = D.dagitici[_sm + '_sira'].slice();
         _dagiticiIdx = D.dagitici[_sm + '_idx'] || 0;
+      }
       }
     }
   } else if (isSkorSave) {
