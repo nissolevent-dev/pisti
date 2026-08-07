@@ -1922,10 +1922,19 @@ function _saveInitLdgExec() {
 function renderHesap() {
   // Bu oturumda oynayan herkes (şu an oturumda olmayanlar da dahil)
   var sessPlayers = D.sess.players.slice();
-  // Sadece aktif oturumdaki sessLdg'yi ekle (oyuncu seçilmişse)
-  if (D.sess.players.length > 0 || D.started) {
-    for (var sp in D.sessLdg) {
-      if (sessPlayers.indexOf(sp) < 0) sessPlayers.push(sp);
+  // sessLdg'den sadece mevcut oturumda olan oyuncuları ekle
+  for (var sp in D.sessLdg) {
+    if (sessPlayers.indexOf(sp) < 0) {
+      // Bu oyuncu mevcut oturumun bir parçası mı?
+      // sessGames'te bu oyuncu varsa ekle (oturumdan ayrılmış olabilir)
+      var inSess = false;
+      for (var gi = 0; gi < (D.sessGames || []).length; gi++) {
+        var g = D.sessGames[gi];
+        if (g && g.teamA && g.teamB && (g.teamA.indexOf(sp) >= 0 || g.teamB.indexOf(sp) >= 0)) {
+          inSess = true; break;
+        }
+      }
+      if (inSess) sessPlayers.push(sp);
     }
   }
   renderLdg('h-sess-ldg', sessPlayers, D.sessLdg);
