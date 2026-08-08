@@ -1599,6 +1599,7 @@ function _closeSessionExec() {
   D.round = JSON.parse(JSON.stringify(DEF.round));
   D.started = false;
   D.siraliMod = false;
+  D.damGecmisi = {};
   _siraliSira = [];
   _siraliOyunIdx = 0;
   saveD();
@@ -1616,6 +1617,7 @@ function newSession() {
   D.sessGames = []; D.sessLdg = {}; D.sess.players = [];
   D.round = JSON.parse(JSON.stringify(DEF.round));
   D.started = false;
+  D.damGecmisi = {};
   saveD();
   renderPool();
   switchToOyun();
