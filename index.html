@@ -3164,7 +3164,10 @@ function addTur() {
   if (!_httbAskedThisGame) {
     var turler2 = D.skorTakip[key].turler;
     var cumK = 0, cumS = 0;
-    for (var ti = 0; ti < turler2.length; ti++) { cumK += turler2[ti].k||0; cumS += turler2[ti].s||0; }
+    for (var ti = 0; ti < turler2.length; ti++) {
+      cumK += (turler2[ti].k||0) + (turler2[ti].kpi||0);
+      cumS += (turler2[ti].s||0) + (turler2[ti].spi||0);
+    }
     var cumFark = Math.abs(cumK - cumS);
     var onde51Gecti = (cumK >= 51 || cumS >= 51);
     var birTarafKaybetti = (cumK < 51 || cumS < 51);
@@ -4202,11 +4205,22 @@ function onaySor(mesaj, callback) {
 // ── ALARM ──
 function playAlarm() {
   try {
-    var audio = document.getElementById('httb-alarm');
-    if (audio) {
-      audio.currentTime = 0;
-      audio.play().catch(function(e){ console.log('audio:', e); });
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    function beep(freq, start, dur) {
+      var o = ctx.createOscillator();
+      var g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = freq;
+      o.type = 'sine';
+      g.gain.setValueAtTime(0.4, ctx.currentTime + start);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+      o.start(ctx.currentTime + start);
+      o.stop(ctx.currentTime + start + dur);
     }
+    beep(880, 0, 0.2);
+    beep(1100, 0.25, 0.2);
+    beep(880, 0.5, 0.2);
+    beep(1100, 0.75, 0.4);
   } catch(e) {}
 }
 
