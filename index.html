@@ -3782,6 +3782,8 @@ function _kListen(){
 
 function showKartCekme(){
   _kAsama=1; _kEslesen={}; _kDamlar=[]; _kSecilen=null; _kDamSecilen=null; _kDamKartlar=[];
+  window._kIlkSecim=null;
+
   var n=D.sess.players.length;
   var normal=[
     {id:0,tip:'as',renk:'k',sembol:'♥'},{id:1,tip:'as',renk:'k',sembol:'♦'},
@@ -3798,6 +3800,28 @@ function showKartCekme(){
     {id:10,tip:'as',renk:'k',sembol:'♥',acik:false},{id:11,tip:'as',renk:'s',sembol:'♠',acik:false},
     {id:12,tip:'kral',renk:'k',sembol:'♥',acik:false},{id:13,tip:'kral',renk:'s',sembol:'♠',acik:false}
   ]);
+
+  // Dam geçmişine göre grupları oluştur
+  var gecmis=D.damGecmisi||{};
+  var players=D.sess.players;
+  // Her oyuncunun dam sayısını al
+  var sayilar=players.map(function(p){return {p:p,n:gecmis[p]||0};});
+  // Benzersiz sayıları büyükten küçüğe sırala
+  var maxSayi=sayilar.reduce(function(m,x){return Math.max(m,x.n);},0);
+  // Gruplar: 0 = en çok çekmiş (dam çekemez), son grup = en az (dam çekebilir)
+  _kGruplar=[];
+  for(var s=maxSayi;s>=0;s--){
+    var grup=sayilar.filter(function(x){return x.n===s;}).map(function(x){return x.p;});
+    if(grup.length>0) _kGruplar.push({sayi:s,oyuncular:grup,bitti:[]});
+  }
+  // Eğer herkes 0 ise tek grup var, normal akış
+  // _kGrupIdx: şu anki aktif grup
+  _kGrupIdx=0;
+  // _kGrupSiradaki: aktif gruptaki sıradaki oyuncu index'i
+  _kGrupSiradaki=0;
+  // Dam çekemeyen oyuncular (son grup hariç hepsi)
+  _kDamYasakli=maxSayi>0;
+
   document.getElementById('ov-kart').classList.add('on');
   _kListen();
   _kRender();
@@ -3807,6 +3831,8 @@ function _kOyuncuTik(idx){
   if(_kAsama===1){
     var p=D.sess.players[idx];
     if(_kEslesen[p])return;
+    // Sadece sıradaki oyuncu seçilebilir
+    if(!_kOyuncuAktifMi(p))return;
     _kSecilen=(_kSecilen===p)?null:p;
   } else if(_kAsama===2){
     var p=_kDamlar[idx];
@@ -3818,15 +3844,68 @@ function _kOyuncuTik(idx){
   _kRender();
 }
 
+// Aktif gruptaki sıradaki oyuncu mu?
+function _kOyuncuAktifMi(p){
+  if(!_kGruplar||_kGruplar.length===0)return true;
+  var grup=_kGruplar[_kGrupIdx];
+  if(!grup)return true;
+  // Son grup mu? Son grupta herkes seçebilir
+  var sonGrup=(_kGrupIdx===_kGruplar.length-1);
+  if(sonGrup)return true;
+  // Aktif gruptaki sıradaki oyuncu
+  var siradaki=grup.oyuncular[_kGrupSiradaki];
+  return p===siradaki;
+}
+
+// Aktif grupta dam yasağı var mı?
+function _kDamYasakliMi(){
+  if(!_kGruplar||_kGruplar.length===0)return false;
+  var sonGrup=(_kGrupIdx===_kGruplar.length-1);
+  return !sonGrup; // son grup değilse yasak
+}
+
 function _kKartTik(idx){
   if(_kAsama===1){
     if(!_kSecilen)return;
     var k=_kDeste1[idx];
     if(k.acik)return;
+
+    // Dam yasağı kontrolü
+    if(k.tip==='dam' && _kDamYasakliMi()){
+      // Geçersiz - kartı kapat, tekrar çektirilecek
+      _kDeste1[idx].acik=false;
+      // Uyarı göster
+      _kDamUyari=true;
+      _kRender();
+      setTimeout(function(){_kDamUyari=false;_kRender();},1200);
+      return;
+    }
+
     _kDeste1[idx].acik=true;
     _kEslesen[_kSecilen]={id:k.id,tip:k.tip,renk:k.renk,sembol:k.sembol};
-    if(k.tip==='dam')_kDamlar.push(_kSecilen);
+    var secenOyuncu=_kSecilen;
     _kSecilen=null;
+
+    if(k.tip==='dam'){
+      _kDamlar.push(secenOyuncu);
+    }
+
+    // Grup sistemi: sıradaki oyuncu normal kart çektiyse sonrakine geç
+    if(_kGruplar && _kGruplar.length>0){
+      var grup=_kGruplar[_kGrupIdx];
+      var sonGrup=(_kGrupIdx===_kGruplar.length-1);
+      if(!sonGrup){
+        // Bu gruptaki oyuncu normal kart çekti → bitti, sonraki oyuncuya geç
+        _kGrupSiradaki++;
+        // Bu gruptaki herkes bitti mi?
+        if(_kGrupSiradaki>=grup.oyuncular.length){
+          // Sonraki gruba geç
+          _kGrupIdx++;
+          _kGrupSiradaki=0;
+        }
+      }
+    }
+
     _kRender();
     if(Object.keys(_kEslesen).length===D.sess.players.length){
       if(_kDamlar.length>0){setTimeout(function(){_kAsama=2;_kRender();},800);}
@@ -3872,23 +3951,42 @@ function _kKartTik(idx){
 
 function _kRender(){
   var baslik=document.querySelector('#ov-kart .ovttl');
-  var aciklama=document.querySelector('#ov-kart p');
+  var aciklama_el=document.querySelector('#ov-kart p');
   var oyDiv=document.getElementById('kart-oyuncular');
   var kartDiv=document.getElementById('kart-kartlar');
   var sonucDiv=document.getElementById('kart-sonuc');
+  // Dam uyarısı
+  if(_kDamUyari){
+    if(aciklama_el)aciklama_el.textContent='⚠️ Dam çekmemen gerekiyor, tekrar seç!';
+    _kListen(); return;
+  }
   if(_kAsama===1){
     if(baslik)baslik.textContent='🃏 Kart Çek';
-    if(aciklama)aciklama.textContent='Önce ismine dokun, sonra bir kart seç.';
+    // Grup bilgisi
+    var aciklama='Önce ismine dokun, sonra bir kart seç.';
+    if(_kGruplar && _kGruplar.length>1){
+      var grup=_kGruplar[_kGrupIdx];
+      var sonGrup=(_kGrupIdx===_kGruplar.length-1);
+      if(!sonGrup){
+        var siradaki=grup.oyuncular[_kGrupSiradaki];
+        if(siradaki) aciklama='Sıra: '+siradaki.split(' ')[0]+' — dam çekmemesi gerekiyor.';
+      } else {
+        aciklama='Sıra: herkes — kart seç.';
+      }
+    }
+    if(aciklama_el)aciklama_el.textContent=aciklama;
     var oyHtml='';
     for(var i=0;i<D.sess.players.length;i++){
       var p=D.sess.players[i];
       var esl=_kEslesen[p];
       var sel=_kSecilen===p;
+      var aktif=_kOyuncuAktifMi(p)&&!esl;
       var lbl=p.split(' ')[0]+(esl?' '+(esl.tip==='as'?'A':esl.tip==='kral'?'K':'Q')+esl.sembol:'');
       var bg=esl?'var(--g1)':sel?'var(--g2)':'var(--bg2)';
       var col=(esl||sel)?'#fff':'var(--tx1)';
       var brd=sel?'var(--g2)':'var(--bd2)';
-      oyHtml+='<div data-kp="'+i+'" style="padding:10px 14px;border:2px solid '+brd+';background:'+bg+';color:'+col+';border-radius:8px;cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:600;display:inline-block;margin:3px;user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
+      var op=(!esl&&!aktif)?'0.35':'1';
+      oyHtml+='<div '+(aktif&&!esl?'data-kp="'+i+'"':'')+' style="padding:10px 14px;border:2px solid '+brd+';background:'+bg+';color:'+col+';border-radius:8px;cursor:'+(aktif?'pointer':'default')+';font-family:inherit;font-size:.82rem;font-weight:600;display:inline-block;margin:3px;user-select:none;-webkit-user-select:none;opacity:'+op+';">'+lbl+'</div>';
     }
     if(oyDiv)oyDiv.innerHTML=oyHtml;
     var kartHtml='';
@@ -3910,7 +4008,7 @@ function _kRender(){
   } else if(_kAsama===2){
     if(baslik)baslik.textContent='🃏 Ortak Seçimi';
     var secildi=_kDamKartlar.length;
-    if(aciklama)aciklama.textContent='Ortak seçimi ('+secildi+'/'+_kDamlar.length+'): önce ismine dokun, sonra kartı seç.';
+    if(aciklama_el)aciklama_el.textContent='Ortak seçimi ('+secildi+'/'+_kDamlar.length+'): önce ismine dokun, sonra kartı seç.';
     var oyHtml='';
     for(var i=0;i<_kDamlar.length;i++){
       var p=_kDamlar[i];
@@ -3956,7 +4054,7 @@ function _kRender(){
     if(sonucDiv)sonucDiv.style.display='none';
   } else if(_kAsama===3){
     if(baslik)baslik.textContent='🃏 Ortak Seçimi';
-    if(aciklama)aciklama.textContent='Seçim tamamlandı.';
+    if(aciklama_el)aciklama_el.textContent='Seçim tamamlandı.';
     var ortaklar=_kDamKartlar.map(function(d){return d.oyuncu.split(' ')[0];}).join(', ');
     if(oyDiv)oyDiv.innerHTML='<div style="padding:10px 14px;border:2px solid var(--g1);background:var(--g1);color:#fff;border-radius:8px;font-family:inherit;font-size:.82rem;font-weight:600;display:inline-block;">'+ortaklar+'</div>';
     var secilenIds=_kDamKartlar.map(function(d){return d.kart.id;});
