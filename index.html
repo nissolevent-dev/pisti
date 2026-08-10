@@ -893,11 +893,15 @@ function addPlayer() {
 }
 
 function rmP(i) {
-  D.pool.splice(i, 1);
-  saveD();
-  renderPool();
-  renderAPChips();
-  if (D.screen === 2) renderSessChips();
+  var name = D.pool[i];
+  onaySor('"' + name + '" oyuncu havuzundan silinsin mi?', function() {
+    D.pool.splice(i, 1);
+    saveD();
+    renderPool();
+    renderAPChips();
+    if (D.screen === 2) renderSessChips();
+  });
+}hips();
 }
 
 function toS2() {
