@@ -658,15 +658,19 @@ REF.on('value', function(snap) {
   if (isDagiticiSave) {
     // Sadece dagitici kaydediliyor - hiçbir şeye dokunma
     if (val.dagitici) D.dagitici = val.dagitici;
-    // Mevcut aktif masanın sırasını güncelle
+    // Mevcut aktif masanın sırasını güncelle ve render et
     if (D.dagitici) {
       var _sm = parseInt((document.getElementById('skor-masa-sel') || {}).value) || _skorMasa || 1;
       if (D.dagitici[_sm + '_sira']) {
         _dagiticiSira = D.dagitici[_sm + '_sira'].slice();
         _dagiticiIdx = D.dagitici[_sm + '_idx'] || 0;
       }
-    }
-  } else if (isSkorSave) {
+      // Skor ekranı açıksa render et
+      var ovSkor = document.getElementById('ov-skor');
+      if (ovSkor && ovSkor.classList.contains('on')) {
+        renderDagitici(_sm);
+      }
+    }} else if (isSkorSave) {
     // Sadece skorTakip kaydediliyor - started/round/ldg'ye dokunma
     if (val.skorTakip) D.skorTakip = val.skorTakip;
   } else if (!isOwnSave) {
@@ -726,7 +730,14 @@ REF.on('value', function(snap) {
   } else if (!isOwnSave) {
     // Başka cihazdan gelen güncelleme
     if (document.getElementById('ov-skor').classList.contains('on')) {
+      var curMasa2 = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+      // Dagitici sırasını güncelle
+      if (D.dagitici && D.dagitici[curMasa2 + '_sira']) {
+        _dagiticiSira = D.dagitici[curMasa2 + '_sira'].slice();
+        _dagiticiIdx = D.dagitici[curMasa2 + '_idx'] || 0;
+      }
       renderSkorTakip();
+      renderDagitici(curMasa2);
     }
     var localScreen = D.screen;
     refreshAllRemote(localScreen);
