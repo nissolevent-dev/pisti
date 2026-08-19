@@ -509,7 +509,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <!-- Sıralı oyun sıralaması -->
     <div id="sirali-sira-goster" style="display:none;margin-bottom:12px;padding:10px 12px;background:var(--bg2);border-radius:9px">
       <div style="font-size:.7rem;font-weight:700;color:var(--g2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.08em">Oyun Sırası</div>
-      <div id="sirali-sira-liste" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      <div id="sirali-sira-liste" style="display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;"></div>
     </div>
 
     <!-- Takım başlıkları -->
@@ -1088,6 +1088,7 @@ function kurSiraliOyun() {
     setSkorMasa(1);
     renderSkorTakip();
     renderDagitici(1);
+    renderSiraliSira();
     document.getElementById('ov-skor').classList.add('on');
   }, 150);
   toast((_siraliOyunIdx + 1) + '. oyun kuruldu');
@@ -4153,12 +4154,10 @@ function renderSiraliSira() {
   var sira = (D.siraliSira && D.siraliSira.length) ? D.siraliSira : (_siraliSira||[]);
   if (!D.siraliMod || sira.length === 0) { div.style.display='none'; return; }
   div.style.display = 'block';
-  var curIdx = (_siraliOyunIdx||0) % 5;
   var html = '';
   for (var i = 0; i < sira.length; i++) {
-    var act = (curIdx === i);
-    html += '<div style="display:flex;align-items:center;gap:4px;padding:4px 10px;border:2px solid '+(act?'var(--g1)':'var(--bd2)')+';background:'+(act?'var(--g1)':'var(--wh)')+';color:'+(act?'#fff':'var(--tx2)')+';border-radius:8px;">';
-    html += '<span style="font-size:.7rem;font-weight:700;">'+(i+1)+'</span>';
+    html += '<div style="display:flex;align-items:center;gap:3px;padding:4px 8px;border:2px solid var(--bd2);background:var(--wh);color:var(--tx2);border-radius:8px;white-space:nowrap;">';
+    html += '<span style="font-size:.7rem;font-weight:700;color:var(--g2);">'+(i+1)+'</span>';
     html += '<span style="font-size:.8rem;">'+sira[i].split(' ')[0]+'</span>';
     html += '</div>';
   }
