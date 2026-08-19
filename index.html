@@ -3310,10 +3310,16 @@ function bitirOyun() {
   saveGame(masa, savedTurler);
 
   // Sıralı modda sonraki oyuna geç
-  if (D.siraliMod && _siraliSira && _siraliSira.length === 5) {
-    _siraliOyunIdx++;
-    setTimeout(function() { kurSiraliOyun(); }, 600);
-    return;
+  if (D.siraliMod) {
+    // _siraliSira boşsa D.siraliSira'dan yükle
+    if ((!_siraliSira || _siraliSira.length === 0) && D.siraliSira && D.siraliSira.length) {
+      _siraliSira = D.siraliSira.slice();
+    }
+    if (_siraliSira && _siraliSira.length === 5) {
+      _siraliOyunIdx++;
+      setTimeout(function() { kurSiraliOyun(); }, 600);
+      return;
+    }
   }
 
   // Geri alma butonu göster
