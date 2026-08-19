@@ -393,15 +393,28 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <!-- Sıralı Oyun Sıralama Overlay -->
-<div class="ov" id="ov-sirali" style="z-index:500" onclick="if(event.target===this){closeOv('ov-sirali');buildSeats();goS(3);}">
+<div class="ov" id="ov-sirali" style="z-index:500">
   <div class="ovbox" style="max-width:360px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div class="ovttl" style="margin-bottom:0">Sıralı Oyun — Sıralama</div>
-      <button class="btn bo bs" onclick="closeOv('ov-sirali');buildSeats();goS(3)">Vazgeç</button>
+      <div class="ovttl" id="sirali-ov-baslik" style="margin-bottom:0">🃏 Sıralama Kart Çek</div>
+      <button class="btn bo bs" id="sirali-vazgec-btn" onclick="siraliVazgec()">Vazgeç</button>
     </div>
-    <p style="font-size:.78rem;color:var(--tx3);margin-bottom:14px">Oyuncuları 1'den 5'e sıralayın. Masalar otomatik kurulacak.</p>
-    <div id="sirali-siralama"></div>
-    <button class="btn bp bfw" style="margin-top:14px" onclick="baslaSirali()">Başla</button>
+    <p id="sirali-aciklama" style="font-size:.78rem;color:var(--tx3);margin-bottom:10px">Önce ismine dokun, sonra bir kart seç.</p>
+    <!-- Oyuncular -->
+    <div id="sirali-oyuncular" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+    <!-- Kartlar -->
+    <div id="sirali-kartlar" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px"></div>
+    <!-- Sonuç / Başla -->
+    <div id="sirali-sonuc" style="display:none">
+      <div id="sirali-sonuc-liste" style="margin-bottom:12px;font-size:.85rem"></div>
+      <button class="btn bp bfw" onclick="baslaSiraliKart()">✓ Masaları Kur ve Başlat</button>
+    </div>
+    <!-- Manuel mod -->
+    <div id="sirali-manuel" style="display:none">
+      <p style="font-size:.78rem;color:var(--tx3);margin-bottom:10px">Oyuncuları 1'den 5'e sıralayın.</p>
+      <div id="sirali-siralama"></div>
+      <button class="btn bp bfw" style="margin-top:10px" onclick="baslaSirali()">Başla</button>
+    </div>
   </div>
 </div>
 
@@ -814,6 +827,10 @@ function refreshAll() {
     document.getElementById('m-pişti').value = D.sess.mPişti;
     document.getElementById('m-kaz').value = D.sess.mKaz;
   }
+  // _siraliSira'yı D'den yükle
+  if (D.siraliMod && D.siraliSira && D.siraliSira.length) {
+    _siraliSira = D.siraliSira.slice();
+  }
   var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active);
   // started=true ama sessGames boşsa tutarsız durum - sıfırla ve ekran 2'ye git
   // NOT: sessGames boş ama masa kuruluysa sıfırlama - ilk oyun oynanmamış olabilir
@@ -992,14 +1009,49 @@ function baslaNormal() {
   goS(3);
 }
 
+// ── 5 KİŞİ SIRALI KARTÇEKİMİ ──
+var _skEslesen = {}; // {oyuncu: kartDegeri}
+var _skSecilen = null;
+var _skDeste = [];
+
 function showSiraliSiralama() {
   closeOv('ov-oyun-modu');
+  // Kart çekme modunu başlat
+  _skEslesen = {};
+  _skSecilen = null;
+  var deger = ['A','2','3','4','5'];
+  _kShuffle(deger);
+  _skDeste = deger.map(function(d){return {deger:d, acik:false};});
+
+  document.getElementById('sirali-ov-baslik').textContent = '🃏 Sıralama Kart Çek';
+  document.getElementById('sirali-aciklama').textContent = 'Önce ismine dokun, sonra bir kart seç.';
+  document.getElementById('sirali-sonuc').style.display = 'none';
+  document.getElementById('sirali-manuel').style.display = 'none';
+  document.getElementById('sirali-oyuncular').style.display = '';
+  document.getElementById('sirali-kartlar').style.display = '';
+
+  _skRender();
+  _skListen();
+  document.getElementById('ov-sirali').classList.add('on');
+}
+
+function siraliVazgec() {
+  // Kart çekmeyi iptal et, manuel dropdown moduna geç
+  _skEslesen = {};
+  _skSecilen = null;
+  document.getElementById('sirali-ov-baslik').textContent = 'Sıralı Oyun — Sıralama';
+  document.getElementById('sirali-aciklama').textContent = '';
+  document.getElementById('sirali-oyuncular').style.display = 'none';
+  document.getElementById('sirali-kartlar').style.display = 'none';
+  document.getElementById('sirali-sonuc').style.display = 'none';
+  document.getElementById('sirali-manuel').style.display = 'block';
+  // Dropdown'ları doldur
   var players = D.sess.players;
   var html = '';
   for (var i = 0; i < 5; i++) {
     html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
     html += '<span style="font-size:.9rem;font-weight:700;color:var(--g1);min-width:20px">' + (i+1) + '.</span>';
-    html += '<select id="sirali-p' + i + '" onchange="updateSiraliDropdowns()" oninput="updateSiraliDropdowns()" style="flex:1;padding:8px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit;font-size:.85rem">';
+    html += '<select id="sirali-p' + i + '" onchange="updateSiraliDropdowns()" style="flex:1;padding:8px;border:1.5px solid var(--bd2);border-radius:7px;font-family:inherit;font-size:.85rem">';
     html += '<option value="">- Seç -</option>';
     for (var j = 0; j < players.length; j++) {
       html += '<option value="' + players[j] + '">' + players[j] + '</option>';
@@ -1007,8 +1059,124 @@ function showSiraliSiralama() {
     html += '</select></div>';
   }
   document.getElementById('sirali-siralama').innerHTML = html;
-  document.getElementById('ov-sirali').classList.add('on');
 }
+
+function _skListen() {
+  var ov = document.getElementById('ov-sirali');
+  if (!ov) return;
+  function findTap(e, prevent) {
+    var t = e.target;
+    if (t && t.nodeType !== 1) t = t.parentNode;
+    while (t && t.tagName && t.tagName !== 'BODY') {
+      if (t.getAttribute) {
+        var kp = t.getAttribute('data-skp');
+        if (kp !== null) { if (prevent) e.preventDefault(); _skOyuncuTik(parseInt(kp)); return; }
+        var kk = t.getAttribute('data-skk');
+        if (kk !== null) { if (prevent) e.preventDefault(); _skKartTik(parseInt(kk)); return; }
+      }
+      t = t.parentNode;
+    }
+  }
+  ov.ontouchstart = function(e) { findTap(e, true); };
+  ov.onclick = function(e) { findTap(e, false); };
+}
+
+function _skOyuncuTik(idx) {
+  var p = D.sess.players[idx];
+  if (_skEslesen[p]) return;
+  _skSecilen = (_skSecilen === p) ? null : p;
+  _skRender();
+}
+
+function _skKartTik(idx) {
+  if (!_skSecilen) return;
+  var k = _skDeste[idx];
+  if (k.acik) return;
+  k.acik = true;
+  _skEslesen[_skSecilen] = k.deger;
+  _skSecilen = null;
+  _skRender();
+  // Hepsi seçti mi?
+  if (Object.keys(_skEslesen).length === D.sess.players.length) {
+    setTimeout(function() { _skSonuc(); }, 600);
+  }
+}
+
+function _skRender() {
+  var oyDiv = document.getElementById('sirali-oyuncular');
+  var kartDiv = document.getElementById('sirali-kartlar');
+  if (!oyDiv || !kartDiv) return;
+
+  var oyHtml = '';
+  for (var i = 0; i < D.sess.players.length; i++) {
+    var p = D.sess.players[i];
+    var esl = _skEslesen[p];
+    var sel = _skSecilen === p;
+    var lbl = p.split(' ')[0] + (esl ? ' ' + esl : '');
+    var bg = esl ? 'var(--g1)' : sel ? 'var(--g2)' : 'var(--bg2)';
+    var col = (esl || sel) ? '#fff' : 'var(--tx1)';
+    var brd = sel ? 'var(--g2)' : 'var(--bd2)';
+    oyHtml += '<div ' + (!esl ? 'data-skp="' + i + '"' : '') + ' style="padding:8px 12px;border:2px solid ' + brd + ';background:' + bg + ';color:' + col + ';border-radius:8px;cursor:' + (!esl ? 'pointer' : 'default') + ';font-size:.82rem;font-weight:600;user-select:none;-webkit-user-select:none;">' + lbl + '</div>';
+  }
+  oyDiv.innerHTML = oyHtml;
+
+  var kartHtml = '';
+  var renkMap = {A:'#cc0000', '2':'#111', '3':'#cc0000', '4':'#111', '5':'#cc0000'};
+  for (var i = 0; i < _skDeste.length; i++) {
+    var k = _skDeste[i];
+    if (k.acik) {
+      var sahibi = '';
+      for (var p2 in _skEslesen) { if (_skEslesen[p2] === k.deger) { sahibi = p2.split(' ')[0]; break; } }
+      var kr = renkMap[k.deger] || '#111';
+      kartHtml += '<div style="border:2px solid ' + kr + ';border-radius:10px;padding:8px 4px;text-align:center;background:#fff;">';
+      kartHtml += '<div style="font-size:1.3rem;color:' + kr + ';font-weight:900;">' + k.deger + '</div>';
+      kartHtml += '<div style="font-size:.6rem;color:var(--tx3);">' + sahibi + '</div></div>';
+    } else {
+      var active = !!_skSecilen;
+      kartHtml += '<div data-skk="' + i + '" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 4px;background:var(--g1);opacity:' + (active ? '1' : '0.4') + ';text-align:center;user-select:none;-webkit-user-select:none;">';
+      kartHtml += '<div style="font-size:1.4rem;">🂠</div></div>';
+    }
+  }
+  kartDiv.innerHTML = kartHtml;
+}
+
+function _skSonuc() {
+  // Kartlara göre sıralama: A=1, 2=2, 3=3, 4=4, 5=5
+  var siraMap = {A:1, '2':2, '3':3, '4':4, '5':5};
+  var siralanmis = D.sess.players.slice().sort(function(a, b) {
+    return (siraMap[_skEslesen[a]] || 0) - (siraMap[_skEslesen[b]] || 0);
+  });
+
+  var html = '<div style="font-size:.75rem;color:var(--tx3);margin-bottom:8px;">Sıralama:</div>';
+  for (var i = 0; i < siralanmis.length; i++) {
+    var p = siralanmis[i];
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
+    html += '<span style="font-size:.9rem;font-weight:700;color:var(--g1);min-width:20px">' + (i+1) + '.</span>';
+    html += '<span style="font-size:.85rem;">' + p + '</span>';
+    html += '<span style="font-size:.85rem;color:var(--g2);font-weight:700;">' + _skEslesen[p] + '</span>';
+    html += '</div>';
+  }
+  document.getElementById('sirali-sonuc-liste').innerHTML = html;
+  document.getElementById('sirali-oyuncular').style.display = 'none';
+  document.getElementById('sirali-kartlar').style.display = 'none';
+  document.getElementById('sirali-sonuc').style.display = 'block';
+
+  // Sırayı kaydet
+  window._skSiralanmis = siralanmis;
+}
+
+function baslaSiraliKart() {
+  var siralanmis = window._skSiralanmis;
+  if (!siralanmis || siralanmis.length !== 5) return;
+  _siraliSira = siralanmis;
+  _siraliOyunIdx = 0;
+  D.siraliMod = true;
+  D.siraliSira = siralanmis.slice();
+  closeOv('ov-sirali');
+  kurSiraliOyun();
+}
+
+
 
 function updateSiraliDropdowns() {
   var players = D.sess.players;
