@@ -506,6 +506,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div id="dagitici-butonlar" style="display:flex;flex-wrap:wrap;gap:6px"></div>
     </div>
 
+    <!-- Sıralı oyun sıralaması -->
+    <div id="sirali-sira-goster" style="display:none;margin-bottom:12px;padding:10px 12px;background:var(--bg2);border-radius:9px">
+      <div style="font-size:.7rem;font-weight:700;color:var(--g2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.08em">Oyun Sırası</div>
+      <div id="sirali-sira-liste" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+
     <!-- Takım başlıkları -->
     <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;margin-bottom:8px;align-items:center">
       <div style="width:28px"></div>
@@ -1047,6 +1053,7 @@ function baslaSirali() {
   _siraliSira = sira;
   _siraliOyunIdx = 0;
   D.siraliMod = true;
+  D.siraliSira = sira.slice();
   closeOv('ov-sirali');
   kurSiraliOyun();
 }
@@ -2925,6 +2932,7 @@ function showSkorTakip() {
   setSkorMasa(masa);
   renderSkorTakip();
   renderDagitici(masa);
+  renderSiraliSira();
   document.getElementById('ov-skor').classList.add('on');
 }
 
@@ -4135,6 +4143,32 @@ function _kIkinciMasaEvet(){
   _kAsama=2;
   _kListen();
   _kRender();
+}
+
+
+function _kSonuc(){
+  var m1K=[],m1S=[],m2K=[],m2S=[];
+  var div = document.getElementById('sirali-sira-goster');
+  var liste = document.getElementById('sirali-sira-liste');
+  if (!div || !liste) return;
+  var sira = D.siraliSira || _siraliSira || [];
+  if (!D.siraliMod || sira.length === 0) {
+    div.style.display = 'none';
+    return;
+  }
+  div.style.display = 'block';
+  var html = '';
+  for (var i = 0; i < sira.length; i++) {
+    var isActive = (_siraliOyunIdx % 5 === i);
+    html += '<div style="display:flex;align-items:center;gap:4px;padding:4px 10px;border:2px solid ' +
+      (isActive ? 'var(--g1)' : 'var(--bd2)') + ';background:' +
+      (isActive ? 'var(--g1)' : 'var(--wh)') + ';color:' +
+      (isActive ? '#fff' : 'var(--tx2)') + ';border-radius:8px;">' +
+      '<span style="font-size:.7rem;font-weight:700;">' + (i+1) + '</span>' +
+      '<span style="font-size:.8rem;">' + sira[i].split(' ')[0] + '</span>' +
+      '</div>';
+  }
+  liste.innerHTML = html;
 }
 
 
