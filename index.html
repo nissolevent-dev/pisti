@@ -1112,34 +1112,51 @@ function _skRender() {
   var kartDiv = document.getElementById('sirali-kartlar');
   if (!oyDiv || !kartDiv) return;
 
+  // Açıklama güncelle
+  var acEl = document.getElementById('sirali-aciklama');
+  if (acEl) {
+    var secilmemiş = D.sess.players.filter(function(p){return !_skEslesen[p];});
+    if (_skSecilen) {
+      acEl.textContent = _skSecilen.split(' ')[0] + ' bir kart seç.';
+    } else if (secilmemiş.length > 0) {
+      acEl.textContent = 'Önce ismine dokun, sonra bir kart seç.';
+    }
+  }
+
+  // Oyuncular
   var oyHtml = '';
   for (var i = 0; i < D.sess.players.length; i++) {
     var p = D.sess.players[i];
     var esl = _skEslesen[p];
     var sel = _skSecilen === p;
-    var lbl = p.split(' ')[0] + (esl ? ' ' + esl : '');
+    var lbl = p.split(' ')[0] + (esl ? ' — ' + esl : '');
     var bg = esl ? 'var(--g1)' : sel ? 'var(--g2)' : 'var(--bg2)';
     var col = (esl || sel) ? '#fff' : 'var(--tx1)';
-    var brd = sel ? 'var(--g2)' : 'var(--bd2)';
-    oyHtml += '<div ' + (!esl ? 'data-skp="' + i + '"' : '') + ' style="padding:8px 12px;border:2px solid ' + brd + ';background:' + bg + ';color:' + col + ';border-radius:8px;cursor:' + (!esl ? 'pointer' : 'default') + ';font-size:.82rem;font-weight:600;user-select:none;-webkit-user-select:none;">' + lbl + '</div>';
+    var brd = sel ? 'var(--g2)' : esl ? 'var(--g1)' : 'var(--bd2)';
+    oyHtml += '<div ' + (!esl ? 'data-skp="' + i + '"' : '') +
+      ' style="padding:10px 14px;border:2px solid ' + brd + ';background:' + bg +
+      ';color:' + col + ';border-radius:8px;cursor:' + (!esl ? 'pointer' : 'default') +
+      ';font-size:.82rem;font-weight:600;user-select:none;-webkit-user-select:none;">' + lbl + '</div>';
   }
   oyDiv.innerHTML = oyHtml;
 
+  // Kartlar — 5'li tek satır
   var kartHtml = '';
   var renkMap = {A:'#cc0000', '2':'#111', '3':'#cc0000', '4':'#111', '5':'#cc0000'};
+  var active = !!_skSecilen;
   for (var i = 0; i < _skDeste.length; i++) {
     var k = _skDeste[i];
     if (k.acik) {
       var sahibi = '';
       for (var p2 in _skEslesen) { if (_skEslesen[p2] === k.deger) { sahibi = p2.split(' ')[0]; break; } }
       var kr = renkMap[k.deger] || '#111';
-      kartHtml += '<div style="border:2px solid ' + kr + ';border-radius:10px;padding:8px 4px;text-align:center;background:#fff;">';
-      kartHtml += '<div style="font-size:1.3rem;color:' + kr + ';font-weight:900;">' + k.deger + '</div>';
-      kartHtml += '<div style="font-size:.6rem;color:var(--tx3);">' + sahibi + '</div></div>';
+      kartHtml += '<div style="border:2px solid ' + kr + ';border-radius:10px;padding:8px 4px;text-align:center;background:#fff;min-width:44px;">' +
+        '<div style="font-size:1.5rem;color:' + kr + ';font-weight:900;">' + k.deger + '</div>' +
+        '<div style="font-size:.6rem;color:var(--tx3);margin-top:2px;">' + sahibi + '</div></div>';
     } else {
-      var active = !!_skSecilen;
-      kartHtml += '<div data-skk="' + i + '" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 4px;background:var(--g1);opacity:' + (active ? '1' : '0.4') + ';text-align:center;user-select:none;-webkit-user-select:none;">';
-      kartHtml += '<div style="font-size:1.4rem;">🂠</div></div>';
+      kartHtml += '<div data-skk="' + i + '" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 4px;background:var(--g1);opacity:' +
+        (active ? '1' : '0.4') + ';text-align:center;min-width:44px;user-select:none;-webkit-user-select:none;">' +
+        '<div style="font-size:1.4rem;">🂠</div></div>';
     }
   }
   kartDiv.innerHTML = kartHtml;
