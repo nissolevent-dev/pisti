@@ -3253,8 +3253,21 @@ function secDagitici(idx) {
 
 function getInitials(players) {
   if (!players || !players.length) return '?';
+  // Tüm masadaki oyuncuları bir arada değerlendirip çakışanları bul
+  var allPlayers = [];
+  if (D.round && D.round.masa1) allPlayers = allPlayers.concat(D.round.masa1.A||[], D.round.masa1.B||[]);
+  if (D.round && D.round.masa2) allPlayers = allPlayers.concat(D.round.masa2.A||[], D.round.masa2.B||[]);
+  // Hangi baş harfler birden fazla kişide var?
+  var firstCharCount = {};
+  for (var i = 0; i < allPlayers.length; i++) {
+    var c = allPlayers[i].trim()[0];
+    firstCharCount[c] = (firstCharCount[c] || 0) + 1;
+  }
   return players.map(function(p) {
-    return p.trim()[0]; // sadece ilk adın ilk harfi
+    var name = p.trim();
+    // Baş harf çakışıyorsa ilk 2 harf kullan
+    if (firstCharCount[name[0]] > 1) return name.slice(0, 2);
+    return name[0];
   }).join('');
 }
 
