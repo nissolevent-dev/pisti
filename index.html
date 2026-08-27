@@ -1282,6 +1282,12 @@ function kurSiraliOyun() {
   D.round.masa2active = false;
   D.round.partners = {};
   D.round.partners[dis] = { m1: disTakim, m2: null };
+  // Dışarıdaki oyuncuyu doğru takıma ekle
+  if (disTakim === 'A') {
+    D.round.masa1.A.push(dis);
+  } else {
+    D.round.masa1.B.push(dis);
+  }
 
   if (!D.started) D.started = true;
   _dagitici = {};
