@@ -1674,9 +1674,7 @@ function saveGame(masa, turler) {
     if ((!_siraliSira || _siraliSira.length === 0) && D.siraliSira && D.siraliSira.length) {
       _siraliSira = D.siraliSira.slice();
     }
-    if (D.siraliOyunIdx !== undefined && D.siraliOyunIdx > _siraliOyunIdx) {
-      _siraliOyunIdx = D.siraliOyunIdx;
-    }
+    _siraliOyunIdx = D.siraliOyunIdx || 0;
     if (_siraliSira && _siraliSira.length === 5) {
       _siraliOyunIdx++;
       D.siraliOyunIdx = _siraliOyunIdx;
@@ -3543,14 +3541,11 @@ function bitirOyun() {
 
   // Sıralı modda sonraki oyuna geç
   if (D.siraliMod) {
-    // _siraliSira boşsa D.siraliSira'dan yükle
     if ((!_siraliSira || _siraliSira.length === 0) && D.siraliSira && D.siraliSira.length) {
       _siraliSira = D.siraliSira.slice();
     }
-    // _siraliOyunIdx'i D'den yükle (başka cihazda 0 kalabilir)
-    if (D.siraliOyunIdx !== undefined && D.siraliOyunIdx > _siraliOyunIdx) {
-      _siraliOyunIdx = D.siraliOyunIdx;
-    }
+    // Her zaman D'den yükle - başka cihazda JS değişkeni senkronize olmayabilir
+    _siraliOyunIdx = D.siraliOyunIdx || 0;
     if (_siraliSira && _siraliSira.length === 5) {
       _siraliOyunIdx++;
       D.siraliOyunIdx = _siraliOyunIdx;
