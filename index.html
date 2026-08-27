@@ -1476,6 +1476,8 @@ function startPlay() {
   else switchMasa(2);
 
   D.started = true;
+  D.siraliMod = false; D.siraliSira = []; D.siraliOyunIdx = 0;
+  _siraliSira = []; _siraliOyunIdx = 0;
   _dagitici = {};
   D.dagitici = {};
   // saveD tamamlanınca skor ekranını aç (dagitici de aynı anda kaydedilsin)
@@ -4397,6 +4399,8 @@ function kartOnayla(){
   D.round.masa1={A:g.m1K.slice(),B:g.m1S.slice()};
   D.round.masa2={A:g.m2K.slice(),B:g.m2S.slice()};
   D.round.masa1active=true; D.round.masa2active=true; D.round.partners={};
+  D.siraliMod=false; D.siraliSira=[]; D.siraliOyunIdx=0;
+  _siraliSira=[]; _siraliOyunIdx=0;
 
   // 9 kişi + iki masaya ortak: aynı oyuncunun 2 kartı olabilir
   var ortakBilgi={}; // {oyuncu: {m1: 'A'|'B'|null, m2: 'A'|'B'|null}}
