@@ -1657,6 +1657,24 @@ function saveGame(masa, turler) {
 
   D.allGames.push(g);
   D.sessGames.push(g);
+
+  // Sıralı modda sonraki oyuna geç
+  if (D.siraliMod) {
+    if ((!_siraliSira || _siraliSira.length === 0) && D.siraliSira && D.siraliSira.length) {
+      _siraliSira = D.siraliSira.slice();
+    }
+    if (_siraliSira && _siraliSira.length === 5) {
+      _siraliOyunIdx++;
+      D.siraliOyunIdx = _siraliOyunIdx;
+      saveD();
+      renderGameCards();
+      clearEntry(masa);
+      toast('Masa ' + masa + ' kaydedildi');
+      setTimeout(function() { kurSiraliOyun(); }, 600);
+      return;
+    }
+  }
+
   saveD();
   renderGameCards();
   clearEntry(masa);
