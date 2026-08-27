@@ -1258,9 +1258,12 @@ function baslaSirali() {
   kurSiraliOyun();
 }
 
-function kurSiraliOyun() {
-  // Kaç oyun oynandıysa o kadar ilerle - Firebase'den güvenilir değer
-  _siraliOyunIdx = D.sessGames ? D.sessGames.length : 0;
+function kurSiraliOyun(idx) {
+  // idx verilmemişse sessGames'ten hesapla
+  if (idx === undefined) {
+    idx = D.sessGames ? D.sessGames.length : 0;
+  }
+  _siraliOyunIdx = idx;
   if (!_siraliSira || _siraliSira.length === 0) {
     if (D.siraliSira && D.siraliSira.length) _siraliSira = D.siraliSira.slice();
   }
@@ -1686,7 +1689,8 @@ function saveGame(masa, turler) {
       _siraliSira = D.siraliSira.slice();
     }
     if (_siraliSira && _siraliSira.length === 5) {
-      setTimeout(function() { kurSiraliOyun(); }, 600);
+      var nextIdx2 = D.sessGames ? D.sessGames.length : 0;
+      setTimeout(function() { kurSiraliOyun(nextIdx2); }, 600);
     }
   }
 }
@@ -3553,7 +3557,8 @@ function bitirOyun() {
       _siraliSira = D.siraliSira.slice();
     }
     if (_siraliSira && _siraliSira.length === 5) {
-      setTimeout(function() { kurSiraliOyun(); }, 600);
+      var nextIdx = D.sessGames ? D.sessGames.length : 0;
+      setTimeout(function() { kurSiraliOyun(nextIdx); }, 600);
       return;
     }
   }
