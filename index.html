@@ -830,9 +830,10 @@ function refreshAll() {
     document.getElementById('m-pişti').value = D.sess.mPişti;
     document.getElementById('m-kaz').value = D.sess.mKaz;
   }
-  // _siraliSira'yı D'den yükle
+  // _siraliSira ve _siraliOyunIdx'i D'den yükle
   if (D.siraliMod && D.siraliSira && D.siraliSira.length) {
     _siraliSira = D.siraliSira.slice();
+    _siraliOyunIdx = D.siraliOyunIdx || 0;
   }
   var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active);
   // started=true ama sessGames boşsa tutarsız durum - sıfırla ve ekran 2'ye git
@@ -1005,6 +1006,8 @@ function toS3() {
 function baslaNormal() {
   closeOv('ov-oyun-modu');
   D.siraliMod = false;
+  D.siraliSira = [];
+  D.siraliOyunIdx = 0;
   _siraliSira = [];
   _siraliOyunIdx = 0;
   saveD();
@@ -1224,11 +1227,11 @@ function updateSiraliDropdowns() {
 
 // Rotasyon tablosu (0-indexed)
 var ROTASYON = [
-  [0,1,2,3,4],  // K=1+2, S=3+4, D=5
-  [3,4,1,2,0],  // K=4+5, S=2+3, D=1
-  [2,4,0,3,1],  // K=3+5, S=1+4, D=2
-  [3,1,4,0,2],  // K=4+2, S=5+1, D=3
-  [0,2,4,1,3],  // K=1+3, S=5+2, D=4
+  {r:[0,1,2,3,4], dis:'B'},  // El 1: K=1+2, S=3+4, D=5→S
+  {r:[3,4,1,2,0], dis:'B'},  // El 2: K=4+5, S=2+3, D=1→S
+  {r:[2,4,0,3,1], dis:'B'},  // El 3: K=3+5, S=1+4, D=2→S
+  {r:[3,1,4,0,2], dis:'B'},  // El 4: K=4+2, S=5+1, D=3→S
+  {r:[0,2,4,1,3], dis:'B'},  // El 5: K=1+3, S=5+2, D=4→S
 ];
 var _siraliSira = [];
 var _siraliOyunIdx = 0;
@@ -1255,16 +1258,18 @@ function kurSiraliOyun() {
     document.getElementById('ov-oyun-modu').classList.add('on');
     return;
   }
-  var rot = ROTASYON[_siraliOyunIdx];
+  var rotObj = ROTASYON[_siraliOyunIdx];
+  var rot = rotObj.r;
   var k1 = _siraliSira[rot[0]], k2 = _siraliSira[rot[1]];
   var s1 = _siraliSira[rot[2]], s2 = _siraliSira[rot[3]];
   var dis = _siraliSira[rot[4]];
+  var disTakim = rotObj.dis;
 
   D.round.masa1 = { A: [k1, k2], B: [s1, s2, dis] };
   D.round.masa1active = true;
   D.round.masa2active = false;
   D.round.partners = {};
-  D.round.partners[dis] = { m1: 'B', m2: null };
+  D.round.partners[dis] = { m1: disTakim, m2: null };
 
   if (!D.started) D.started = true;
   _dagitici = {};
@@ -3507,6 +3512,7 @@ function bitirOyun() {
     }
     if (_siraliSira && _siraliSira.length === 5) {
       _siraliOyunIdx++;
+      D.siraliOyunIdx = _siraliOyunIdx;
       setTimeout(function() { kurSiraliOyun(); }, 600);
       return;
     }
@@ -3554,7 +3560,7 @@ function undoGame(gameId) {
     // Sıralı modda: önceki oyuna dön
     if (D.siraliMod && _siraliOyunIdx > 0) {
       _siraliOyunIdx--;
-      var rot = ROTASYON[_siraliOyunIdx];
+      var rot = ROTASYON[_siraliOyunIdx].r;
       var k1 = _siraliSira[rot[0]], k2 = _siraliSira[rot[1]];
       var s1 = _siraliSira[rot[2]], s2 = _siraliSira[rot[3]];
       var dis = _siraliSira[rot[4]];
@@ -3562,7 +3568,7 @@ function undoGame(gameId) {
       D.round.masa1active = true;
       D.round.masa2active = false;
       D.round.partners = {};
-      D.round.partners[dis] = { m1: 'B', m2: null };
+      D.round.partners[dis] = { m1: disTakim, m2: null };
       updateMasaLabels();
     } else if (game.roundSnapshot) {
       // Normal oyun: kayıt anındaki masa düzenine dön
