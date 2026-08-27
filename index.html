@@ -1678,6 +1678,8 @@ function saveGame(masa, turler) {
 
   D.allGames.push(g);
   D.sessGames.push(g);
+  // Sıralı mod için idx'i push'tan hemen sonra al
+  var _nextSiraliIdx = D.sessGames.length;
   saveD();
   renderGameCards();
   clearEntry(masa);
@@ -1689,8 +1691,7 @@ function saveGame(masa, turler) {
       _siraliSira = D.siraliSira.slice();
     }
     if (_siraliSira && _siraliSira.length === 5) {
-      var nextIdx2 = D.sessGames ? D.sessGames.length : 0;
-      setTimeout(function() { kurSiraliOyun(nextIdx2); }, 600);
+      setTimeout(function() { kurSiraliOyun(_nextSiraliIdx); }, 600);
     }
   }
 }
@@ -3551,13 +3552,13 @@ function bitirOyun() {
   // Otomatik kaydet (turları da sakla geri alma için)
   saveGame(masa, savedTurler);
 
-  // Sıralı modda sonraki oyuna geç
+  // Sıralı modda sonraki oyuna geç (saveGame push yaptı, length şimdi doğru)
   if (D.siraliMod) {
     if ((!_siraliSira || _siraliSira.length === 0) && D.siraliSira && D.siraliSira.length) {
       _siraliSira = D.siraliSira.slice();
     }
     if (_siraliSira && _siraliSira.length === 5) {
-      var nextIdx = D.sessGames ? D.sessGames.length : 0;
+      var nextIdx = D.sessGames.length;
       setTimeout(function() { kurSiraliOyun(nextIdx); }, 600);
       return;
     }
