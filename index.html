@@ -752,6 +752,13 @@ REF.on('value', function(snap) {
     }
   } else if (!isOwnSave) {
     // Başka cihazdan gelen güncelleme
+    // Sıralı mod değişkenlerini senkronize et
+    if (D.siraliSira && D.siraliSira.length) {
+      _siraliSira = D.siraliSira.slice();
+    }
+    if (D.siraliOyunIdx !== undefined) {
+      _siraliOyunIdx = D.siraliOyunIdx;
+    }
     if (document.getElementById('ov-skor').classList.contains('on')) {
       var curMasa2 = parseInt(document.getElementById('skor-masa-sel').value) || 1;
       // Dagitici sırasını güncelle
@@ -835,8 +842,7 @@ function refreshAll() {
   if (D.siraliMod && D.siraliSira && D.siraliSira.length) {
     _siraliSira = D.siraliSira.slice();
     _siraliOyunIdx = D.siraliOyunIdx || 0;
-  }
-  var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active);
+  }  var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active);
   // started=true ama sessGames boşsa tutarsız durum - sıfırla ve ekran 2'ye git
   // NOT: sessGames boş ama masa kuruluysa sıfırlama - ilk oyun oynanmamış olabilir
   // Bu kontrolü kaldırıyoruz, masa aktifliği yeterli
@@ -1664,10 +1670,12 @@ function saveGame(masa, turler) {
   toast('Masa ' + masa + ' kaydedildi');
 
   // Sıralı modda ve masa ekranından kayıt yapılıyorsa sonraki oyuna geç
-  // (bitirOyun'dan çağrılınca o fonksiyon kendisi ilerletiyor)
   if (D.siraliMod && !turler) {
     if ((!_siraliSira || _siraliSira.length === 0) && D.siraliSira && D.siraliSira.length) {
       _siraliSira = D.siraliSira.slice();
+    }
+    if (D.siraliOyunIdx !== undefined && D.siraliOyunIdx > _siraliOyunIdx) {
+      _siraliOyunIdx = D.siraliOyunIdx;
     }
     if (_siraliSira && _siraliSira.length === 5) {
       _siraliOyunIdx++;
@@ -3538,6 +3546,10 @@ function bitirOyun() {
     // _siraliSira boşsa D.siraliSira'dan yükle
     if ((!_siraliSira || _siraliSira.length === 0) && D.siraliSira && D.siraliSira.length) {
       _siraliSira = D.siraliSira.slice();
+    }
+    // _siraliOyunIdx'i D'den yükle (başka cihazda 0 kalabilir)
+    if (D.siraliOyunIdx !== undefined && D.siraliOyunIdx > _siraliOyunIdx) {
+      _siraliOyunIdx = D.siraliOyunIdx;
     }
     if (_siraliSira && _siraliSira.length === 5) {
       _siraliOyunIdx++;
