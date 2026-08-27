@@ -1205,7 +1205,7 @@ function baslaSiraliKart() {
   D.siraliMod = true;
   D.siraliSira = siralanmis.slice();
   closeOv('ov-sirali');
-  kurSiraliOyun();
+  kurSiraliOyun(0);
 }
 
 
@@ -1255,12 +1255,12 @@ function baslaSirali() {
   D.siraliMod = true;
   D.siraliSira = sira.slice();
   closeOv('ov-sirali');
-  kurSiraliOyun();
+  kurSiraliOyun(0);
 }
 
 function kurSiraliOyun(idx) {
-  // idx verilmemişse sessGames'ten hesapla
-  if (idx === undefined) {
+  // idx verilmişse direkt kullan, verilmemişse sessGames'ten hesapla
+  if (idx === undefined || idx === null) {
     idx = D.sessGames ? D.sessGames.length : 0;
   }
   _siraliOyunIdx = idx;
