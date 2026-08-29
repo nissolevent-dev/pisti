@@ -4590,6 +4590,34 @@ function playAlarm() {
   } catch(e) {}
 }
 
+function playClap() {
+  try {
+    var ctx = _getAudioCtx();
+    if (!ctx) return;
+    function clap(t) {
+      var buf = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < d.length; i++) {
+        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+      }
+      var src = ctx.createBufferSource();
+      var g = ctx.createGain();
+      var f = ctx.createBiquadFilter();
+      f.type = 'bandpass'; f.frequency.value = 1200; f.Q.value = 0.8;
+      src.buffer = buf;
+      src.connect(f); f.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.6, ctx.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.12);
+      src.start(ctx.currentTime + t);
+      src.stop(ctx.currentTime + t + 0.15);
+    }
+    // 6 alkış sesi
+    for (var i = 0; i < 6; i++) {
+      clap(i * 0.18 + Math.random() * 0.04);
+    }
+  } catch(e) {}
+}
+
 var _masallahKuyruk = [];
 
 function showMasallah(oyuncu) {
@@ -4604,7 +4632,7 @@ function _masallahGoster() {
   var oyuncu = _masallahKuyruk[0];
   document.getElementById('masallah-isim').textContent = oyuncu;
   document.getElementById('ov-masallah').classList.add('on');
-  playAlarm();
+  playClap();
 }
 
 function masallahTamam() {
