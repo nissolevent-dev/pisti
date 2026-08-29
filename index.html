@@ -445,6 +445,16 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <!-- Onay Overlay -->
+<div class="ov" id="ov-masallah" style="z-index:1002">
+  <div class="ovbox" style="max-width:320px;text-align:center;padding:2rem 1.5rem;">
+    <div style="font-size:64px;margin-bottom:0.75rem;line-height:1;">🧿</div>
+    <div style="font-size:1.3rem;font-weight:700;letter-spacing:.06em;margin-bottom:6px;color:var(--tx1);">MAŞALLAH</div>
+    <div id="masallah-isim" style="font-size:1.2rem;font-weight:600;color:var(--g1);margin-bottom:6px;"></div>
+    <div style="font-size:.9rem;color:var(--tx3);margin-bottom:1.5rem;">+500 TL'yi geçtin 🎉</div>
+    <button class="btn bp bfw" onclick="closeOv('ov-masallah')">Tamam</button>
+  </div>
+</div>
+
 <div class="ov" id="ov-onay" style="z-index:1001">
   <div class="ovbox" style="max-width:320px;text-align:center">
     <div id="onay-mesaj" style="font-size:.95rem;font-weight:600;color:var(--tx1);margin-bottom:20px">Emin misiniz?</div>
@@ -1634,6 +1644,12 @@ function saveGame(masa, turler) {
   for (var p in payMap) {
     D.ldg[p] = (D.ldg[p] || 0) + payMap[p];
     D.sessLdg[p] = (D.sessLdg[p] || 0) + payMap[p];
+    // Maşallah kontrolü: oturumda 500 TL'yi ilk kez geçti mi?
+    if (!D.masallahGoster) D.masallahGoster = {};
+    if (!D.masallahGoster[p] && D.sessLdg[p] >= 500) {
+      D.masallahGoster[p] = true;
+      showMasallah(p);
+    }
   }
 
   // Bu masadaki gerçek ortakları tespit et
@@ -1772,6 +1788,7 @@ function _delGameExec(id) {
       masa2active: false
     };
     D.sessLdg = {};
+  D.masallahGoster = {};
     D.sess.players = [];
     // Önce saving'i false yap ki listener engellenmesin
     saving = false;
@@ -2425,7 +2442,15 @@ function renderLdg(elId, players, ldg) {
 function renderStat() {
   var games = D.allGames;
 
-  // En düşük puan (kazanan takımın puanı değil, herhangi bir takımın en düşük puanı)
+  // Tüm oyuncuları belirle (havuzdan silinmişler dahil) - en başta hesapla
+  var allPlayerNames = {};
+  for (var i = 0; i < D.pool.length; i++) allPlayerNames[D.pool[i]] = true;
+  for (var i = 0; i < games.length; i++) {
+    var gp = games[i];
+    var allInGame = (gp.teamA||[]).concat(gp.teamB||[]).concat(gp.partners||[]);
+    for (var j = 0; j < allInGame.length; j++) allPlayerNames[allInGame[j]] = true;
+  }
+  for (var p0 in D.ldg) allPlayerNames[p0] = true;
   var minPts = null, minPtsGame = null, minPtsTeam = null;
   // Bir oyunda en fazla pişti farkı
   var maxPiDiff = 0, maxPiDiffGame = null;
@@ -2558,9 +2583,9 @@ function renderStat() {
   var curWin = {}, curLoss = {};
   var maxWinStr = 0, maxWinPlayer = null;
   var maxLossStr = 0, maxLossStrPlayer = null;
-  for (var i = 0; i < D.pool.length; i++) {
-    wins[D.pool[i]] = 0; losses[D.pool[i]] = 0;
-    curWin[D.pool[i]] = 0; curLoss[D.pool[i]] = 0;
+  for (var pn2 in allPlayerNames) {
+    wins[pn2] = 0; losses[pn2] = 0;
+    curWin[pn2] = 0; curLoss[pn2] = 0;
   }
   for (var i = 0; i < sortedGames.length; i++) {
     var g = sortedGames[i];
@@ -2813,7 +2838,7 @@ function renderStat() {
   // Galibiyet serisi top5
   var winStrArr = [];
   var tempWin = {};
-  for (var i = 0; i < D.pool.length; i++) tempWin[D.pool[i]] = 0;
+  for (var pn3 in allPlayerNames) tempWin[pn3] = 0;
   var allWinStrs = [];
   for (var i = 0; i < sortedGames.length; i++) {
     var g = sortedGames[i];
@@ -2836,7 +2861,7 @@ function renderStat() {
 
   // Mağlubiyet serisi top5
   var tempLoss2 = {};
-  for (var i = 0; i < D.pool.length; i++) tempLoss2[D.pool[i]] = 0;
+  for (var pn4 in allPlayerNames) tempLoss2[pn4] = 0;
   var bestLossStr = {};
   for (var i = 0; i < sortedGames.length; i++) {
     var g = sortedGames[i];
@@ -2988,8 +3013,7 @@ function renderStat() {
     trendEl.innerHTML = '';
   }
 
-  var ps = {};
-  // Havuzdan silinmiş oyuncuları da dahil et - tüm oyunlardaki oyunculardan oluştur
+  // Tüm oyunculari belirle (havuzdan silinmişler dahil)
   var allPlayerNames = {};
   for (var i = 0; i < D.pool.length; i++) allPlayerNames[D.pool[i]] = true;
   for (var i = 0; i < games.length; i++) {
@@ -2997,8 +3021,9 @@ function renderStat() {
     var allInGame = (gp.teamA||[]).concat(gp.teamB||[]).concat(gp.partners||[]);
     for (var j = 0; j < allInGame.length; j++) allPlayerNames[allInGame[j]] = true;
   }
-  // ldg'deki oyuncuları da ekle
   for (var p in D.ldg) allPlayerNames[p] = true;
+
+  var ps = {};
   for (var pn in allPlayerNames) {
     ps[pn] = {g:0,w:0,l:0,pi:0,pw:0,pl:0,m:D.ldg[pn]||0};
   }
@@ -3025,8 +3050,8 @@ function renderStat() {
   }
 
   var active = [];
-  for (var i = 0; i < D.pool.length; i++) {
-    if (ps[D.pool[i]] && ps[D.pool[i]].g > 0) active.push(D.pool[i]);
+  for (var pn5 in allPlayerNames) {
+    if (ps[pn5] && ps[pn5].g > 0) active.push(pn5);
   }
   active.sort(function(a,b) { return ps[b].m - ps[a].m; });
 
@@ -4562,6 +4587,12 @@ function playAlarm() {
     var p = audio.play();
     if (p && p.catch) p.catch(function(){});
   } catch(e) {}
+}
+
+function showMasallah(oyuncu) {
+  document.getElementById('masallah-isim').textContent = oyuncu;
+  document.getElementById('ov-masallah').classList.add('on');
+  playAlarm();
 }
 
 // ── TOAST ──
