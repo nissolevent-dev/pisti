@@ -2989,8 +2989,18 @@ function renderStat() {
   }
 
   var ps = {};
-  for (var i = 0; i < D.pool.length; i++) {
-    ps[D.pool[i]] = {g:0,w:0,l:0,pi:0,pw:0,pl:0,m:D.ldg[D.pool[i]]||0};
+  // Havuzdan silinmiş oyuncuları da dahil et - tüm oyunlardaki oyunculardan oluştur
+  var allPlayerNames = {};
+  for (var i = 0; i < D.pool.length; i++) allPlayerNames[D.pool[i]] = true;
+  for (var i = 0; i < games.length; i++) {
+    var gp = games[i];
+    var allInGame = (gp.teamA||[]).concat(gp.teamB||[]).concat(gp.partners||[]);
+    for (var j = 0; j < allInGame.length; j++) allPlayerNames[allInGame[j]] = true;
+  }
+  // ldg'deki oyuncuları da ekle
+  for (var p in D.ldg) allPlayerNames[p] = true;
+  for (var pn in allPlayerNames) {
+    ps[pn] = {g:0,w:0,l:0,pi:0,pw:0,pl:0,m:D.ldg[pn]||0};
   }
   for (var i = 0; i < games.length; i++) {
     var g = games[i];
