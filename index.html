@@ -1647,7 +1647,7 @@ function saveGame(masa, turler) {
     D.sessLdg[p] = (D.sessLdg[p] || 0) + payMap[p];
     // Maşallah kontrolü: oturumda 500 TL'yi ilk kez geçti mi?
     if (!D.masallahGoster) D.masallahGoster = {};
-    if (!D.masallahGoster[p] && D.sessLdg[p] >= 500) {
+    if (!D.masallahGoster[p] && D.sessLdg[p] >= 800) {
       D.masallahGoster[p] = true;
       showMasallah(p);
     }
