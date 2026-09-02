@@ -242,7 +242,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <div style="text-align:center"><div id="pv-m1B" style="font-size:1.3rem;font-weight:700">-</div><div style="font-size:.6rem;color:var(--tx3)">Siyah Takım</div></div>
       </div>
       <div class="row">
-        <button class="btn bp" onclick="_prepClap();saveGame(1)">Kaydet</button>
+        <button class="btn bp" onclick="saveGame(1)">Kaydet</button>
         <button class="btn bo" onclick="clearEntry(1)">Temizle</button>
       </div>
     </div>
@@ -274,7 +274,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <div style="text-align:center"><div id="pv-m2B" style="font-size:1.3rem;font-weight:700">-</div><div style="font-size:.6rem;color:var(--tx3)">Siyah Takım</div></div>
       </div>
       <div class="row">
-        <button class="btn bp" onclick="_prepClap();saveGame(2)">Kaydet</button>
+        <button class="btn bp" onclick="saveGame(2)">Kaydet</button>
         <button class="btn bo" onclick="clearEntry(2)">Temizle</button>
       </div>
     </div>
@@ -596,7 +596,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
     <!-- Oyunu Bitir -->
     <div style="margin-top:10px;display:flex;gap:8px">
-      <button id="bitir-btn" class="btn bp bfw" style="background:#166534;opacity:0.4;cursor:not-allowed" onclick="_prepClap();bitirOyun()" disabled>✓ Oyunu Bitir ve Kaydet</button>
+      <button id="bitir-btn" class="btn bp bfw" style="background:#166534;opacity:0.4;cursor:not-allowed" onclick="bitirOyun()" disabled>✓ Oyunu Bitir ve Kaydet</button>
       <button class="btn bd_btn" onclick="resetSkor()">Sıfırla</button>
     </div>
   </div>
