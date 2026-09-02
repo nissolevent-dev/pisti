@@ -451,7 +451,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div style="font-size:64px;margin-bottom:0.75rem;line-height:1;">🧿</div>
     <div style="font-size:1.3rem;font-weight:700;letter-spacing:.06em;margin-bottom:6px;color:var(--tx1);">MAŞALLAH</div>
     <div id="masallah-isim" style="font-size:1.2rem;font-weight:600;color:var(--g1);margin-bottom:6px;"></div>
-    <div style="font-size:.9rem;color:var(--tx3);margin-bottom:1.5rem;">+500 TL'yi geçtin 🎉</div>
+    <div style="font-size:.9rem;color:var(--tx3);margin-bottom:1.5rem;">+800 TL'yi geçtin 🎉</div>
     <button class="btn bp bfw" onclick="masallahTamam()">Tamam</button>
   </div>
 </div>
@@ -1215,6 +1215,7 @@ function baslaSiraliKart() {
   _siraliOyunIdx = 0;
   D.siraliMod = true;
   D.siraliSira = siralanmis.slice();
+  D.siraliElIdx = 0;
   closeOv('ov-sirali');
   kurSiraliOyun(0);
 }
@@ -1265,14 +1266,15 @@ function baslaSirali() {
   _siraliOyunIdx = 0;
   D.siraliMod = true;
   D.siraliSira = sira.slice();
+  D.siraliElIdx = 0;
   closeOv('ov-sirali');
   kurSiraliOyun(0);
 }
 
 function kurSiraliOyun(idx) {
-  // idx verilmişse direkt kullan, verilmemişse sessGames'ten hesapla
+  // idx verilmişse direkt kullan, verilmemişse D.siraliElIdx'ten al
   if (idx === undefined || idx === null) {
-    idx = D.sessGames ? D.sessGames.length : 0;
+    idx = D.siraliElIdx || 0;
   }
   _siraliOyunIdx = idx;
   if (!_siraliSira || _siraliSira.length === 0) {
@@ -1508,7 +1510,7 @@ function startPlay() {
   else switchMasa(2);
 
   D.started = true;
-  D.siraliMod = false; D.siraliSira = []; D.siraliOyunIdx = 0;
+  D.siraliMod = false; D.siraliSira = []; D.siraliOyunIdx = 0; D.siraliElIdx = 0;
   _siraliSira = []; _siraliOyunIdx = 0;
   _dagitici = {};
   D.dagitici = {};
@@ -1696,7 +1698,8 @@ function saveGame(masa, turler) {
   D.allGames.push(g);
   D.sessGames.push(g);
   // Sıralı mod için idx'i push'tan hemen sonra al
-  var _nextSiraliIdx = D.sessGames.length;
+  var _nextSiraliIdx = (D.siraliElIdx || 0) + 1;
+  if (D.siraliMod) D.siraliElIdx = _nextSiraliIdx;
   saveD();
   renderGameCards();
   clearEntry(masa);
@@ -3595,7 +3598,8 @@ function bitirOyun() {
       _siraliSira = D.siraliSira.slice();
     }
     if (_siraliSira && _siraliSira.length === 5) {
-      var nextIdx = D.sessGames.length;
+      var nextIdx = (D.siraliElIdx || 0) + 1;
+      D.siraliElIdx = nextIdx;
       setTimeout(function() { kurSiraliOyun(nextIdx); }, 600);
       return;
     }
