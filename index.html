@@ -1699,18 +1699,19 @@ function saveGame(masa, turler) {
   D.sessGames.push(g);
   // Sıralı mod için idx'i push'tan hemen sonra al
   var _nextSiraliIdx = (D.siraliElIdx || 0) + 1;
-  if (D.siraliMod) D.siraliElIdx = _nextSiraliIdx;
   saveD();
   renderGameCards();
   clearEntry(masa);
   toast('Masa ' + masa + ' kaydedildi');
 
   // Sıralı modda ve masa ekranından kayıt yapılıyorsa sonraki oyuna geç
+  // (!turler = masa ekranından çağrıldı, bitirOyun'dan değil)
   if (D.siraliMod && !turler) {
     if ((!_siraliSira || _siraliSira.length === 0) && D.siraliSira && D.siraliSira.length) {
       _siraliSira = D.siraliSira.slice();
     }
     if (_siraliSira && _siraliSira.length === 5) {
+      D.siraliElIdx = _nextSiraliIdx;
       setTimeout(function() { kurSiraliOyun(_nextSiraliIdx); }, 600);
     }
   }
