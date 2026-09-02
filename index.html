@@ -714,9 +714,12 @@ REF.on('value', function(snap) {
     // Kendi saveD'miz - ldg'ye dokunma, diğer her şeyi Firebase'den al
     var savedLdg = D.ldg;
     var savedSessLdg = D.sessLdg;
+    var savedSiraliElIdx = D.siraliElIdx;
     D = val;
     D.ldg = savedLdg;
     D.sessLdg = savedSessLdg;
+    // siraliElIdx: en yüksek değeri koru (Firebase'e henüz yazılmamış olabilir)
+    if (savedSiraliElIdx > (D.siraliElIdx || 0)) D.siraliElIdx = savedSiraliElIdx;
   }
 
   // Eksik anahtarları doldur
@@ -769,6 +772,9 @@ REF.on('value', function(snap) {
     }
     if (D.siraliOyunIdx !== undefined) {
       _siraliOyunIdx = D.siraliOyunIdx;
+    }
+    if (val.siraliElIdx !== undefined) {
+      D.siraliElIdx = val.siraliElIdx;
     }
     if (document.getElementById('ov-skor').classList.contains('on')) {
       var curMasa2 = parseInt(document.getElementById('skor-masa-sel').value) || 1;
