@@ -1871,7 +1871,17 @@ function _closeSessionExec() {
     summary: summary,
     allLdg: JSON.parse(JSON.stringify(D.ldg)),
     initialLdg: JSON.parse(JSON.stringify(D.initialLdg || {})),
-    pool: D.pool.slice(),
+    pool: (function() {
+      var allNames = {};
+      for (var i = 0; i < D.pool.length; i++) allNames[D.pool[i]] = true;
+      for (var i = 0; i < D.allGames.length; i++) {
+        var gp = D.allGames[i];
+        var allIn = (gp.teamA||[]).concat(gp.teamB||[]).concat(gp.partners||[]);
+        for (var j = 0; j < allIn.length; j++) allNames[allIn[j]] = true;
+      }
+      for (var p in D.ldg) allNames[p] = true;
+      return Object.keys(allNames);
+    })(),
     winLoss: JSON.parse(JSON.stringify(D.winLoss || {}))
   };
 
@@ -2117,7 +2127,17 @@ function shareClosedSess(sessId) {
     summary: s.summary,
     allLdg: JSON.parse(JSON.stringify(D.ldg)),
     initialLdg: JSON.parse(JSON.stringify(D.initialLdg || {})),
-    pool: D.pool.slice(),
+    pool: (function() {
+      var allNames = {};
+      for (var i = 0; i < D.pool.length; i++) allNames[D.pool[i]] = true;
+      for (var i = 0; i < D.allGames.length; i++) {
+        var gp = D.allGames[i];
+        var allIn = (gp.teamA||[]).concat(gp.teamB||[]).concat(gp.partners||[]);
+        for (var j = 0; j < allIn.length; j++) allNames[allIn[j]] = true;
+      }
+      for (var p in D.ldg) allNames[p] = true;
+      return Object.keys(allNames);
+    })(),
     winLoss: JSON.parse(JSON.stringify(D.winLoss || {}))
   };
   showShareCard(shareData);
@@ -4072,7 +4092,17 @@ function saveManualSession() {
     summary: summary,
     allLdg: JSON.parse(JSON.stringify(D.ldg)),
     initialLdg: JSON.parse(JSON.stringify(D.initialLdg || {})),
-    pool: D.pool.slice(),
+    pool: (function() {
+      var allNames = {};
+      for (var i = 0; i < D.pool.length; i++) allNames[D.pool[i]] = true;
+      for (var i = 0; i < D.allGames.length; i++) {
+        var gp = D.allGames[i];
+        var allIn = (gp.teamA||[]).concat(gp.teamB||[]).concat(gp.partners||[]);
+        for (var j = 0; j < allIn.length; j++) allNames[allIn[j]] = true;
+      }
+      for (var p in D.ldg) allNames[p] = true;
+      return Object.keys(allNames);
+    })(),
     winLoss: JSON.parse(JSON.stringify(D.winLoss || {}))
   };
   setTimeout(function() { showShareCard(shareData); }, 400);
