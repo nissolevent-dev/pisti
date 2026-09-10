@@ -4480,11 +4480,34 @@ function renderSiraliSira() {
   var sira = (D.siraliSira && D.siraliSira.length) ? D.siraliSira : (_siraliSira||[]);
   if (!D.siraliMod || sira.length === 0) { div.style.display='none'; return; }
   div.style.display = 'block';
+
+  // Mevcut elde takım bilgisini al
+  var masa1 = D.round && D.round.masa1;
+  var teamA = masa1 ? (masa1.A || []) : [];
+  var teamB = masa1 ? (masa1.B || []) : [];
+
   var html = '';
   for (var i = 0; i < sira.length; i++) {
-    html += '<div style="display:flex;align-items:center;gap:3px;padding:4px 8px;border:2px solid var(--bd2);background:var(--wh);color:var(--tx2);border-radius:8px;white-space:nowrap;">';
-    html += '<span style="font-size:.7rem;font-weight:700;color:var(--g2);">'+(i+1)+'</span>';
-    html += '<span style="font-size:.8rem;">'+sira[i].split(' ')[0]+'</span>';
+    var p = sira[i];
+    var inA = teamA.indexOf(p) >= 0;
+    var inB = teamB.indexOf(p) >= 0;
+    // partners kontrolü (dışarıdan ortak)
+    if (!inA && !inB && D.round && D.round.partners && D.round.partners[p]) {
+      var pv = D.round.partners[p];
+      if (pv.m1 === 'A') inA = true;
+      else if (pv.m1 === 'B') inB = true;
+    }
+    var bg, col, border;
+    if (inA) {
+      bg = '#cc0000'; col = '#fff'; border = '#cc0000';
+    } else if (inB) {
+      bg = '#111'; col = '#fff'; border = '#111';
+    } else {
+      bg = 'var(--wh)'; col = 'var(--tx2)'; border = 'var(--bd2)';
+    }
+    html += '<div style="display:flex;align-items:center;gap:3px;padding:4px 8px;border:2px solid '+border+';background:'+bg+';color:'+col+';border-radius:8px;white-space:nowrap;">';
+    html += '<span style="font-size:.7rem;font-weight:700;opacity:.8;">'+(i+1)+'</span>';
+    html += '<span style="font-size:.8rem;">'+p.split(' ')[0]+'</span>';
     html += '</div>';
   }
   liste.innerHTML = html;
