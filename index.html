@@ -3434,9 +3434,11 @@ function renderSkorTakip() {
   var bitirBtn = document.getElementById('bitir-btn');
   if (bitirBtn) {
     var birTakim101 = (totK >= 101 || totS >= 101);
-    bitirBtn.disabled = !birTakim101;
-    bitirBtn.style.opacity = birTakim101 ? '1' : '0.4';
-    bitirBtn.style.cursor = birTakim101 ? 'pointer' : 'not-allowed';
+    var berabere = (totK === totS);
+    var aktif = birTakim101 && !berabere;
+    bitirBtn.disabled = !aktif;
+    bitirBtn.style.opacity = aktif ? '1' : '0.4';
+    bitirBtn.style.cursor = aktif ? 'pointer' : 'not-allowed';
   }
 }
 
