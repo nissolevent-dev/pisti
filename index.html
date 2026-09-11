@@ -1202,7 +1202,7 @@ function _skSonuc() {
     html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
     html += '<span style="font-size:.9rem;font-weight:700;color:var(--g1);min-width:20px">' + (i+1) + '.</span>';
     html += '<span style="font-size:.85rem;">' + p + '</span>';
-    html += '<span style="font-size:.85rem;color:var(--g2);font-weight:700;">' + _skEslesen[p] + '</span>';
+    html += '<span style="font-size:.85rem;color:var(--g2);font-weight:700;">' + (_skEslesen[p] === 'A' ? '1' : _skEslesen[p]) + '</span>';
     html += '</div>';
   }
   document.getElementById('sirali-sonuc-liste').innerHTML = html;
