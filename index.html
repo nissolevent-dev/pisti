@@ -3634,6 +3634,17 @@ function bitirOyun() {
     }
   }
 
+  // 8-9-10 kişi: her 2 oyun sonunda yeniden kart çek
+  var sessCount = D.sessGames ? D.sessGames.length : 0;
+  var playerCount = D.sess && D.sess.players ? D.sess.players.length : 0;
+  if (!D.siraliMod && playerCount >= 8 && sessCount > 0 && sessCount % 2 === 0) {
+    setTimeout(function() {
+      closeOv('ov-skor');
+      showKartCekme();
+    }, 800);
+    return;
+  }
+
   // Geri alma butonu göster
   showUndoToast(masa, savedTurler);
 }
