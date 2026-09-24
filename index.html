@@ -4183,8 +4183,12 @@ function showKartCekme(){
     {id:12,tip:'kral',renk:'k',sembol:'♥',acik:false},{id:13,tip:'kral',renk:'s',sembol:'♠',acik:false}
   ]);
 
-  // Dam geçmişine göre grupları oluştur
-  var gecmis=D.damGecmisi||{};
+  // Dam geçmişini sessGames'ten hesapla (silinmiş oyunlar dahil edilmez)
+  var gecmis={};
+  for(var dgi=0;dgi<(D.sessGames||[]).length;dgi++){
+    var dgg=D.sessGames[dgi];
+    if(dgg.damlar){for(var ddi=0;ddi<dgg.damlar.length;ddi++){var ddp=dgg.damlar[ddi];gecmis[ddp]=(gecmis[ddp]||0)+1;}}
+  }
   var players=D.sess.players;
   // Her oyuncunun dam sayısını al
   var sayilar=players.map(function(p){return {p:p,n:gecmis[p]||0};});
@@ -4231,12 +4235,10 @@ function _kOyuncuAktifMi(p){
   if(!_kGruplar||_kGruplar.length===0)return true;
   var grup=_kGruplar[_kGrupIdx];
   if(!grup)return true;
-  // Son grup mu? Son grupta herkes seçebilir
   var sonGrup=(_kGrupIdx===_kGruplar.length-1);
   if(sonGrup)return true;
-  // Aktif gruptaki sıradaki oyuncu
-  var siradaki=grup.oyuncular[_kGrupSiradaki];
-  return p===siradaki;
+  // Aktif gruptaki herkes aynı anda seçebilir - sıra yok
+  return grup.oyuncular.indexOf(p)>=0;
 }
 
 // Aktif grupta dam yasağı var mı?
@@ -4286,11 +4288,10 @@ function _kKartTik(idx){
       var grup=_kGruplar[_kGrupIdx];
       var sonGrup=(_kGrupIdx===_kGruplar.length-1);
       if(!sonGrup){
-        // Bu gruptaki oyuncu normal kart çekti → bitti, sonraki oyuncuya geç
-        _kGrupSiradaki++;
-        // Bu gruptaki herkes bitti mi?
-        if(_kGrupSiradaki>=grup.oyuncular.length){
-          // Sonraki gruba geç
+        // Bu gruptaki oyuncu normal kart çekti → bitti
+        // Gruptaki tüm oyuncular çekti mi?
+        var grupBitti = grup.oyuncular.every(function(gp){ return !!_kEslesen[gp]; });
+        if(grupBitti){
           _kGrupIdx++;
           _kGrupSiradaki=0;
         }
