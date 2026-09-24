@@ -4241,9 +4241,18 @@ function _kKartTik(idx){
 
     // Dam yasağı kontrolü
     if(k.tip==='dam' && _kDamYasakliMi()){
-      // Geçersiz - kartı kapat, tekrar çektirilecek
-      _kDeste1[idx].acik=false;
-      // Uyarı göster
+      // Geçersiz - tüm kapalı kartları yeniden karıştır (pozisyon belli olmasın)
+      var kapaliIdxler = [];
+      for(var ki=0; ki<_kDeste1.length; ki++){
+        if(!_kDeste1[ki].acik) kapaliIdxler.push(ki);
+      }
+      // Kapalı kartların değerlerini al ve karıştır
+      var kapaliKartlar = kapaliIdxler.map(function(ki){ return {id:_kDeste1[ki].id, tip:_kDeste1[ki].tip, renk:_kDeste1[ki].renk, sembol:_kDeste1[ki].sembol}; });
+      _kShuffle(kapaliKartlar);
+      for(var ki=0; ki<kapaliIdxler.length; ki++){
+        _kDeste1[kapaliIdxler[ki]] = {id:kapaliKartlar[ki].id, tip:kapaliKartlar[ki].tip, renk:kapaliKartlar[ki].renk, sembol:kapaliKartlar[ki].sembol, acik:false};
+      }
+      _kSecilen = null;
       _kDamUyari=true;
       _kRender();
       setTimeout(function(){_kDamUyari=false;_kRender();},1200);
