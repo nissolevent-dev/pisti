@@ -3861,8 +3861,6 @@ function bitirOyun() {
   });
 
   _bitirOnayBekle(masa, totK, totS, totKpi, totSpi, rubikonPreview, winTeam, prePayMap, turler);
-
-  _bitirOnayBekle(masa, totK, totS, totKpi, totSpi, rubikonPreview, winTeam, prePayMap, turler);
 }
 
 function _bitirOnayBekle(masa, totK, totS, totKpi, totSpi, rubikon, winTeam, prePayMap, turler) {
@@ -3964,43 +3962,50 @@ function _bitirOyunOnay(masa) {
     var lastG = D.sessGames[D.sessGames.length - 1];
     if (lastG && lastG.payMap) _bitirPayMap = lastG.payMap;
   }
-  showOyunSonucu(masa, totK, totS, totKpi, totSpi, rubikon, _bitirWinTeam, _bitirPayMap, function() {
-    // Sonuç kapatılınca devam et
-    _bitirOyunDevam(masa, savedTurler);
-  });
+  _bitirOyunDevam(masa, savedTurler);
 }
 
 function _bitirOyunDevam(masa, savedTurler) {
   var sessCount = D.sessGames ? D.sessGames.length : 0;
   var playerCount = D.sess && D.sess.players ? D.sess.players.length : 0;
+
+  // 5 kişi sıralı mod
   if (D.siraliMod) {
+    if ((!_siraliSira || _siraliSira.length === 0) && D.siraliSira && D.siraliSira.length) {
+      _siraliSira = D.siraliSira.slice();
+    }
+    if (_siraliSira && _siraliSira.length === 5) {
+      var nextIdx = (D.siraliElIdx || 0) + 1;
+      D.siraliElIdx = nextIdx;
+      setTimeout(function() { kurSiraliOyun(nextIdx); }, 300);
+      return;
+    }
+  }
+
+  // 8-9-10 kişi: her 2 oyun sonunda yeniden kart çek
   if (!D.siraliMod && playerCount >= 8 && sessCount > 0 && sessCount % 2 === 0) {
     setTimeout(function() {
       closeOv('ov-skor');
       showKartCekme();
-    }, 800);
+    }, 300);
     return;
   }
 
-  // 4 kişi sıralı: her oyun sonunda oynanan kombinasyonu kaydet ve yeniden kart çek
+  // 4 kişi sıralı: her oyun sonunda kombinasyonu kaydet ve yeniden kart çek
   if (D.siraliMod4 && playerCount === 4) {
     if (!D.oynananKombinasyonlar4) D.oynananKombinasyonlar4 = [];
     if (D.oncekiOrtaklik4) D.oynananKombinasyonlar4.push(D.oncekiOrtaklik4);
-    // 3 oyun tamamlandıysa bir sonraki tur için sıfırla
     if (D.oynananKombinasyonlar4.length >= 3) D.oynananKombinasyonlar4 = [];
     setTimeout(function() {
       closeOv('ov-skor');
       show4KisiKartCekme();
-    }, 800);
+    }, 300);
     return;
   }
 
-  // Geri alma butonu göster
+  // Normal devam
   showUndoToast(masa, savedTurler);
 }
-
-var _undoMasa = null;
-var _undoTurler = null;
 
 function showUndoToast(masa, turler) {
   _undoMasa = masa;
@@ -5119,6 +5124,9 @@ function oyunSonucuKapat() {
 }
 
 
+var _masallahKuyruk = [];
+
+function showMasallah(oyuncu) {
   _masallahKuyruk.push(oyuncu);
   if (_masallahKuyruk.length === 1) {
     _masallahGoster();
