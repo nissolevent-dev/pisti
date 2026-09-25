@@ -2696,10 +2696,16 @@ function renderLdg(elId, players, ldg) {
   if (!isAllTime && playerCount === 7 && D.sessGames && D.sessGames.length >= 2) {
     function gercekOturanlar(g) {
       var oturanlar = {};
-      var partners = g.partners || [];
-      var tumOyuncular = (g.teamA || []).concat(g.teamB || []);
-      tumOyuncular.forEach(function(p) {
-        if (partners.indexOf(p) < 0) oturanlar[p] = true;
+      // roundSnapshot'tan partner anahtarlarını al (daha güvenilir)
+      var partnerKeys = [];
+      if (g.roundSnapshot && g.roundSnapshot.partners) {
+        partnerKeys = Object.keys(g.roundSnapshot.partners);
+      } else {
+        partnerKeys = g.partners || [];
+      }
+      var hepsi = (g.teamA || []).concat(g.teamB || []);
+      hepsi.forEach(function(p) {
+        if (partnerKeys.indexOf(p) < 0) oturanlar[p] = true;
       });
       return oturanlar;
     }
