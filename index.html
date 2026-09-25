@@ -1220,11 +1220,6 @@ function _4kSonuc() {
 }
 
 function _4kKurMasa(kirmizi, siyah) {
-  // Oynanan kombinasyonları kaydet
-  if (!D.oynananKombinasyonlar4) D.oynananKombinasyonlar4 = [];
-  // Tüm 3 oynandıysa sıfırla
-  if (D.oynananKombinasyonlar4.length >= 3) D.oynananKombinasyonlar4 = [];
-  D.oynananKombinasyonlar4.push({K: kirmizi.slice(), S: siyah.slice()});
   D.oncekiOrtaklik4 = {K: kirmizi.slice(), S: siyah.slice()};
   D.siraliMod4 = true;
   D.round.masa1 = {A: kirmizi.slice(), B: siyah.slice()};
@@ -3878,8 +3873,12 @@ function bitirOyun() {
     return;
   }
 
-  // 4 kişi sıralı: her oyun sonunda yeniden kart çek
+  // 4 kişi sıralı: her oyun sonunda oynanan kombinasyonu kaydet ve yeniden kart çek
   if (D.siraliMod4 && playerCount === 4) {
+    // Bu oyunun kombinasyonunu kaydet
+    if (!D.oynananKombinasyonlar4) D.oynananKombinasyonlar4 = [];
+    if (D.oynananKombinasyonlar4.length >= 3) D.oynananKombinasyonlar4 = [];
+    if (D.oncekiOrtaklik4) D.oynananKombinasyonlar4.push(D.oncekiOrtaklik4);
     setTimeout(function() {
       closeOv('ov-skor');
       show4KisiKartCekme();
