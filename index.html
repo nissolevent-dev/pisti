@@ -1191,16 +1191,21 @@ function _4kSonuc() {
     else siyah.push(p);
   }
 
-  // Önceki ortaklık kontrolü
-  var onceki = D.oncekiOrtaklik4;
-  if (onceki) {
-    var ayni = (onceki.K.slice().sort().join(',') === kirmizi.slice().sort().join(',') ||
-                onceki.K.slice().sort().join(',') === siyah.slice().sort().join(','));
-    if (ayni) {
-      document.getElementById('4kart-aciklama').textContent = '⚠️ Aynı ortaklık! Yeniden karıştırılıyor...';
-      setTimeout(function() { show4KisiKartCekme(); }, 1200);
-      return;
-    }
+  // Daha önce oynanan TÜM kombinasyonları kontrol et
+  var oynananlar = D.oynananKombinasyonlar4 || [];
+  function kombAyni4(k, o) {
+    var ks = k.K.slice().sort().join(',');
+    var os1 = o.K.slice().sort().join(',');
+    var os2 = o.S.slice().sort().join(',');
+    return ks === os1 || ks === os2;
+  }
+  var zatenOynandi = oynananlar.some(function(o) {
+    return kombAyni4({K: kirmizi, S: siyah}, o);
+  });
+  if (zatenOynandi) {
+    document.getElementById('4kart-aciklama').textContent = '⚠️ Bu ortaklık oynandı! Yeniden karıştırılıyor...';
+    setTimeout(function() { show4KisiKartCekme(); }, 1200);
+    return;
   }
 
   var html = '<div style="margin-bottom:8px;">';
