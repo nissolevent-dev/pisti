@@ -2685,24 +2685,46 @@ function renderHesap() {
 
 function renderLdg(elId, players, ldg) {
   var el = document.getElementById(elId);
-  var active = players.slice(); // Tüm oyuncuları dahil et
+  var active = players.slice();
   if (!active.length) { el.innerHTML = '<div class="empty">Veri yok</div>'; return; }
   active.sort(function(a,b) { return (ldg[b]||0)-(ldg[a]||0); });
   var isAllTime = (elId === 'h-all-ldg');
+
+  // 7 kişi: son 2 oyunda masada oturan (ortak değil) kişileri bul
+  var x2Set = {};
+  var playerCount = D.sess && D.sess.players ? D.sess.players.length : 0;
+  if (!isAllTime && playerCount === 7 && D.sessGames && D.sessGames.length >= 2) {
+    var g1 = D.sessGames[D.sessGames.length - 2];
+    var g2 = D.sessGames[D.sessGames.length - 1];
+    function gercekOturanlar(g) {
+      var oturanlar = {};
+      var partners = g.partners || [];
+      var tumOyuncular = (g.teamA || []).concat(g.teamB || []);
+      tumOyuncular.forEach(function(p) {
+        if (partners.indexOf(p) < 0) oturanlar[p] = true;
+      });
+      return oturanlar;
+    }
+    var o1 = gercekOturanlar(g1);
+    var o2 = gercekOturanlar(g2);
+    for (var p in o1) { if (o2[p]) x2Set[p] = true; }
+  }
+
   var html = '<div class="ldg">';
   for (var i = 0; i < active.length; i++) {
     var p = active[i]; var m = ldg[p] || 0;
+    var x2Badge = (!isAllTime && x2Set[p]) ? ' <span style="font-size:.65rem;font-weight:700;color:#fff;background:#f59e0b;border-radius:4px;padding:1px 5px;vertical-align:middle;">x2</span>' : '';
     if (isAllTime) {
       var wl = (D.winLoss && D.winLoss[p]) ? D.winLoss[p] : {w:0, l:0};
       html += '<div class="ldgr" style="display:grid;grid-template-columns:auto 1fr auto auto auto;align-items:center;gap:0">' +
         '<span style="font-size:.72rem;color:var(--tx3);font-weight:700;min-width:24px;text-align:center">' + (i+1) + '</span>' +
-        '<span class="ldgnm">' + p + '</span>' +
+        '<span class="ldgnm">' + p + x2Badge + '</span>' +
         '<span class="ldgv ' + (m>0?'pos':m<0?'neg':'z') + '" style="min-width:80px;text-align:right">' + (m>=0?'+':'') + 'TL' + Math.abs(m) + '</span>' +
         '<span style="font-size:.72rem;color:var(--win);font-weight:600;min-width:36px;text-align:right;padding-left:10px">' + (wl.w||0) + 'W</span>' +
         '<span style="font-size:.72rem;color:var(--lose);font-weight:600;min-width:32px;text-align:right;padding-left:4px">' + (wl.l||0) + 'L</span>' +
         '</div>';
     } else {
-      html += '<div class="ldgr"><span class="ldgnm">' + p + '</span><span class="ldgv ' + (m>0?'pos':m<0?'neg':'z') + '">' + (m>=0?'+':'') + 'TL' + Math.abs(m) + '</span></div>';
+      html += '<div class="ldgr"><span class="ldgnm">' + p + x2Badge + '</span><span class="ldgv ' + (m>0?'pos':m<0?'neg':'z') + '">' + (m>=0?'+':'') + 'TL' + Math.abs(m) + '</span></div>';
     }
   }
   html += '</div>';
