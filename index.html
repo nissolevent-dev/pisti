@@ -1258,6 +1258,8 @@ function showSiraliSiralama() {
   closeOv('ov-oyun-modu');
   // 4 kişi için özel kart çekme sistemi
   if (D.sess.players.length === 4) {
+    D.oynananKombinasyonlar4 = [];
+    D.oncekiOrtaklik4 = null;
     show4KisiKartCekme();
     return;
   }
