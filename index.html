@@ -2690,12 +2690,10 @@ function renderLdg(elId, players, ldg) {
   active.sort(function(a,b) { return (ldg[b]||0)-(ldg[a]||0); });
   var isAllTime = (elId === 'h-all-ldg');
 
-  // 7 kişi: son 2 oyunda masada oturan (ortak değil) kişileri bul
+  // 7 kişi: herhangi ardışık 2 oyunda masada oturan (ortak değil) kişileri bul
   var x2Set = {};
   var playerCount = D.sess && D.sess.players ? D.sess.players.length : 0;
   if (!isAllTime && playerCount === 7 && D.sessGames && D.sessGames.length >= 2) {
-    var g1 = D.sessGames[D.sessGames.length - 2];
-    var g2 = D.sessGames[D.sessGames.length - 1];
     function gercekOturanlar(g) {
       var oturanlar = {};
       var partners = g.partners || [];
@@ -2705,9 +2703,11 @@ function renderLdg(elId, players, ldg) {
       });
       return oturanlar;
     }
-    var o1 = gercekOturanlar(g1);
-    var o2 = gercekOturanlar(g2);
-    for (var p in o1) { if (o2[p]) x2Set[p] = true; }
+    for (var gi = 0; gi < D.sessGames.length - 1; gi++) {
+      var o1 = gercekOturanlar(D.sessGames[gi]);
+      var o2 = gercekOturanlar(D.sessGames[gi + 1]);
+      for (var pp in o1) { if (o2[pp]) x2Set[pp] = true; }
+    }
   }
 
   var html = '<div class="ldg">';
