@@ -3957,39 +3957,24 @@ function _gosterSonucVeDevam(masa, totK, totS, totKpi, totSpi, rubikon, winTeam,
   var teamA = masaData ? (masaData.A || []) : [];
   var teamB = masaData ? (masaData.B || []) : [];
   var sessCount = D.sessGames ? D.sessGames.length : 0;
+  var tumOyuncular = teamA.concat(teamB);
 
   var html = '<div style="padding:14px 16px 10px;border-bottom:1px solid var(--bd2);display:flex;align-items:center;gap:6px;">';
   html += '<span style="font-size:13px;color:var(--tx3);">' + sessCount + '. Oyun · Masa ' + masa + '</span>';
   html += '<span style="margin-left:auto;background:var(--g1);color:#fff;font-size:11px;font-weight:600;padding:3px 7px;border-radius:4px;">M' + masa + '</span>';
   if (rubikon) html += '<span style="background:#dc2626;color:#fff;font-size:11px;font-weight:600;padding:3px 7px;border-radius:4px;">Rubikon</span>';
   html += '</div>';
-  html += '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:0;padding:14px;">';
 
-  function takimKarti2(oyuncular, puan, pisti, takim, kazandi) {
-    var bg = takim === 'A' ? 'background:#fef2f2;border:0.5px solid #fecaca;' : 'background:var(--bg2);border:0.5px solid var(--bd2);';
-    var baslikRenk = takim === 'A' ? 'color:#991b1b;' : 'color:var(--tx3);';
-    var s = '<div style="' + bg + 'border-radius:10px;padding:11px;">';
-    s += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;' + baslikRenk + '">';
-    s += (takim === 'A' ? 'Kırmızı' : 'Siyah') + (kazandi ? ' W' : '') + '</div>';
-    s += '<div style="font-size:12px;font-weight:500;color:var(--tx1);margin-bottom:7px;line-height:1.4;">' + oyuncular.map(function(p){return p.split(' ')[0];}).join(', ') + '</div>';
-    s += '<div style="font-size:26px;font-weight:600;color:var(--tx1);line-height:1;">' + puan + '</div>';
-    s += '<div style="font-size:11px;color:var(--tx3);margin-top:2px;margin-bottom:9px;">' + pisti + ' pişti</div>';
-    s += '<div style="border-top:0.5px solid ' + (takim==='A'?'#fecaca':'var(--bd2)') + ';padding-top:7px;">';
-    oyuncular.forEach(function(p) {
-      var pay = payMap[p] || 0;
-      var col = pay >= 0 ? '#16a34a' : '#dc2626';
-      var lbl = pay >= 0 ? '+TL' + pay : 'TL' + Math.abs(pay);
-      s += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">';
-      s += '<span style="color:var(--tx3);">' + p.split(' ')[0] + '</span>';
-      s += '<span style="font-weight:600;color:' + col + ';">' + lbl + '</span></div>';
-    });
-    s += '</div></div>';
-    return s;
-  }
-
-  html += takimKarti2(teamA, totK, totKpi, 'A', winTeam === 'A');
-  html += '<div style="display:flex;align-items:center;justify-content:center;padding:0 8px;"><span style="font-size:11px;color:var(--tx3);">vs</span></div>';
-  html += takimKarti2(teamB, totS, totSpi, 'B', winTeam === 'B');
+  html += '<div style="padding:16px;">';
+  tumOyuncular.forEach(function(p) {
+    var pay = payMap[p] || 0;
+    var col = pay >= 0 ? '#16a34a' : '#dc2626';
+    var lbl = pay >= 0 ? '+TL' + pay : '−TL' + Math.abs(pay);
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid var(--bd2);">';
+    html += '<span style="font-size:1rem;color:var(--tx1);">' + p.split(' ')[0] + ' ' + (p.split(' ')[1]||'') + '</span>';
+    html += '<span style="font-size:1.4rem;font-weight:700;color:' + col + ';">' + lbl + '</span>';
+    html += '</div>';
+  });
   html += '</div>';
 
   document.getElementById('oyun-sonucu-icerik').innerHTML = html;
