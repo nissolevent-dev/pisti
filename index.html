@@ -1051,6 +1051,7 @@ function baslaNormal() {
   D.siraliMod = false;
   D.siraliMod4 = false;
   D.oncekiOrtaklik4 = null;
+  D.oynananKombinasyonlar4 = [];
   D.siraliSira = [];
   D.siraliOyunIdx = 0;
   _siraliSira = [];
@@ -1066,9 +1067,38 @@ var _4kSecilen = null;
 var _4kDeste = [];
 
 function show4KisiKartCekme() {
+  var players = D.sess.players;
+  // Tüm 3 kombinasyonu hesapla
+  var p = players;
+  var kombinasyonlar = [
+    {K:[p[0],p[1]], S:[p[2],p[3]]},
+    {K:[p[0],p[2]], S:[p[1],p[3]]},
+    {K:[p[0],p[3]], S:[p[1],p[2]]}
+  ];
+
+  // Oynanan kombinasyonları bul
+  var oynananlar = D.oynananKombinasyonlar4 || [];
+
+  // Oynanmamış kombinasyonları bul
+  function kombAyni(a, b) {
+    return a.K.slice().sort().join(',') === b.K.slice().sort().join(',') ||
+           a.K.slice().sort().join(',') === b.S.slice().sort().join(',');
+  }
+  var oynanmamis = kombinasyonlar.filter(function(k) {
+    return !oynananlar.some(function(o) { return kombAyni(k, o); });
+  });
+
+  // Sadece 1 kombinasyon kaldıysa direkt kur
+  if (oynanmamis.length === 1) {
+    var kalan = oynanmamis[0];
+    D.oncekiOrtaklik4 = kalan;
+    _4kKurMasa(kalan.K, kalan.S);
+    return;
+  }
+
+  // Birden fazla seçenek varsa kart çektir
   _4kEslesen = {};
   _4kSecilen = null;
-  // 2 kırmızı as, 2 siyah as - karışık
   var kartlar = [{renk:'K',sembol:'♥'},{renk:'K',sembol:'♦'},{renk:'S',sembol:'♠'},{renk:'S',sembol:'♣'}];
   _kShuffle(kartlar);
   _4kDeste = kartlar.map(function(k){ return {renk:k.renk, sembol:k.sembol, acik:false}; });
@@ -1164,9 +1194,9 @@ function _4kSonuc() {
   // Önceki ortaklık kontrolü
   var onceki = D.oncekiOrtaklik4;
   if (onceki) {
-    var ayni = (onceki.K.sort().join(',') === kirmizi.sort().join(','));
+    var ayni = (onceki.K.slice().sort().join(',') === kirmizi.slice().sort().join(',') ||
+                onceki.K.slice().sort().join(',') === siyah.slice().sort().join(','));
     if (ayni) {
-      // Aynı ortaklık — yeniden karıştır
       document.getElementById('4kart-aciklama').textContent = '⚠️ Aynı ortaklık! Yeniden karıştırılıyor...';
       setTimeout(function() { show4KisiKartCekme(); }, 1200);
       return;
@@ -1184,12 +1214,15 @@ function _4kSonuc() {
   window._4kSonucData = {K: kirmizi, S: siyah};
 }
 
-function basla4KisiSirali() {
-  var d = window._4kSonucData;
-  if (!d) return;
-  D.oncekiOrtaklik4 = {K: d.K.slice(), S: d.S.slice()};
+function _4kKurMasa(kirmizi, siyah) {
+  // Oynanan kombinasyonları kaydet
+  if (!D.oynananKombinasyonlar4) D.oynananKombinasyonlar4 = [];
+  // Tüm 3 oynandıysa sıfırla
+  if (D.oynananKombinasyonlar4.length >= 3) D.oynananKombinasyonlar4 = [];
+  D.oynananKombinasyonlar4.push({K: kirmizi.slice(), S: siyah.slice()});
+  D.oncekiOrtaklik4 = {K: kirmizi.slice(), S: siyah.slice()};
   D.siraliMod4 = true;
-  D.round.masa1 = {A: d.K.slice(), B: d.S.slice()};
+  D.round.masa1 = {A: kirmizi.slice(), B: siyah.slice()};
   D.round.masa1active = true;
   D.round.masa2active = false;
   D.round.partners = {};
@@ -1208,6 +1241,12 @@ function basla4KisiSirali() {
     updateMasaLabels(); renderSessChips(); renderGameCards(); goS(4); switchMasa(1);
     setTimeout(function() { showSkorTakip(); }, 100);
   }).catch(function() { saving = false; syncDot('#ef4444'); });
+}
+
+function basla4KisiSirali() {
+  var d = window._4kSonucData;
+  if (!d) return;
+  _4kKurMasa(d.K, d.S);
 }
 
 
