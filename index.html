@@ -3864,14 +3864,12 @@ function bitirOyun() {
 }
 
 function _bitirOnayBekle(masa, totK, totS, totKpi, totSpi, rubikon, winTeam, prePayMap, turler) {
-  // Sonuç penceresini göster - onay/iptal butonlarıyla
   var masaData = masa === 1 ? D.round.masa1 : D.round.masa2;
   var teamA = masaData ? (masaData.A || []) : [];
   var teamB = masaData ? (masaData.B || []) : [];
   var sessCount = (D.sessGames ? D.sessGames.length : 0) + 1;
 
-  var html = '';
-  html += '<div style="padding:14px 16px 10px;border-bottom:1px solid var(--bd2);display:flex;align-items:center;gap:6px;">';
+  var html = '<div style="padding:14px 16px 10px;border-bottom:1px solid var(--bd2);display:flex;align-items:center;gap:6px;">';
   html += '<span style="font-size:13px;color:var(--tx3);">' + sessCount + '. Oyun · Masa ' + masa + '</span>';
   html += '<span style="margin-left:auto;background:var(--g1);color:#fff;font-size:11px;font-weight:600;padding:3px 7px;border-radius:4px;">M' + masa + '</span>';
   if (rubikon) html += '<span style="background:#dc2626;color:#fff;font-size:11px;font-weight:600;padding:3px 7px;border-radius:4px;">Rubikon</span>';
@@ -3886,17 +3884,8 @@ function _bitirOnayBekle(masa, totK, totS, totKpi, totSpi, rubikon, winTeam, pre
     s += (takim === 'A' ? 'Kırmızı' : 'Siyah') + (kazandi ? ' W' : '') + '</div>';
     s += '<div style="font-size:12px;font-weight:500;color:var(--tx1);margin-bottom:7px;line-height:1.4;">' + oyuncular.map(function(p){return p.split(' ')[0];}).join(', ') + '</div>';
     s += '<div style="font-size:26px;font-weight:600;color:var(--tx1);line-height:1;">' + puan + '</div>';
-    s += '<div style="font-size:11px;color:var(--tx3);margin-top:2px;margin-bottom:9px;">' + pisti + ' pişti</div>';
-    s += '<div style="border-top:0.5px solid ' + (takim==='A'?'#fecaca':'var(--bd2)') + ';padding-top:7px;">';
-    oyuncular.forEach(function(p) {
-      var pay = prePayMap[p] || 0;
-      var col = pay >= 0 ? '#16a34a' : '#dc2626';
-      var lbl = pay >= 0 ? '+TL' + pay : 'TL' + Math.abs(pay);
-      s += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">';
-      s += '<span style="color:var(--tx3);">' + p.split(' ')[0] + '</span>';
-      s += '<span style="font-weight:600;color:' + col + ';">' + lbl + '</span></div>';
-    });
-    s += '</div></div>';
+    s += '<div style="font-size:11px;color:var(--tx3);margin-top:2px;">' + pisti + ' pişti</div>';
+    s += '</div>';
     return s;
   }
 
@@ -3906,19 +3895,17 @@ function _bitirOnayBekle(masa, totK, totS, totKpi, totSpi, rubikon, winTeam, pre
   html += '</div>';
 
   document.getElementById('oyun-sonucu-icerik').innerHTML = html;
-
-  // Butonları güncelle: Cancel / OK
   var btnDiv = document.querySelector('#ov-oyun-sonucu > .ovbox > div:last-child');
   if (btnDiv) {
     btnDiv.innerHTML = '<div style="display:flex;gap:8px;">' +
-      '<button class="btn bo" style="flex:1" onclick="closeOv(\'ov-oyun-sonucu\')">İptal</button>' +
+      '<button class="btn bo" style="flex:1" onclick="oyunSonucuKapat()">İptal</button>' +
       '<button class="btn bp" style="flex:1" onclick="_bitirOyunOnay(' + masa + ')">Kaydet</button>' +
       '</div>';
   }
-
   window._bitirOnayTurler = turler;
   document.getElementById('ov-oyun-sonucu').classList.add('on');
 }
+
 
 function _bitirOyunOnay(masa) {
   closeOv('ov-oyun-sonucu');
@@ -3954,15 +3941,64 @@ function _bitirOyunOnay(masa) {
   // Otomatik kaydet (turları da sakla geri alma için)
   saveGame(masa, savedTurler);
 
-  // Oyun sonucu penceresi göster, kapanınca devam et
+  // Gerçek payMap'i al ve sonuç penceresini göster
   var _bitirWinTeam = (totK > totS) ? 'A' : (totS > totK) ? 'B' : '';
   var _bitirPayMap = {};
-  // payMap'i hesapla - saveGame zaten hesapladı, D.sessGames'in son elemanından al
   if (D.sessGames && D.sessGames.length > 0) {
     var lastG = D.sessGames[D.sessGames.length - 1];
     if (lastG && lastG.payMap) _bitirPayMap = lastG.payMap;
   }
-  _bitirOyunDevam(masa, savedTurler);
+  _gosterSonucVeDevam(masa, totK, totS, totKpi, totSpi, rubikon, _bitirWinTeam, _bitirPayMap, savedTurler);
+}
+
+
+function _gosterSonucVeDevam(masa, totK, totS, totKpi, totSpi, rubikon, winTeam, payMap, savedTurler) {
+  var masaData = masa === 1 ? D.round.masa1 : D.round.masa2;
+  var teamA = masaData ? (masaData.A || []) : [];
+  var teamB = masaData ? (masaData.B || []) : [];
+  var sessCount = D.sessGames ? D.sessGames.length : 0;
+
+  var html = '<div style="padding:14px 16px 10px;border-bottom:1px solid var(--bd2);display:flex;align-items:center;gap:6px;">';
+  html += '<span style="font-size:13px;color:var(--tx3);">' + sessCount + '. Oyun · Masa ' + masa + '</span>';
+  html += '<span style="margin-left:auto;background:var(--g1);color:#fff;font-size:11px;font-weight:600;padding:3px 7px;border-radius:4px;">M' + masa + '</span>';
+  if (rubikon) html += '<span style="background:#dc2626;color:#fff;font-size:11px;font-weight:600;padding:3px 7px;border-radius:4px;">Rubikon</span>';
+  html += '</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:0;padding:14px;">';
+
+  function takimKarti2(oyuncular, puan, pisti, takim, kazandi) {
+    var bg = takim === 'A' ? 'background:#fef2f2;border:0.5px solid #fecaca;' : 'background:var(--bg2);border:0.5px solid var(--bd2);';
+    var baslikRenk = takim === 'A' ? 'color:#991b1b;' : 'color:var(--tx3);';
+    var s = '<div style="' + bg + 'border-radius:10px;padding:11px;">';
+    s += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;' + baslikRenk + '">';
+    s += (takim === 'A' ? 'Kırmızı' : 'Siyah') + (kazandi ? ' W' : '') + '</div>';
+    s += '<div style="font-size:12px;font-weight:500;color:var(--tx1);margin-bottom:7px;line-height:1.4;">' + oyuncular.map(function(p){return p.split(' ')[0];}).join(', ') + '</div>';
+    s += '<div style="font-size:26px;font-weight:600;color:var(--tx1);line-height:1;">' + puan + '</div>';
+    s += '<div style="font-size:11px;color:var(--tx3);margin-top:2px;margin-bottom:9px;">' + pisti + ' pişti</div>';
+    s += '<div style="border-top:0.5px solid ' + (takim==='A'?'#fecaca':'var(--bd2)') + ';padding-top:7px;">';
+    oyuncular.forEach(function(p) {
+      var pay = payMap[p] || 0;
+      var col = pay >= 0 ? '#16a34a' : '#dc2626';
+      var lbl = pay >= 0 ? '+TL' + pay : 'TL' + Math.abs(pay);
+      s += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">';
+      s += '<span style="color:var(--tx3);">' + p.split(' ')[0] + '</span>';
+      s += '<span style="font-weight:600;color:' + col + ';">' + lbl + '</span></div>';
+    });
+    s += '</div></div>';
+    return s;
+  }
+
+  html += takimKarti2(teamA, totK, totKpi, 'A', winTeam === 'A');
+  html += '<div style="display:flex;align-items:center;justify-content:center;padding:0 8px;"><span style="font-size:11px;color:var(--tx3);">vs</span></div>';
+  html += takimKarti2(teamB, totS, totSpi, 'B', winTeam === 'B');
+  html += '</div>';
+
+  document.getElementById('oyun-sonucu-icerik').innerHTML = html;
+  var btnDiv = document.querySelector('#ov-oyun-sonucu > .ovbox > div:last-child');
+  if (btnDiv) {
+    btnDiv.innerHTML = '<button class="btn bp bfw" onclick="oyunSonucuKapat()">Tamam</button>';
+  }
+  window._oyunSonucuOnTamam = function() { _bitirOyunDevam(masa, savedTurler); };
+  document.getElementById('ov-oyun-sonucu').classList.add('on');
 }
 
 function _bitirOyunDevam(masa, savedTurler) {
@@ -5122,7 +5158,6 @@ function oyunSonucuKapat() {
     fn();
   }
 }
-
 
 var _masallahKuyruk = [];
 
