@@ -1315,7 +1315,7 @@ function _6kRender() {
     }
     oyDiv.innerHTML = oyHtml;
     var active2 = !!_6k.ortakSecilen;
-    var kartHtml2 = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">';
+    var kartHtml2 = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;">';
     for (var ki=0; ki<4; ki++) {
       var secilenIdx = _6k.ortakAcikIndeksler ? _6k.ortakAcikIndeksler.indexOf(ki) : -1;
       var acik = _6k.ortakAcikKartlar && _6k.ortakAcikKartlar[ki];
@@ -2575,6 +2575,7 @@ function _delGameExec(id) {
     D.siraliMod = false;
     D.damGecmisi = {};
   D._6kDisaridaGecmis = {};
+  D.damlarSonOyun = [];
     _siraliSira = [];
     _siraliOyunIdx = 0;
     D.round = {
