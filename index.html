@@ -1343,8 +1343,57 @@ function _6kRender() {
   _6kListen();
 }
 
+function _6kYenidenCekFromGame(teamA, teamB, partnersList) {
+  // sessGames'ten gelen verilerle çalış
+  var oncekiMasada4 = teamA.concat(teamB).filter(function(p) {
+    return partnersList.indexOf(p) < 0;
+  });
+  var oncekiDisarida2 = partnersList.slice(0, 2);
+
+  if (!D._6kDisaridaGecmis) D._6kDisaridaGecmis = {};
+  oncekiDisarida2.forEach(function(p) {
+    D._6kDisaridaGecmis[p] = (D._6kDisaridaGecmis[p] || 0) + 1;
+  });
+
+  var hicKalmamis = D.sess.players.filter(function(p) {
+    return !(D._6kDisaridaGecmis[p]);
+  });
+
+  _6k.deste52 = _6kDeste52();
+  _6k.eslesen = {};
+  _6k.secilen = null;
+  _6k.ortakEslesen = {};
+  _6k.ortakSecilen = null;
+  _6k.disOrtak = {};
+  _6k.disSecilen = null;
+
+  if (hicKalmamis.length === 2) {
+    _6k.disaridakiler = hicKalmamis.slice(0, 2);
+    var asama2Oyuncular = oncekiMasada4.concat(oncekiDisarida2);
+    _6k._asama2Oyuncular = asama2Oyuncular;
+    _6k.masadakiler = asama2Oyuncular;
+    var ortakKartlar = _kShuffle([
+      {deger:'A',renk:'K',sembol:'♥'},{deger:'A',renk:'K',sembol:'♦'},
+      {deger:'A',renk:'S',sembol:'♠'},{deger:'A',renk:'S',sembol:'♣'}
+    ]);
+    _6k.ortakKartDizisi = ortakKartlar;
+    _6k.ortakAcikKartlar = [null,null,null,null];
+    _6k.asama = 2;
+    _6kRender();
+    _6kListen();
+  } else {
+    _6k._yenidenCekOyuncular = oncekiMasada4;
+    _6k._oncekiDisarida = oncekiDisarida2;
+    _6k.asama = 'Y1';
+    _6kRenderY1();
+    _6kListenY1();
+  }
+  document.getElementById('ov-6kart').classList.add('on');
+}
+
+
+  // Önceki oyundan masada oturan 4 kişi ve dışarıda kalan 2 kişi (D.round'dan)
 function _6kYenidenCek() {
-  // Önceki oyundan masada oturan 4 kişi ve dışarıda kalan 2 kişi
   var partnerKeys = Object.keys(D.round.partners || {});
   var oncekiMasada4 = (D.round.masa1.A || []).concat(D.round.masa1.B || []).filter(function(p) {
     return partnerKeys.indexOf(p) < 0;
@@ -4484,12 +4533,19 @@ function _bitirOyunDevam(masa, savedTurler) {
   }
 
   // 6 kişi: her oyun sonunda yeniden kart çek (sadece masadaki 4 kişi)
-  if (playerCount === 6 && D.round && D.round.partners && Object.keys(D.round.partners).length === 2) {
-    setTimeout(function() {
-      closeOv('ov-skor');
-      _6kYenidenCek();
-    }, 800);
-    return;
+  if (playerCount === 6) {
+    // D.round bilgisini sessGames'in son oyunundan al (daha güvenilir)
+    var lastGame6 = D.sessGames && D.sessGames.length > 0 ? D.sessGames[D.sessGames.length - 1] : null;
+    var partners6 = lastGame6 ? lastGame6.partners : [];
+    var teamA6 = lastGame6 ? lastGame6.teamA : [];
+    var teamB6 = lastGame6 ? lastGame6.teamB : [];
+    if (partners6 && partners6.length === 2) {
+      setTimeout(function() {
+        closeOv('ov-skor');
+        _6kYenidenCekFromGame(teamA6, teamB6, partners6);
+      }, 800);
+      return;
+    }
   }
   if (!D.siraliMod && playerCount >= 8 && sessCount > 0 && sessCount % 2 === 0) {
     setTimeout(function() {
