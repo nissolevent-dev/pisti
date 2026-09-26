@@ -1231,11 +1231,15 @@ function _6kAsamaBit1() {
 }
 
 function _6kAsamaBit2() {
-  // Kontrol: 2 kırmızı 2 siyah olmalı
-  var kirmizilar = _6k.masadakiler.filter(function(p) { return _6k.ortakEslesen[p] && _6k.ortakEslesen[p].renk === 'K'; });
-  var siyahlar = _6k.masadakiler.filter(function(p) { return _6k.ortakEslesen[p] && _6k.ortakEslesen[p].renk === 'S'; });
-  // Ortaklıklar doğru (2+2 garantili çünkü deste 2K+2S)
-  _6k.deste52 = _6kDeste52(); // yeni deste
+  // masadakiler = ortakEslesen'deki kırmızılar ve siyahlar
+  var kirmizilar = (_6k._asama2Oyuncular || _6k.masadakiler).filter(function(p) {
+    return _6k.ortakEslesen[p] && _6k.ortakEslesen[p].renk === 'K';
+  });
+  var siyahlar = (_6k._asama2Oyuncular || _6k.masadakiler).filter(function(p) {
+    return _6k.ortakEslesen[p] && _6k.ortakEslesen[p].renk === 'S';
+  });
+  _6k.masadakiler = kirmizilar.concat(siyahlar); // gerçek masadaki 4
+  _6k.deste52 = _6kDeste52();
   _6k.disOrtak = {};
   _6k.disSecilen = null;
   _6k.asama = 3;
@@ -1287,8 +1291,9 @@ function _6kRender() {
     if (baslik) baslik.textContent = '🃏 Ortaklık Seçimi';
     if (aciklama) aciklama.textContent = 'Masadaki 4 kişi as çeker. Önce ismine, sonra karta dokun.';
     var oyHtml = '';
-    for (var i = 0; i < _6k.masadakiler.length; i++) {
-      var p = _6k.masadakiler[i];
+    var asama2Liste = _6k._asama2Oyuncular || _6k.masadakiler;
+    for (var i = 0; i < asama2Liste.length; i++) {
+      var p = asama2Liste[i];
       var esl = _6k.ortakEslesen[p];
       var sel = _6k.ortakSecilen === p;
       var kr = esl ? (esl.renk==='K'?'#cc0000':'#111') : null;
@@ -1339,71 +1344,107 @@ function _6kRender() {
 }
 
 function _6kYenidenCek() {
-  // Önceki oyundan masada oturan 4 kişi (ortak olmayanlar)
+  // Önceki oyundan masada oturan 4 kişi ve dışarıda kalan 2 kişi
   var partnerKeys = Object.keys(D.round.partners || {});
-  var masadakiler4 = (D.round.masa1.A || []).concat(D.round.masa1.B || []).filter(function(p) {
+  var oncekiMasada4 = (D.round.masa1.A || []).concat(D.round.masa1.B || []).filter(function(p) {
     return partnerKeys.indexOf(p) < 0;
   });
-  // Tekrar başlat ama sadece bu 4 kişiyle
-  _6k.asama = 1;
+  var oncekiDisarida2 = partnerKeys.slice(0, 2);
+
+  // Tüm oturumdaki dışarıda kalma geçmişi
+  if (!D._6kDisaridaGecmis) D._6kDisaridaGecmis = {};
+  oncekiDisarida2.forEach(function(p) {
+    D._6kDisaridaGecmis[p] = (D._6kDisaridaGecmis[p] || 0) + 1;
+  });
+
+  // Hiç dışarıda kalmamış 2 kişi var mı?
+  var hicKalmamis = D.sess.players.filter(function(p) {
+    return !(D._6kDisaridaGecmis[p]);
+  });
+
   _6k.deste52 = _6kDeste52();
   _6k.eslesen = {};
   _6k.secilen = null;
-  _6k.masadakiler = [];
-  _6k.disaridakiler = [];
-  // Geçici olarak sadece 4 kişiyi göster
-  _6k._yenidenCekOyuncular = masadakiler4;
-  _6kRenderYeniden();
-  _6kListenYeniden();
+  _6k.ortakEslesen = {};
+  _6k.ortakSecilen = null;
+  _6k.disOrtak = {};
+  _6k.disSecilen = null;
+
+  if (hicKalmamis.length >= 2) {
+    // Aşama 1'i atla — hiç dışarıda kalmamış 2 kişi direkt dışarıda
+    _6k.disaridakiler = hicKalmamis.slice(0, 2);
+    _6k.masadakiler = oncekiMasada4;
+    // Aşama 2: masadaki 4 + önceki dışarıdaki 2 = 4 kişi as çeker
+    // (masadaki 4'ten önceki dışarıdaki 2 çıkar → 2 kalır, + yeni dışarıdaki 2 gelir → 4)
+    var asama2Oyuncular = oncekiMasada4.concat(oncekiDisarida2);
+    _6k._asama2Oyuncular = asama2Oyuncular;
+    var ortakKartlar = _kShuffle([
+      {deger:'A',renk:'K',sembol:'♥'},{deger:'A',renk:'K',sembol:'♦'},
+      {deger:'A',renk:'S',sembol:'♠'},{deger:'A',renk:'S',sembol:'♣'}
+    ]);
+    _6k.ortakKartDizisi = ortakKartlar;
+    _6k.ortakAcikKartlar = [null,null,null,null];
+    _6k.masadakiler = asama2Oyuncular; // geçici, sonuç sonrası güncellenir
+    _6k.asama = 2;
+    _6kRender();
+    _6kListen();
+  } else {
+    // Aşama 1: önceki masadaki 4 kişi çeker
+    _6k._yenidenCekOyuncular = oncekiMasada4;
+    _6k._oncekiDisarida = oncekiDisarida2;
+    _6k.asama = 'Y1'; // yeniden aşama 1
+    _6kRenderY1();
+    _6kListenY1();
+  }
   document.getElementById('ov-6kart').classList.add('on');
 }
 
-function _6kListenYeniden() {
+function _6kListenY1() {
   var ov = document.getElementById('ov-6kart');
   if (!ov) return;
-  ov.ontouchstart = function(e) { _6kFindTapYeniden(e, true); };
-  ov.onclick = function(e) { _6kFindTapYeniden(e, false); };
+  ov.ontouchstart = function(e) { _6kFindTapY1(e, true); };
+  ov.onclick = function(e) { _6kFindTapY1(e, false); };
 }
 
-function _6kFindTapYeniden(e, prevent) {
+function _6kFindTapY1(e, prevent) {
   var t = e.target;
   if (t && t.nodeType !== 1) t = t.parentNode;
   while (t && t.tagName && t.tagName !== 'BODY') {
     if (t.getAttribute) {
       var kp = t.getAttribute('data-6kp');
-      if (kp !== null) { if (prevent) e.preventDefault(); _6kOyuncuTikYeniden(parseInt(kp)); return; }
+      if (kp !== null) { if (prevent) e.preventDefault(); _6kOyuncuTikY1(parseInt(kp)); return; }
       var kk = t.getAttribute('data-6kk');
-      if (kk !== null) { if (prevent) e.preventDefault(); _6kKartTikYeniden(); return; }
+      if (kk !== null) { if (prevent) e.preventDefault(); _6kKartTikY1(); return; }
     }
     t = t.parentNode;
   }
 }
 
-function _6kOyuncuTikYeniden(idx) {
+function _6kOyuncuTikY1(idx) {
   var p = _6k._yenidenCekOyuncular[idx];
   if (_6k.eslesen[p]) return;
   _6k.secilen = (_6k.secilen === p) ? null : p;
-  _6kRenderYeniden();
+  _6kRenderY1();
 }
 
-function _6kKartTikYeniden() {
+function _6kKartTikY1() {
   if (!_6k.secilen) return;
   var k = _6k.deste52.pop();
   _6k.eslesen[_6k.secilen] = k;
   _6k.secilen = null;
-  _6kRenderYeniden();
+  _6kRenderY1();
   if (Object.keys(_6k.eslesen).length === _6k._yenidenCekOyuncular.length) {
-    setTimeout(function() { _6kYenidenSonuc(); }, 600);
+    setTimeout(function() { _6kY1Sonuc(); }, 600);
   }
 }
 
-function _6kRenderYeniden() {
+function _6kRenderY1() {
   var baslik = document.getElementById('6kart-baslik');
   var aciklama = document.getElementById('6kart-aciklama');
   var oyDiv = document.getElementById('6kart-oyuncular');
   var kartDiv = document.getElementById('6kart-kart');
-  if (baslik) baslik.textContent = '🃏 Yeniden Kart Çek';
-  if (aciklama) aciklama.textContent = 'Masadaki 4 kişi çeker. En küçük 2 dışarıda kalır.';
+  if (baslik) baslik.textContent = '🃏 Kart Çek';
+  if (aciklama) aciklama.textContent = 'Önce ismine dokun, sonra kapalı karta dokun.';
   var oyHtml = '';
   var oyuncular = _6k._yenidenCekOyuncular;
   for (var i = 0; i < oyuncular.length; i++) {
@@ -1418,23 +1459,22 @@ function _6kRenderYeniden() {
   oyDiv.innerHTML = oyHtml;
   var active = !!_6k.secilen;
   kartDiv.innerHTML = '<div data-6kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;background:var(--g1);opacity:'+(active?'1':'0.35')+';cursor:'+(active?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div style="font-size:2.5rem;">🂠</div></div>';
-  _6kListenYeniden();
+  _6kListenY1();
 }
 
-function _6kYenidenSonuc() {
+function _6kY1Sonuc() {
   var oyuncular = _6k._yenidenCekOyuncular;
   var sirali = oyuncular.slice().sort(function(a, b) {
     return _6kDegerSira(_6k.eslesen[a].deger) - _6kDegerSira(_6k.eslesen[b].deger);
   });
-  // Yeni masadakiler: büyük 2, yeni dışarıdakiler: küçük 2
-  var yeniDisarida = sirali.slice(0, 2);
-  var yeniMasada = sirali.slice(2);
-  // Önceki dışarıdakiler aynı kalır
-  var eskiDisarida = Object.keys(D.round.partners || {});
+  var yeniDisarida = sirali.slice(0, 2); // küçük 2 dışarıda
+  var yeniBuyuk2 = sirali.slice(2);     // büyük 2 devam
   _6k.disaridakiler = yeniDisarida;
-  _6k.masadakiler = yeniMasada;
 
-  // Aşama 2: ortaklık
+  // Aşama 2: büyük 2 + önceki dışarıdaki 2 = 4 kişi as çeker
+  var asama2Oyuncular = yeniBuyuk2.concat(_6k._oncekiDisarida);
+  _6k._asama2Oyuncular = asama2Oyuncular;
+  _6k.masadakiler = asama2Oyuncular;
   var ortakKartlar = _kShuffle([
     {deger:'A',renk:'K',sembol:'♥'},{deger:'A',renk:'K',sembol:'♦'},
     {deger:'A',renk:'S',sembol:'♠'},{deger:'A',renk:'S',sembol:'♣'}
