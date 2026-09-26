@@ -1369,7 +1369,10 @@ function _6kYenidenCekFromGame(teamA, teamB, partnersList) {
 
   if (hicKalmamis.length === 2) {
     _6k.disaridakiler = hicKalmamis.slice(0, 2);
-    var asama2Oyuncular = oncekiMasada4.concat(oncekiDisarida2);
+    // Aşama 2: dışarıda kalmayacak 4 kişi as çeker
+    var asama2Oyuncular = D.sess.players.filter(function(p) {
+      return hicKalmamis.indexOf(p) < 0;
+    });
     _6k._asama2Oyuncular = asama2Oyuncular;
     _6k.masadakiler = asama2Oyuncular;
     var ortakKartlar = _kShuffle([
@@ -1423,9 +1426,10 @@ function _6kYenidenCek() {
     // Aşama 1'i atla — hiç dışarıda kalmamış 2 kişi direkt dışarıda
     _6k.disaridakiler = hicKalmamis.slice(0, 2);
     _6k.masadakiler = oncekiMasada4;
-    // Aşama 2: masadaki 4 + önceki dışarıdaki 2 = 4 kişi as çeker
-    // (masadaki 4'ten önceki dışarıdaki 2 çıkar → 2 kalır, + yeni dışarıdaki 2 gelir → 4)
-    var asama2Oyuncular = oncekiMasada4.concat(oncekiDisarida2);
+    // Aşama 2: dışarıda kalmayacak 4 kişi as çeker
+    var asama2Oyuncular = D.sess.players.filter(function(p) {
+      return hicKalmamis.indexOf(p) < 0;
+    });
     _6k._asama2Oyuncular = asama2Oyuncular;
     var ortakKartlar = _kShuffle([
       {deger:'A',renk:'K',sembol:'♥'},{deger:'A',renk:'K',sembol:'♦'},
