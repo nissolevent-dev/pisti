@@ -5097,9 +5097,17 @@ function showKartCekme(){
 
   // Dam geçmişini sessGames'ten hesapla (silinmiş oyunlar dahil edilmez)
   var gecmis={};
+  var hasDamlarData = false;
   for(var dgi=0;dgi<(D.sessGames||[]).length;dgi++){
     var dgg=D.sessGames[dgi];
-    if(dgg.damlar){for(var ddi=0;ddi<dgg.damlar.length;ddi++){var ddp=dgg.damlar[ddi];gecmis[ddp]=(gecmis[ddp]||0)+1;}}
+    if(dgg.damlar && dgg.damlar.length > 0){
+      hasDamlarData = true;
+      for(var ddi=0;ddi<dgg.damlar.length;ddi++){var ddp=dgg.damlar[ddi];gecmis[ddp]=(gecmis[ddp]||0)+1;}
+    }
+  }
+  // Eğer sessGames'te damlar verisi yoksa D.damGecmisi'ni kullan
+  if(!hasDamlarData && D.damGecmisi && Object.keys(D.damGecmisi).length > 0){
+    gecmis = JSON.parse(JSON.stringify(D.damGecmisi));
   }
   var players=D.sess.players;
   // Her oyuncunun dam sayısını al
