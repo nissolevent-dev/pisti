@@ -1214,6 +1214,17 @@ function _6kAsamaBit1() {
   var sirali = D.sess.players.slice().sort(function(a, b) {
     return _6kDegerSira(_6k.eslesen[a].deger) - _6kDegerSira(_6k.eslesen[b].deger);
   });
+  // Sınırdaki (2. ve 3. sıra) kart değeri eşitse dışarı/masa ayrımı belli değildir — o değere sahip olanlar yeniden çeksin
+  var sinirDeger1 = _6kDegerSira(_6k.eslesen[sirali[1]].deger);
+  if (_6kDegerSira(_6k.eslesen[sirali[2]].deger) === sinirDeger1) {
+    var esitOyuncular1 = sirali.filter(function(p) {
+      return _6kDegerSira(_6k.eslesen[p].deger) === sinirDeger1;
+    });
+    document.getElementById('6kart-aciklama').textContent = '⚠️ Eşit kart (' + esitOyuncular1.map(function(p){return p.split(' ')[0];}).join(', ') + ')! Yeniden çekin.';
+    esitOyuncular1.forEach(function(p) { delete _6k.eslesen[p]; });
+    setTimeout(function() { _6kRender(); }, 900);
+    return;
+  }
   _6k.disaridakiler = sirali.slice(0, 2);
   _6k.masadakiler = sirali.slice(2);
 
@@ -1310,12 +1321,12 @@ function _6kRender() {
       var acik = _6k.ortakAcikKartlar && _6k.ortakAcikKartlar[ki];
       if (acik) {
         var kr2 = acik.renk==='K'?'#cc0000':'#111';
-        kartHtml2 += '<div style="border:2px solid '+kr2+';border-radius:10px;padding:8px 4px;text-align:center;background:#fff;">';
+        kartHtml2 += '<div style="min-width:0;width:100%;box-sizing:border-box;border:2px solid '+kr2+';border-radius:10px;padding:8px 4px;text-align:center;background:#fff;">';
         kartHtml2 += '<div style="font-size:1.4rem;color:'+kr2+';font-weight:900;">A'+acik.sembol+'</div>';
         var sah = Object.keys(_6k.ortakEslesen).find(function(p){return _6k.ortakEslesen[p]&&_6k.ortakEslesen[p]._idx===ki;}) || '';
         kartHtml2 += '<div style="font-size:.6rem;color:var(--tx3);">'+( sah ? sah.split(' ')[0] : '')+'</div></div>';
       } else {
-        kartHtml2 += '<div data-6kk="'+ki+'" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 4px;background:var(--g1);opacity:'+(active2?'1':'0.4')+';text-align:center;cursor:'+(active2?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div style="font-size:1.4rem;">🂠</div></div>';
+        kartHtml2 += '<div data-6kk="'+ki+'" style="min-width:0;width:100%;box-sizing:border-box;border:2px solid var(--bd2);border-radius:10px;padding:12px 4px;background:var(--g1);opacity:'+(active2?'1':'0.4')+';text-align:center;cursor:'+(active2?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div style="font-size:1.4rem;">🂠</div></div>';
       }
     }
     kartHtml2 += '</div>';
@@ -1354,6 +1365,15 @@ function _6kYenidenCekFromGame(teamA, teamB, partnersList) {
   oncekiDisarida2.forEach(function(p) {
     D._6kDisaridaGecmis[p] = (D._6kDisaridaGecmis[p] || 0) + 1;
   });
+
+  // 6 kişide her oyuncu 3 oyunda bir kez dışarı çıkar. Bir döngü (3 oyun) tamamlanınca
+  // (herkes en az 1 kez dışarı çıktıysa) geçmişi sıfırla ki yeni döngünün 3. oyununda da
+  // aşama 1 doğru şekilde atlansın (aksi halde geçmiş hep birikip hiçbir zaman tekrar
+  // "hiç çıkmamış 2 kişi" durumuna dönülmez).
+  var hepsiCiktiMi = D.sess.players.every(function(p) { return D._6kDisaridaGecmis[p] > 0; });
+  if (hepsiCiktiMi) {
+    D._6kDisaridaGecmis = {};
+  }
 
   var hicKalmamis = D.sess.players.filter(function(p) {
     return !(D._6kDisaridaGecmis[p]);
@@ -1409,6 +1429,12 @@ function _6kYenidenCek() {
   oncekiDisarida2.forEach(function(p) {
     D._6kDisaridaGecmis[p] = (D._6kDisaridaGecmis[p] || 0) + 1;
   });
+
+  // Bir döngü (3 oyun, herkes 1 kez dışarı) tamamlandıysa yeni döngü için sıfırla
+  var hepsiCiktiMiY = D.sess.players.every(function(p) { return D._6kDisaridaGecmis[p] > 0; });
+  if (hepsiCiktiMiY) {
+    D._6kDisaridaGecmis = {};
+  }
 
   // Hiç dışarıda kalmamış 2 kişi var mı?
   var hicKalmamis = D.sess.players.filter(function(p) {
@@ -1522,6 +1548,17 @@ function _6kY1Sonuc() {
   var sirali = oyuncular.slice().sort(function(a, b) {
     return _6kDegerSira(_6k.eslesen[a].deger) - _6kDegerSira(_6k.eslesen[b].deger);
   });
+  // Sınırdaki (2. ve 3. sıra) kart değeri eşitse dışarı/masa ayrımı belli değildir — o değere sahip olanlar yeniden çeksin
+  var sinirDegerY1 = _6kDegerSira(_6k.eslesen[sirali[1]].deger);
+  if (_6kDegerSira(_6k.eslesen[sirali[2]].deger) === sinirDegerY1) {
+    var esitOyuncularY1 = sirali.filter(function(p) {
+      return _6kDegerSira(_6k.eslesen[p].deger) === sinirDegerY1;
+    });
+    document.getElementById('6kart-aciklama').textContent = '⚠️ Eşit kart (' + esitOyuncularY1.map(function(p){return p.split(' ')[0];}).join(', ') + ')! Yeniden çekin.';
+    esitOyuncularY1.forEach(function(p) { delete _6k.eslesen[p]; });
+    setTimeout(function() { _6kRenderY1(); }, 900);
+    return;
+  }
   var yeniDisarida = sirali.slice(0, 2); // küçük 2 dışarıda
   var yeniBuyuk2 = sirali.slice(2);     // büyük 2 devam
   _6k.disaridakiler = yeniDisarida;
