@@ -2637,6 +2637,7 @@ function _closeSessionExec() {
   D.started = false;
   D.siraliMod = false;
   D.damGecmisi = {};
+  D.damlarSonOyun = [];
   _siraliSira = [];
   _siraliOyunIdx = 0;
   saveD();
@@ -2655,6 +2656,7 @@ function newSession() {
   D.round = JSON.parse(JSON.stringify(DEF.round));
   D.started = false;
   D.damGecmisi = {};
+  D.damlarSonOyun = [];
   saveD();
   renderPool();
   switchToOyun();
@@ -5095,19 +5097,11 @@ function showKartCekme(){
     {id:12,tip:'kral',renk:'k',sembol:'♥',acik:false},{id:13,tip:'kral',renk:'s',sembol:'♠',acik:false}
   ]);
 
-  // Dam geçmişini sessGames'ten hesapla (silinmiş oyunlar dahil edilmez)
+  // Dam geçmişini bu oturumun sessGames'inden hesapla
   var gecmis={};
-  var hasDamlarData = false;
   for(var dgi=0;dgi<(D.sessGames||[]).length;dgi++){
     var dgg=D.sessGames[dgi];
-    if(dgg.damlar && dgg.damlar.length > 0){
-      hasDamlarData = true;
-      for(var ddi=0;ddi<dgg.damlar.length;ddi++){var ddp=dgg.damlar[ddi];gecmis[ddp]=(gecmis[ddp]||0)+1;}
-    }
-  }
-  // Eğer sessGames'te damlar verisi yoksa D.damGecmisi'ni kullan
-  if(!hasDamlarData && D.damGecmisi && Object.keys(D.damGecmisi).length > 0){
-    gecmis = JSON.parse(JSON.stringify(D.damGecmisi));
+    if(dgg.damlar){for(var ddi=0;ddi<dgg.damlar.length;ddi++){var ddp=dgg.damlar[ddi];gecmis[ddp]=(gecmis[ddp]||0)+1;}}
   }
   var players=D.sess.players;
   // Her oyuncunun dam sayısını al
@@ -5517,6 +5511,7 @@ function kartOnayla(){
 
   // Dam geçmişini güncelle
   if(!D.damGecmisi) D.damGecmisi={};
+  D.damlarSonOyun = []; // önce sıfırla
   var _damlarBuOyun = [];
   for(var di=0;di<_kDamKartlar.length;di++){
     var dp=_kDamKartlar[di].oyuncu;
