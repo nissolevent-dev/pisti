@@ -2522,6 +2522,7 @@ function _delGameExec(id) {
   if (si > -1) D.sessGames.splice(si, 1);
   // damGecmisi'ni sessGames'ten yeniden hesapla
   D.damGecmisi = {};
+  D._6kDisaridaGecmis = {};
   for (var dgi = 0; dgi < D.sessGames.length; dgi++) {
     var dg = D.sessGames[dgi];
     if (dg.damlar) {
@@ -2536,6 +2537,7 @@ function _delGameExec(id) {
     D.started = false;
     D.siraliMod = false;
     D.damGecmisi = {};
+  D._6kDisaridaGecmis = {};
     _siraliSira = [];
     _siraliOyunIdx = 0;
     D.round = {
@@ -2637,7 +2639,9 @@ function _closeSessionExec() {
   D.started = false;
   D.siraliMod = false;
   D.damGecmisi = {};
+  D._6kDisaridaGecmis = {};
   D.damlarSonOyun = [];
+  D._6kDisaridaGecmis = {};
   _siraliSira = [];
   _siraliOyunIdx = 0;
   saveD();
@@ -2656,7 +2660,9 @@ function newSession() {
   D.round = JSON.parse(JSON.stringify(DEF.round));
   D.started = false;
   D.damGecmisi = {};
+  D._6kDisaridaGecmis = {};
   D.damlarSonOyun = [];
+  D._6kDisaridaGecmis = {};
   saveD();
   renderPool();
   switchToOyun();
