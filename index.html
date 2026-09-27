@@ -471,6 +471,17 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div>
 </div>
 
+<div class="ov" id="ov-kart-modu-sor" style="z-index:500;align-items:center">
+  <div class="ovbox" style="max-width:340px;text-align:center">
+    <div class="ovttl" style="margin-bottom:8px">Kart Çekme Modu</div>
+    <p style="font-size:.82rem;color:var(--tx3);margin-bottom:20px">Kart çekme modu istiyor musun?</p>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button class="btn bp" style="min-width:110px" onclick="kartCekmeModuEvet()">Evet</button>
+      <button class="btn bo" style="min-width:110px" onclick="kartCekmeModuHayir()">Hayır</button>
+    </div>
+  </div>
+</div>
+
 <!-- Sıralı Oyun Sıralama Overlay -->
 <div class="ov" id="ov-sirali" style="z-index:500;align-items:center">
   <div class="ovbox" style="max-width:360px">
@@ -1020,6 +1031,8 @@ function kartCekmeVazgecManuel() {
   if (typeof _7k !== 'undefined') _7k.pending = false;
   if (typeof _kPending !== 'undefined') _kPending = false;
   if (typeof _4kPending !== 'undefined') _4kPending = false;
+  // Manuel kuruluma geçildi — bu oturumda bir daha kart çekme moduna otomatik dönmesin
+  D.kartCekmeModuKapali = true;
   guncelleRotasyonBanner();
   goS(3);
   setTimeout(function() { buildSeats(); }, 50);
@@ -1175,22 +1188,43 @@ function toS3() {
   D.sess.mPişti = parseFloat(document.getElementById('m-pişti').value) || 0;
   D.sess.mKaz = parseFloat(document.getElementById('m-kaz').value) || 0;
   saveD();
-  // 8/9/10 oyuncu seçiliyse kart çekme
+  // 4 veya 5 oyuncu seçiliyse oyun modu sor (Normal/Sıralı) — değişmedi
+  if (D.sess.players.length === 5 || D.sess.players.length === 4) {
+    var aciklama = D.sess.players.length === 4 ? '4 oyuncu seçildi. Nasıl oynamak istersiniz?' : '5 oyuncu seçildi. Nasıl oynamak istersiniz?';
+    document.getElementById('oyun-modu-aciklama').textContent = aciklama;
+    document.getElementById('ov-oyun-modu').classList.add('on');
+    return;
+  }
+  // Diğer tüm oyuncu sayıları: bu oturumda daha önce "Hayır" denmişse tekrar sorma,
+  // direkt manuel masa kurulumuna git. Aksi halde kart çekme modu isteyip istemediğini sor.
+  if (D.kartCekmeModuKapali) {
+    buildSeats();
+    goS(3);
+    return;
+  }
+  document.getElementById('ov-kart-modu-sor').classList.add('on');
+}
+
+function kartCekmeModuEvet() {
+  closeOv('ov-kart-modu-sor');
   if (D.sess.players.length === 8 || D.sess.players.length === 9 || D.sess.players.length === 10) {
     showKartCekme();
   } else if (D.sess.players.length === 6) {
     ask6KisiDortE2();
   } else if (D.sess.players.length === 7) {
     show7KisiKartCekme();
-  // 4 veya 5 oyuncu seçiliyse oyun modu sor
-  } else if (D.sess.players.length === 5 || D.sess.players.length === 4) {
-    var aciklama = D.sess.players.length === 4 ? '4 oyuncu seçildi. Nasıl oynamak istersiniz?' : '5 oyuncu seçildi. Nasıl oynamak istersiniz?';
-    document.getElementById('oyun-modu-aciklama').textContent = aciklama;
-    document.getElementById('ov-oyun-modu').classList.add('on');
   } else {
     buildSeats();
     goS(3);
   }
+}
+
+function kartCekmeModuHayir() {
+  closeOv('ov-kart-modu-sor');
+  D.kartCekmeModuKapali = true;
+  saveD();
+  buildSeats();
+  goS(3);
 }
 
 function baslaNormal() {
@@ -3191,6 +3225,7 @@ function _delGameExec(id) {
     D.damGecmisi = {};
   D._6kDisaridaGecmis = {};
   D.damlarSonOyun = [];
+  D.kartCekmeModuKapali = false;
     _siraliSira = [];
     _siraliOyunIdx = 0;
     D.round = {
@@ -3295,6 +3330,7 @@ function _closeSessionExec() {
   D._6kDisaridaGecmis = {};
   D.damlarSonOyun = [];
   D._6kDisaridaGecmis = {};
+  D.kartCekmeModuKapali = false;
   _siraliSira = [];
   _siraliOyunIdx = 0;
   saveD();
@@ -3316,6 +3352,7 @@ function newSession() {
   D._6kDisaridaGecmis = {};
   D.damlarSonOyun = [];
   D._6kDisaridaGecmis = {};
+  D.kartCekmeModuKapali = false;
   saveD();
   renderPool();
   switchToOyun();
@@ -5177,51 +5214,53 @@ function _bitirOyunDevam(masa, savedTurler) {
     }
   }
 
-  // 6 kişi: her oyun sonunda yeniden kart çek (sadece masadaki 4 kişi)
-  if (playerCount === 6) {
-    // D.round bilgisini sessGames'in son oyunundan al (daha güvenilir)
-    var lastGame6 = D.sessGames && D.sessGames.length > 0 ? D.sessGames[D.sessGames.length - 1] : null;
-    var partners6 = lastGame6 ? lastGame6.partners : [];
-    var teamA6 = lastGame6 ? lastGame6.teamA : [];
-    var teamB6 = lastGame6 ? lastGame6.teamB : [];
-    if (partners6 && partners6.length === 2) {
-      setTimeout(function() {
-        closeOv('ov-skor');
-        _6kYenidenCekFromGame(teamA6, teamB6, partners6);
-      }, 800);
-      return;
+  if (!D.kartCekmeModuKapali) {
+    // 6 kişi: her oyun sonunda yeniden kart çek (sadece masadaki 4 kişi)
+    if (playerCount === 6) {
+      // D.round bilgisini sessGames'in son oyunundan al (daha güvenilir)
+      var lastGame6 = D.sessGames && D.sessGames.length > 0 ? D.sessGames[D.sessGames.length - 1] : null;
+      var partners6 = lastGame6 ? lastGame6.partners : [];
+      var teamA6 = lastGame6 ? lastGame6.teamA : [];
+      var teamB6 = lastGame6 ? lastGame6.teamB : [];
+      if (partners6 && partners6.length === 2) {
+        setTimeout(function() {
+          closeOv('ov-skor');
+          _6kYenidenCekFromGame(teamA6, teamB6, partners6);
+        }, 800);
+        return;
+      }
     }
-  }
 
-  // 7 kişi: her oyun sonunda yeniden kart çek (önceki masadaki 4 kişi arasından)
-  if (playerCount === 7) {
-    var lastGame7 = D.sessGames && D.sessGames.length > 0 ? D.sessGames[D.sessGames.length - 1] : null;
-    var partners7 = lastGame7 ? lastGame7.partners : [];
-    var teamA7 = lastGame7 ? lastGame7.teamA : [];
-    var teamB7 = lastGame7 ? lastGame7.teamB : [];
-    if (partners7 && partners7.length === 3) {
-      setTimeout(function() {
-        closeOv('ov-skor');
-        _7kYenidenCekFromGame(teamA7, teamB7, partners7);
-      }, 800);
+    // 7 kişi: her oyun sonunda yeniden kart çek (önceki masadaki 4 kişi arasından)
+    if (playerCount === 7) {
+      var lastGame7 = D.sessGames && D.sessGames.length > 0 ? D.sessGames[D.sessGames.length - 1] : null;
+      var partners7 = lastGame7 ? lastGame7.partners : [];
+      var teamA7 = lastGame7 ? lastGame7.teamA : [];
+      var teamB7 = lastGame7 ? lastGame7.teamB : [];
+      if (partners7 && partners7.length === 3) {
+        setTimeout(function() {
+          closeOv('ov-skor');
+          _7kYenidenCekFromGame(teamA7, teamB7, partners7);
+        }, 800);
+        return;
+      }
+    }
+    if (!D.siraliMod && playerCount >= 8) {
+      if (!D._8910RoundDone) D._8910RoundDone = {};
+      D._8910RoundDone[masa] = true;
+      var masa1Bitti = !D.round.masa1active || D._8910RoundDone[1];
+      var masa2Bitti = !D.round.masa2active || D._8910RoundDone[2];
+      if (masa1Bitti && masa2Bitti) {
+        setTimeout(function() {
+          closeOv('ov-skor');
+          showKartCekme();
+        }, 300);
+        return;
+      }
+      // Bu masa bitti ama diğer masa henüz bitmedi — kart çekmeden normal devam et
+      showUndoToast(masa, savedTurler);
       return;
     }
-  }
-  if (!D.siraliMod && playerCount >= 8) {
-    if (!D._8910RoundDone) D._8910RoundDone = {};
-    D._8910RoundDone[masa] = true;
-    var masa1Bitti = !D.round.masa1active || D._8910RoundDone[1];
-    var masa2Bitti = !D.round.masa2active || D._8910RoundDone[2];
-    if (masa1Bitti && masa2Bitti) {
-      setTimeout(function() {
-        closeOv('ov-skor');
-        showKartCekme();
-      }, 300);
-      return;
-    }
-    // Bu masa bitti ama diğer masa henüz bitmedi — kart çekmeden normal devam et
-    showUndoToast(masa, savedTurler);
-    return;
   }
 
   // 4 kişi sıralı: her oyun sonunda kombinasyonu kaydet ve yeniden kart çek
