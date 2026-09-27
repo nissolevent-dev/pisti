@@ -249,7 +249,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <div style="text-align:center"><div id="pv-m1B" style="font-size:1.3rem;font-weight:700">-</div><div style="font-size:.6rem;color:var(--tx3)">Siyah Takım</div></div>
       </div>
       <div class="row">
-        <button class="btn bp" onclick="saveGame(1)">Kaydet</button>
+        <button class="btn bp" id="save-btn-1" onclick="saveGame(1)" disabled style="opacity:.45;cursor:not-allowed">Kaydet</button>
         <button class="btn bo" onclick="clearEntry(1)">Temizle</button>
       </div>
     </div>
@@ -281,7 +281,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <div style="text-align:center"><div id="pv-m2B" style="font-size:1.3rem;font-weight:700">-</div><div style="font-size:.6rem;color:var(--tx3)">Siyah Takım</div></div>
       </div>
       <div class="row">
-        <button class="btn bp" onclick="saveGame(2)">Kaydet</button>
+        <button class="btn bp" id="save-btn-2" onclick="saveGame(2)" disabled style="opacity:.45;cursor:not-allowed">Kaydet</button>
         <button class="btn bo" onclick="clearEntry(2)">Temizle</button>
       </div>
     </div>
@@ -3017,6 +3017,13 @@ function updatePrev(masa) {
   var pA = gv('m'+masa+'-Apts'), pB = gv('m'+masa+'-Bpts');
   document.getElementById('pv-m'+masa+'A').textContent = document.getElementById('m'+masa+'-Apts').value !== '' ? pA : '-';
   document.getElementById('pv-m'+masa+'B').textContent = document.getElementById('m'+masa+'-Bpts').value !== '' ? pB : '-';
+  var saveBtn = document.getElementById('save-btn-' + masa);
+  if (saveBtn) {
+    var yeterli = Math.max(pA, pB) >= 101;
+    saveBtn.disabled = !yeterli;
+    saveBtn.style.opacity = yeterli ? '1' : '.45';
+    saveBtn.style.cursor = yeterli ? 'pointer' : 'not-allowed';
+  }
 }
 
 function clearEntry(masa) {
@@ -3025,6 +3032,12 @@ function clearEntry(masa) {
   });
   document.getElementById('pv-m'+masa+'A').textContent = '-';
   document.getElementById('pv-m'+masa+'B').textContent = '-';
+  var saveBtn = document.getElementById('save-btn-' + masa);
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.style.opacity = '.45';
+    saveBtn.style.cursor = 'not-allowed';
+  }
 }
 
 function saveGame(masa, turler) {
