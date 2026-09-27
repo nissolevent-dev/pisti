@@ -1143,6 +1143,16 @@ function toggleSess(name) {
   if (i >= 0) D.sess.players.splice(i, 1);
   else D.sess.players.push(name);
 
+  // Oyuncu sayısı değiştiği için, eski sayıya göre yarım kalmış bir kart çekme
+  // varsa artık geçerli değildir — "devam et" işaretini temizle.
+  if (D.started) {
+    _6k.pending = false;
+    _7k.pending = false;
+    if (typeof _kPending !== 'undefined') _kPending = false;
+    if (typeof _4kPending !== 'undefined') _4kPending = false;
+    if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
+  }
+
   // Eğer oyun başlamamışsa ve tüm oyuncular kaldırıldıysa started'ı sıfırla
   if (D.sess.players.length === 0 && D.started && D.sessGames && D.sessGames.length === 0) {
     D.started = false;
@@ -1243,6 +1253,11 @@ function secDortE2(val) {
 }
 
 function show6KisiKartCekme() {
+  // Yeni (baştan) bir 6 kişilik çekiliş — önceki rotasyon geçmişini/işaretlerini sıfırla
+  D._6kDisaridaGecmis = {};
+  _6k.pending = false;
+  _7k.pending = false;
+  if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
   _6k.asama = 1;
   _6k.deste52 = _6kDeste52();
   _6k.eslesen = {};
@@ -1761,6 +1776,9 @@ var _7k = {
 };
 
 function show7KisiKartCekme() {
+  _7k.pending = false;
+  _6k.pending = false;
+  if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
   _7k.asama = 1;
   _7k.deste52 = _6kDeste52();
   _7k.eslesen = {};
@@ -1997,15 +2015,21 @@ function _7kGercekOturanlar(g) {
   return oturanlar;
 }
 
+function _7kOyunKisiSayisi(g) {
+  return (g.teamA || []).length + (g.teamB || []).length;
+}
+
 function _7kUstusteOturanlar() {
-  // Oturumun başından beri herhangi 2 ARDIŞIK oyunda masada oturan herkesi döndürür
-  // — leaderboard'daki "x2" rozetiyle birebir aynı hesap (tek bir geçmiş çift değil,
-  // sessGames içindeki tüm ardışık çiftler taranır).
+  // Oturumun başından beri herhangi 2 ARDIŞIK 7-kişilik oyunda masada oturan
+  // herkesi döndürür — leaderboard'daki "x2" rozetiyle birebir aynı hesap.
+  // Aradaki format 6/8/9/10 kişiye değiştiyse o çift "ardışık" sayılmaz.
   var result = {};
   if (!D.sessGames || D.sessGames.length < 2) return result;
   for (var gi = 0; gi < D.sessGames.length - 1; gi++) {
-    var o1 = _7kGercekOturanlar(D.sessGames[gi]);
-    var o2 = _7kGercekOturanlar(D.sessGames[gi + 1]);
+    var gA = D.sessGames[gi], gB = D.sessGames[gi + 1];
+    if (_7kOyunKisiSayisi(gA) !== 7 || _7kOyunKisiSayisi(gB) !== 7) continue;
+    var o1 = _7kGercekOturanlar(gA);
+    var o2 = _7kGercekOturanlar(gB);
     for (var p in o1) { if (o2[p]) result[p] = true; }
   }
   return result;
@@ -3834,16 +3858,9 @@ function renderLdg(elId, players, ldg) {
   active.sort(function(a,b) { return (ldg[b]||0)-(ldg[a]||0); });
   var isAllTime = (elId === 'h-all-ldg');
 
-  // 7 kişi: herhangi ardışık 2 oyunda masada oturan (ortak değil) kişileri bul
-  var x2Set = {};
+  // 7 kişi: herhangi ardışık 2 (7-kişilik) oyunda masada oturan (ortak değil) kişileri bul
   var playerCount = D.sess && D.sess.players ? D.sess.players.length : 0;
-  if (!isAllTime && playerCount === 7 && D.sessGames && D.sessGames.length >= 2) {
-    for (var gi = 0; gi < D.sessGames.length - 1; gi++) {
-      var o1 = _7kGercekOturanlar(D.sessGames[gi]);
-      var o2 = _7kGercekOturanlar(D.sessGames[gi + 1]);
-      for (var pp in o1) { if (o2[pp]) x2Set[pp] = true; }
-    }
-  }
+  var x2Set = (!isAllTime && playerCount === 7) ? _7kUstusteOturanlar() : {};
 
   var html = '<div class="ldg">';
   for (var i = 0; i < active.length; i++) {
@@ -5148,7 +5165,7 @@ function _bitirOyunDevam(masa, savedTurler) {
   var playerCount = D.sess && D.sess.players ? D.sess.players.length : 0;
 
   // 5 kişi sıralı mod
-  if (D.siraliMod) {
+  if (D.siraliMod && playerCount === 5) {
     if ((!_siraliSira || _siraliSira.length === 0) && D.siraliSira && D.siraliSira.length) {
       _siraliSira = D.siraliSira.slice();
     }
