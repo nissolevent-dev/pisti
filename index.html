@@ -401,6 +401,21 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div>
 </div>
 
+<!-- 7 Kişi Kart Çekme -->
+<div class="ov" id="ov-7kart" style="z-index:500;align-items:center">
+  <div class="ovbox" style="max-width:360px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="ovttl" id="7kart-baslik" style="margin-bottom:0">🃏 Kart Çek</div>
+      <button class="btn bo bs" onclick="closeOv('ov-7kart');buildSeats();goS(3)">Vazgeç</button>
+    </div>
+    <p id="7kart-aciklama" style="font-size:.78rem;color:var(--tx3);margin-bottom:10px"></p>
+    <div id="7kart-oyuncular" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px"></div>
+    <div id="7kart-kart" style="display:flex;justify-content:center;margin-bottom:14px"></div>
+    <div id="7kart-sonuc" style="display:none;margin-bottom:12px;font-size:.85rem"></div>
+    <div id="7kart-aksiyon"></div>
+  </div>
+</div>
+
 <div class="ov" id="ov-4kart" style="z-index:500;align-items:center">
   <div class="ovbox" style="max-width:360px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -1076,6 +1091,8 @@ function toS3() {
     showKartCekme();
   } else if (D.sess.players.length === 6) {
     ask6KisiDortE2();
+  } else if (D.sess.players.length === 7) {
+    show7KisiKartCekme();
   // 4 veya 5 oyuncu seçiliyse oyun modu sor
   } else if (D.sess.players.length === 5 || D.sess.players.length === 4) {
     var aciklama = D.sess.players.length === 4 ? '4 oyuncu seçildi. Nasıl oynamak istersiniz?' : '5 oyuncu seçildi. Nasıl oynamak istersiniz?';
@@ -1630,6 +1647,415 @@ function _6kMasaKur() {
   D.sess.mKaz = parseFloat(document.getElementById('m-kaz').value) || 0;
   D.started = true; D.dagitici = {}; _dagitici = {};
   closeOv('ov-6kart');
+  saving = true; syncDot('#f59e0b');
+  var toSave = JSON.parse(JSON.stringify(D)); delete toSave.screen;
+  REF.set(toSave).then(function() {
+    saving = false; syncDot('#22c55e');
+    updateMasaLabels(); renderSessChips(); renderGameCards(); goS(4); switchMasa(1);
+    setTimeout(function() { showSkorTakip(); }, 100);
+  }).catch(function() { saving = false; syncDot('#ef4444'); });
+}
+
+
+// ── 7 KİŞİ KARTÇEKİMİ ──
+// 7 kişi 52 kart çeker: en büyük 4 masaya oturur, en küçük 3 dışarıdan ortak olur.
+// Masadaki 4 kişi kırmızı/siyah as çekip 2'şerli takım kurar.
+// Dışarıdaki 3 kişi renk çeker (3'ü birden aynı renk olamaz), çektikleri renge göre bir takıma ortak olurlar.
+// 2. oyundan itibaren: önceki dışarıdaki 3 kişi masaya döner, önceki masadaki 4 kişi arasından
+// yeniden kart çekilip (en düşük 3'ü) yeni dışarıda kalacak 3 kişi belirlenir.
+var _7k = {
+  asama: 1,
+  deste52: [],
+  eslesen: {},
+  secilen: null,
+  masadakiler: [],
+  disaridakiler: [],
+  ortakKartDizisi: [],
+  ortakAcikKartlar: [],
+  ortakEslesen: {},
+  ortakSecilen: null,
+  disOrtak: {},
+  disSecilen: null
+};
+
+function show7KisiKartCekme() {
+  _7k.asama = 1;
+  _7k.deste52 = _6kDeste52();
+  _7k.eslesen = {};
+  _7k.secilen = null;
+  _7k.masadakiler = [];
+  _7k.disaridakiler = [];
+  document.getElementById('7kart-sonuc').style.display = 'none';
+  _7kListen();
+  _7kRender();
+  document.getElementById('ov-7kart').classList.add('on');
+}
+
+function _7kListen() {
+  var ov = document.getElementById('ov-7kart');
+  if (!ov) return;
+  ov.ontouchstart = function(e) { _7kFindTap(e, true); };
+  ov.onclick = function(e) { _7kFindTap(e, false); };
+}
+
+function _7kFindTap(e, prevent) {
+  var t = e.target;
+  if (t && t.nodeType !== 1) t = t.parentNode;
+  while (t && t.tagName && t.tagName !== 'BODY') {
+    if (t.getAttribute) {
+      var kp = t.getAttribute('data-7kp');
+      if (kp !== null) { if (prevent) e.preventDefault(); _7kOyuncuTik(parseInt(kp)); return; }
+      var kk = t.getAttribute('data-7kk');
+      if (kk !== null) { if (prevent) e.preventDefault(); _7kKartTik(parseInt(kk)); return; }
+    }
+    t = t.parentNode;
+  }
+}
+
+function _7kOyuncuTik(idx) {
+  if (_7k.asama === 1) {
+    var p = D.sess.players[idx];
+    if (_7k.eslesen[p]) return;
+    _7k.secilen = (_7k.secilen === p) ? null : p;
+  } else if (_7k.asama === 2) {
+    var p = _7k.masadakiler[idx];
+    if (_7k.ortakEslesen[p]) return;
+    _7k.ortakSecilen = (_7k.ortakSecilen === p) ? null : p;
+  } else if (_7k.asama === 3) {
+    var p = _7k.disaridakiler[idx];
+    if (_7k.disOrtak[p]) return;
+    _7k.disSecilen = (_7k.disSecilen === p) ? null : p;
+  }
+  _7kRender();
+}
+
+function _7kKartTik(idx) {
+  var e = idx; // aşama 2 için kart indeksi
+  if (_7k.asama === 1) {
+    if (!_7k.secilen) return;
+    var k = _7k.deste52.pop();
+    _7k.eslesen[_7k.secilen] = k;
+    _7k.secilen = null;
+    _7kRender();
+    // Herkes çekince otomatik geçmez — "Tamam" butonuyla devam edilir (bkz. _7kRender)
+  } else if (_7k.asama === 2) {
+    if (!_7k.ortakSecilen) return;
+    var kartIdx = parseInt(e || 0);
+    if (_7k.ortakAcikKartlar[kartIdx]) return;
+    var k = _7k.ortakKartDizisi[kartIdx];
+    var kKopi = {deger:k.deger, renk:k.renk, sembol:k.sembol, _idx:kartIdx};
+    _7k.ortakAcikKartlar[kartIdx] = k;
+    _7k.ortakEslesen[_7k.ortakSecilen] = kKopi;
+    _7k.ortakSecilen = null;
+    _7kRender();
+    if (Object.keys(_7k.ortakEslesen).length === (_7k._asama2Oyuncular || _7k.masadakiler).length) {
+      setTimeout(function() { _7kAsamaBit2(); }, 600);
+    }
+  } else if (_7k.asama === 3) {
+    if (!_7k.disSecilen) return;
+    var k = _7k.deste52.pop();
+    _7k.disOrtak[_7k.disSecilen] = k.renk;
+    _7k.disSecilen = null;
+    _7kRender();
+    if (Object.keys(_7k.disOrtak).length === _7k.disaridakiler.length) {
+      setTimeout(function() { _7kAsamaBit3(); }, 600);
+    }
+  }
+}
+
+function _7kAsamaBit1() {
+  // Sırala: en küçük 3 dışarıda, en büyük 4 masada
+  var sirali = D.sess.players.slice().sort(function(a, b) {
+    return _6kDegerSira(_7k.eslesen[a].deger) - _6kDegerSira(_7k.eslesen[b].deger);
+  });
+  // Sınırdaki (3. ve 4. sıra) kart değeri eşitse dışarı/masa ayrımı belli değildir — o değere sahip olanlar yeniden çeksin
+  var sinirDeger1 = _6kDegerSira(_7k.eslesen[sirali[2]].deger);
+  if (_6kDegerSira(_7k.eslesen[sirali[3]].deger) === sinirDeger1) {
+    var esitOyuncular1 = sirali.filter(function(p) {
+      return _6kDegerSira(_7k.eslesen[p].deger) === sinirDeger1;
+    });
+    document.getElementById('7kart-aciklama').textContent = '⚠️ Eşit kart (' + esitOyuncular1.map(function(p){return p.split(' ')[0];}).join(', ') + ')! Yeniden çekin.';
+    esitOyuncular1.forEach(function(p) { delete _7k.eslesen[p]; });
+    setTimeout(function() { _7kRender(); }, 900);
+    return;
+  }
+  _7k.disaridakiler = sirali.slice(0, 3);
+  _7k.masadakiler = sirali.slice(3);
+
+  var ortakKartlar = _kShuffle([
+    {deger:'A',renk:'K',sembol:'♥'},{deger:'A',renk:'K',sembol:'♦'},
+    {deger:'A',renk:'S',sembol:'♠'},{deger:'A',renk:'S',sembol:'♣'}
+  ]);
+  _7k.ortakKartDizisi = ortakKartlar;
+  _7k.ortakAcikKartlar = [null,null,null,null];
+  _7k.ortakEslesen = {};
+  _7k.ortakSecilen = null;
+  _7k.asama = 2;
+  _7kRender();
+}
+
+function _7kAsamaBit2() {
+  var kirmizilar = (_7k._asama2Oyuncular || _7k.masadakiler).filter(function(p) {
+    return _7k.ortakEslesen[p] && _7k.ortakEslesen[p].renk === 'K';
+  });
+  var siyahlar = (_7k._asama2Oyuncular || _7k.masadakiler).filter(function(p) {
+    return _7k.ortakEslesen[p] && _7k.ortakEslesen[p].renk === 'S';
+  });
+  _7k.masadakiler = kirmizilar.concat(siyahlar); // gerçek masadaki 4
+  _7k.deste52 = _6kDeste52();
+  _7k.disOrtak = {};
+  _7k.disSecilen = null;
+  _7k.asama = 3;
+  _7kRender();
+}
+
+function _7kAsamaBit3() {
+  // Dışarıdaki 3 kişi renk çekti — 3'ü birden aynı renk olamaz
+  var renkler = _7k.disaridakiler.map(function(p) { return _7k.disOrtak[p]; });
+  var hepsiAyni = renkler.every(function(r) { return r === renkler[0]; });
+  if (hepsiAyni) {
+    document.getElementById('7kart-aciklama').textContent = '⚠️ Üçü de aynı renk! Yeniden çekin.';
+    _7k.disOrtak = {};
+    _7k.disSecilen = null;
+    _7k.deste52 = _6kDeste52();
+    setTimeout(function() { _7kRender(); }, 800);
+    return;
+  }
+  setTimeout(function() { _7kMasaKur(); }, 500);
+}
+
+function _7kRender() {
+  var baslik = document.getElementById('7kart-baslik');
+  var aciklama = document.getElementById('7kart-aciklama');
+  var oyDiv = document.getElementById('7kart-oyuncular');
+  var kartDiv = document.getElementById('7kart-kart');
+  var aksiyonDiv = document.getElementById('7kart-aksiyon');
+
+  if (_7k.asama === 1) {
+    if (baslik) baslik.textContent = '🃏 Kart Çek';
+    if (aciklama) aciklama.textContent = 'Önce ismine dokun, sonra kapalı karta dokun.';
+    var oyHtml = '';
+    for (var i = 0; i < D.sess.players.length; i++) {
+      var p = D.sess.players[i];
+      var esl = _7k.eslesen[p];
+      var sel = _7k.secilen === p;
+      var bg = esl ? 'var(--g1)' : sel ? 'var(--g2)' : 'var(--bg2)';
+      var col = (esl||sel) ? '#fff' : 'var(--tx1)';
+      var lbl = p.split(' ')[0] + (esl ? '<br><span style="font-size:1rem;">' + esl.deger + esl.sembol + '</span>' : '');
+      oyHtml += '<div '+ (!esl?'data-7kp="'+i+'"':'')+' style="padding:8px 4px;border:2px solid '+(sel?'var(--g2)':esl?'var(--g1)':'var(--bd2)')+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(esl?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
+    }
+    oyDiv.innerHTML = oyHtml;
+    var active = !!_7k.secilen;
+    kartDiv.innerHTML = '<div data-7kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;width:88px;background:var(--g1);opacity:'+(active?'1':'0.35')+';cursor:'+(active?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb"></div></div>';
+    aksiyonDiv.innerHTML = (Object.keys(_7k.eslesen).length === D.sess.players.length)
+      ? '<button class="btn bp bfw" onclick="_7kAsamaBit1()">Tamam</button>'
+      : '';
+
+  } else if (_7k.asama === 2) {
+    if (baslik) baslik.textContent = '🃏 Ortaklık Seçimi';
+    if (aciklama) aciklama.textContent = 'Masadaki 4 kişi as çeker. Önce ismine, sonra karta dokun.';
+    var oyHtml = '';
+    var asama2Liste = _7k._asama2Oyuncular || _7k.masadakiler;
+    for (var i = 0; i < asama2Liste.length; i++) {
+      var p = asama2Liste[i];
+      var esl = _7k.ortakEslesen[p];
+      var sel = _7k.ortakSecilen === p;
+      var kr = esl ? (esl.renk==='K'?'#cc0000':'#111') : null;
+      var bg = esl ? (esl.renk==='K'?'#fef2f2':'var(--bg2)') : sel ? 'var(--g2)' : 'var(--bg2)';
+      var col = sel ? '#fff' : esl ? (esl.renk==='K'?'#cc0000':'#111') : 'var(--tx1)';
+      var lbl = p.split(' ')[0] + (esl ? '<br><span style="font-size:1rem;">A'+esl.sembol+'</span>' : '');
+      oyHtml += '<div '+ (!esl?'data-7kp="'+i+'"':'')+' style="padding:8px 4px;border:2px solid '+(sel?'var(--g2)':esl?kr:'var(--bd2)')+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(esl?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
+    }
+    oyDiv.innerHTML = oyHtml;
+    var active2 = !!_7k.ortakSecilen;
+    var kartHtml2 = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">';
+    for (var ki=0; ki<4; ki++) {
+      var acik = _7k.ortakAcikKartlar && _7k.ortakAcikKartlar[ki];
+      if (acik) {
+        var kr2 = acik.renk==='K'?'#cc0000':'#111';
+        kartHtml2 += '<div style="min-width:68px;box-sizing:border-box;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid '+kr2+';border-radius:10px;padding:8px 4px;text-align:center;background:#fff;">';
+        kartHtml2 += '<div style="font-size:1.4rem;color:'+kr2+';font-weight:900;">A'+acik.sembol+'</div>';
+        var sah = Object.keys(_7k.ortakEslesen).find(function(p){return _7k.ortakEslesen[p]&&_7k.ortakEslesen[p]._idx===ki;}) || '';
+        kartHtml2 += '<div style="font-size:.6rem;color:var(--tx3);font-weight:700;">'+( sah ? sah.split(' ')[0] : '')+'</div></div>';
+      } else {
+        kartHtml2 += '<div data-7kk="'+ki+'" style="min-width:68px;box-sizing:border-box;border:2px solid var(--bd2);border-radius:10px;padding:12px 4px;background:var(--g1);opacity:'+(active2?'1':'0.4')+';text-align:center;cursor:'+(active2?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb-sm"></div></div>';
+      }
+    }
+    kartHtml2 += '</div>';
+    kartDiv.innerHTML = kartHtml2;
+    aksiyonDiv.innerHTML = '';
+
+  } else if (_7k.asama === 3) {
+    if (baslik) baslik.textContent = '🃏 Dışarıdan Ortak';
+    if (aciklama) aciklama.textContent = 'Dışarıdaki 3 kişi renk çeker. Kırmızı → kırmızı takım, Siyah → siyah takım. Üçü birden aynı renk olamaz.';
+    var oyHtml = '';
+    for (var i = 0; i < _7k.disaridakiler.length; i++) {
+      var p = _7k.disaridakiler[i];
+      var renk = _7k.disOrtak[p];
+      var sel = _7k.disSecilen === p;
+      var bg = renk ? (renk==='K'?'#fef2f2':'var(--bg2)') : sel ? 'var(--g2)' : 'var(--bg2)';
+      var col = sel ? '#fff' : renk ? (renk==='K'?'#cc0000':'#111') : 'var(--tx1)';
+      var lbl = p.split(' ')[0] + (renk ? '<br><span style="font-size:1.1rem;">'+(renk==='K'?'♥':'♠')+'</span>' : '');
+      oyHtml += '<div '+ (!renk?'data-7kp="'+i+'"':'')+' style="padding:8px 4px;border:2px solid '+(sel?'var(--g2)':renk?(renk==='K'?'#cc0000':'#111'):'var(--bd2)')+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(renk?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
+    }
+    oyDiv.innerHTML = oyHtml;
+    var active3 = !!_7k.disSecilen;
+    kartDiv.innerHTML = '<div data-7kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;width:88px;background:var(--g1);opacity:'+(active3?'1':'0.35')+';cursor:'+(active3?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb"></div></div>';
+    aksiyonDiv.innerHTML = '';
+  }
+  _7kListen();
+}
+
+function _7kYenidenCekFromGame(teamA, teamB, partnersList) {
+  // Önceki oyunun masadaki 4 kişisi ve dışarıdaki 3 kişisi
+  var oncekiMasada4 = teamA.concat(teamB).filter(function(p) {
+    return partnersList.indexOf(p) < 0;
+  });
+  var oncekiDisarida3 = partnersList.slice(0, 3);
+
+  _7k.deste52 = _6kDeste52();
+  _7k.eslesen = {};
+  _7k.secilen = null;
+  _7k.ortakEslesen = {};
+  _7k.ortakSecilen = null;
+  _7k.disOrtak = {};
+  _7k.disSecilen = null;
+
+  // Önceki dışarıdaki 3 kişi masaya döner; önceki masadaki 4 kişi arasından
+  // yeniden kart çekilip en düşük 3'ü yeni dışarıda kalacak kişiler olur.
+  _7k._yenidenCekOyuncular = oncekiMasada4;
+  _7k._oncekiDisarida = oncekiDisarida3;
+  _7k.asama = 'Y1';
+  _7kRenderY1();
+  _7kListenY1();
+  document.getElementById('ov-7kart').classList.add('on');
+}
+
+function _7kListenY1() {
+  var ov = document.getElementById('ov-7kart');
+  if (!ov) return;
+  ov.ontouchstart = function(e) { _7kFindTapY1(e, true); };
+  ov.onclick = function(e) { _7kFindTapY1(e, false); };
+}
+
+function _7kFindTapY1(e, prevent) {
+  var t = e.target;
+  if (t && t.nodeType !== 1) t = t.parentNode;
+  while (t && t.tagName && t.tagName !== 'BODY') {
+    if (t.getAttribute) {
+      var kp = t.getAttribute('data-7kp');
+      if (kp !== null) { if (prevent) e.preventDefault(); _7kOyuncuTikY1(parseInt(kp)); return; }
+      var kk = t.getAttribute('data-7kk');
+      if (kk !== null) { if (prevent) e.preventDefault(); _7kKartTikY1(); return; }
+    }
+    t = t.parentNode;
+  }
+}
+
+function _7kOyuncuTikY1(idx) {
+  var p = _7k._yenidenCekOyuncular[idx];
+  if (_7k.eslesen[p]) return;
+  _7k.secilen = (_7k.secilen === p) ? null : p;
+  _7kRenderY1();
+}
+
+function _7kKartTikY1() {
+  if (!_7k.secilen) return;
+  var k = _7k.deste52.pop();
+  _7k.eslesen[_7k.secilen] = k;
+  _7k.secilen = null;
+  _7kRenderY1();
+  if (Object.keys(_7k.eslesen).length === _7k._yenidenCekOyuncular.length) {
+    setTimeout(function() { _7kY1Sonuc(); }, 600);
+  }
+}
+
+function _7kRenderY1() {
+  var baslik = document.getElementById('7kart-baslik');
+  var aciklama = document.getElementById('7kart-aciklama');
+  var oyDiv = document.getElementById('7kart-oyuncular');
+  var kartDiv = document.getElementById('7kart-kart');
+  if (baslik) baslik.textContent = '🃏 Kart Çek';
+  if (aciklama) aciklama.textContent = 'Önce ismine dokun, sonra kapalı karta dokun.';
+  var oyHtml = '';
+  var oyuncular = _7k._yenidenCekOyuncular;
+  for (var i = 0; i < oyuncular.length; i++) {
+    var p = oyuncular[i];
+    var esl = _7k.eslesen[p];
+    var sel = _7k.secilen === p;
+    var bg = esl ? 'var(--g1)' : sel ? 'var(--g2)' : 'var(--bg2)';
+    var col = (esl||sel) ? '#fff' : 'var(--tx1)';
+    var lbl = p.split(' ')[0] + (esl ? '<br><span style="font-size:1rem;">' + esl.deger + esl.sembol + '</span>' : '');
+    oyHtml += '<div '+ (!esl?'data-7kp="'+i+'"':'')+' style="padding:8px 4px;border:2px solid '+(sel?'var(--g2)':esl?'var(--g1)':'var(--bd2)')+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(esl?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
+  }
+  oyDiv.innerHTML = oyHtml;
+  var active = !!_7k.secilen;
+  kartDiv.innerHTML = '<div data-7kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;width:88px;background:var(--g1);opacity:'+(active?'1':'0.35')+';cursor:'+(active?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb"></div></div>';
+  _7kListenY1();
+}
+
+function _7kY1Sonuc() {
+  var oyuncular = _7k._yenidenCekOyuncular; // önceki masadaki 4 kişi
+  var sirali = oyuncular.slice().sort(function(a, b) {
+    return _6kDegerSira(_7k.eslesen[a].deger) - _6kDegerSira(_7k.eslesen[b].deger);
+  });
+  // Sınırdaki (3. ve 4. sıra) kart değeri eşitse masada kimin kalacağı belli değildir — o değere sahip olanlar yeniden çeksin
+  var sinirDegerY1 = _6kDegerSira(_7k.eslesen[sirali[2]].deger);
+  if (_6kDegerSira(_7k.eslesen[sirali[3]].deger) === sinirDegerY1) {
+    var esitOyuncularY1 = sirali.filter(function(p) {
+      return _6kDegerSira(_7k.eslesen[p].deger) === sinirDegerY1;
+    });
+    document.getElementById('7kart-aciklama').textContent = '⚠️ Eşit kart (' + esitOyuncularY1.map(function(p){return p.split(' ')[0];}).join(', ') + ')! Yeniden çekin.';
+    esitOyuncularY1.forEach(function(p) { delete _7k.eslesen[p]; });
+    setTimeout(function() { _7kRenderY1(); }, 900);
+    return;
+  }
+  var yeniDisarida = sirali.slice(0, 3); // en küçük 3 dışarıda
+  var kalan1 = sirali.slice(3);         // en büyük 1 masada kalır
+  _7k.disaridakiler = yeniDisarida;
+
+  // Aşama 2: masada kalan 1 + önceki dışarıdaki 3 (masaya dönen) = 4 kişi as çeker
+  var asama2Oyuncular = kalan1.concat(_7k._oncekiDisarida);
+  _7k._asama2Oyuncular = asama2Oyuncular;
+  _7k.masadakiler = asama2Oyuncular;
+  var ortakKartlar = _kShuffle([
+    {deger:'A',renk:'K',sembol:'♥'},{deger:'A',renk:'K',sembol:'♦'},
+    {deger:'A',renk:'S',sembol:'♠'},{deger:'A',renk:'S',sembol:'♣'}
+  ]);
+  _7k.ortakKartDizisi = ortakKartlar;
+  _7k.ortakAcikKartlar = [null,null,null,null];
+  _7k.ortakEslesen = {};
+  _7k.ortakSecilen = null;
+  _7k.asama = 2;
+  _7kRender();
+  _7kListen();
+}
+
+function _7kMasaKur() {
+  var kirmizilar = _7k.masadakiler.filter(function(p) { return _7k.ortakEslesen[p] && _7k.ortakEslesen[p].renk === 'K'; });
+  var siyahlar = _7k.masadakiler.filter(function(p) { return _7k.ortakEslesen[p] && _7k.ortakEslesen[p].renk === 'S'; });
+
+  D.round.masa1 = { A: kirmizilar.slice(), B: siyahlar.slice() };
+  D.round.masa1active = true;
+  D.round.masa2active = false;
+  D.round.partners = {};
+
+  _7k.disaridakiler.forEach(function(p) {
+    var renk = _7k.disOrtak[p];
+    if (renk === 'K') {
+      D.round.partners[p] = { m1: 'A', m2: null };
+      D.round.masa1.A.push(p);
+    } else {
+      D.round.partners[p] = { m1: 'B', m2: null };
+      D.round.masa1.B.push(p);
+    }
+  });
+
+  D.sess.mPuan = parseFloat(document.getElementById('m-puan').value) || 0;
+  D.sess.mPişti = parseFloat(document.getElementById('m-pişti').value) || 0;
+  D.sess.mKaz = parseFloat(document.getElementById('m-kaz').value) || 0;
+  D.started = true; D.dagitici = {}; _dagitici = {};
+  closeOv('ov-7kart');
   saving = true; syncDot('#f59e0b');
   var toSave = JSON.parse(JSON.stringify(D)); delete toSave.screen;
   REF.set(toSave).then(function() {
@@ -4619,6 +5045,21 @@ function _bitirOyunDevam(masa, savedTurler) {
       setTimeout(function() {
         closeOv('ov-skor');
         _6kYenidenCekFromGame(teamA6, teamB6, partners6);
+      }, 800);
+      return;
+    }
+  }
+
+  // 7 kişi: her oyun sonunda yeniden kart çek (önceki masadaki 4 kişi arasından)
+  if (playerCount === 7) {
+    var lastGame7 = D.sessGames && D.sessGames.length > 0 ? D.sessGames[D.sessGames.length - 1] : null;
+    var partners7 = lastGame7 ? lastGame7.partners : [];
+    var teamA7 = lastGame7 ? lastGame7.teamA : [];
+    var teamB7 = lastGame7 ? lastGame7.teamB : [];
+    if (partners7 && partners7.length === 3) {
+      setTimeout(function() {
+        closeOv('ov-skor');
+        _7kYenidenCekFromGame(teamA7, teamB7, partners7);
       }, 800);
       return;
     }
