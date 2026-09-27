@@ -1031,8 +1031,9 @@ function kartCekmeVazgecManuel() {
   if (typeof _7k !== 'undefined') _7k.pending = false;
   if (typeof _kPending !== 'undefined') _kPending = false;
   if (typeof _4kPending !== 'undefined') _4kPending = false;
-  // Manuel kuruluma geçildi — bu oturumda bir daha kart çekme moduna otomatik dönmesin
-  D.kartCekmeModuKapali = true;
+  // Manuel kuruluma geçildi — bu oyuncu sayısı değişmeden kaldığı sürece bir daha
+  // kart çekme moduna otomatik dönmesin (sayı değişirse tekrar sorulur).
+  D.kartCekmeModuKapaliSayi = D.sess.players.length;
   guncelleRotasyonBanner();
   goS(3);
   setTimeout(function() { buildSeats(); }, 50);
@@ -1195,9 +1196,10 @@ function toS3() {
     document.getElementById('ov-oyun-modu').classList.add('on');
     return;
   }
-  // Diğer tüm oyuncu sayıları: bu oturumda daha önce "Hayır" denmişse tekrar sorma,
-  // direkt manuel masa kurulumuna git. Aksi halde kart çekme modu isteyip istemediğini sor.
-  if (D.kartCekmeModuKapali) {
+  // Diğer tüm oyuncu sayıları: bu SAYI için daha önce "Hayır" denmişse tekrar sorma,
+  // direkt manuel masa kurulumuna git. Oyuncu sayısı değiştiyse (ör. 6'dan 8'e çıktıysa)
+  // yeni sayı için tekrar sor.
+  if (D.kartCekmeModuKapaliSayi === D.sess.players.length) {
     buildSeats();
     goS(3);
     return;
@@ -1221,7 +1223,7 @@ function kartCekmeModuEvet() {
 
 function kartCekmeModuHayir() {
   closeOv('ov-kart-modu-sor');
-  D.kartCekmeModuKapali = true;
+  D.kartCekmeModuKapaliSayi = D.sess.players.length;
   saveD();
   buildSeats();
   goS(3);
@@ -3225,7 +3227,7 @@ function _delGameExec(id) {
     D.damGecmisi = {};
   D._6kDisaridaGecmis = {};
   D.damlarSonOyun = [];
-  D.kartCekmeModuKapali = false;
+  D.kartCekmeModuKapaliSayi = null;
     _siraliSira = [];
     _siraliOyunIdx = 0;
     D.round = {
@@ -3330,7 +3332,7 @@ function _closeSessionExec() {
   D._6kDisaridaGecmis = {};
   D.damlarSonOyun = [];
   D._6kDisaridaGecmis = {};
-  D.kartCekmeModuKapali = false;
+  D.kartCekmeModuKapaliSayi = null;
   _siraliSira = [];
   _siraliOyunIdx = 0;
   saveD();
@@ -3352,7 +3354,7 @@ function newSession() {
   D._6kDisaridaGecmis = {};
   D.damlarSonOyun = [];
   D._6kDisaridaGecmis = {};
-  D.kartCekmeModuKapali = false;
+  D.kartCekmeModuKapaliSayi = null;
   saveD();
   renderPool();
   switchToOyun();
@@ -5214,7 +5216,7 @@ function _bitirOyunDevam(masa, savedTurler) {
     }
   }
 
-  if (!D.kartCekmeModuKapali) {
+  if (D.kartCekmeModuKapaliSayi !== playerCount) {
     // 6 kişi: her oyun sonunda yeniden kart çek (sadece masadaki 4 kişi)
     if (playerCount === 6) {
       // D.round bilgisini sessGames'in son oyunundan al (daha güvenilir)
