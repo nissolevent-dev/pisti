@@ -356,7 +356,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="ovbox" style="max-height:92vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div class="ovttl" style="margin-bottom:0">🃏 Masa Kurma — Kart Çek</div>
-      <button class="btn bo bs" onclick="closeOv('ov-kart');goS(3);setTimeout(function(){buildSeats();},50)">Vazgeç</button>
+      <button class="btn bo bs" onclick="kartCekmeVazgec('ov-kart')">Vazgeç</button>
     </div>
     <p style="font-size:.76rem;color:var(--tx3);margin-bottom:14px">Önce ismine tıkla, sonra bir kart seç.</p>
 
@@ -391,7 +391,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="ovbox" style="max-width:360px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div class="ovttl" id="6kart-baslik" style="margin-bottom:0">🃏 Kart Çek</div>
-      <button class="btn bo bs" onclick="closeOv('ov-6kart');buildSeats();goS(3)">Vazgeç</button>
+      <button class="btn bo bs" onclick="kartCekmeVazgec('ov-6kart')">Vazgeç</button>
     </div>
     <p id="6kart-aciklama" style="font-size:.78rem;color:var(--tx3);margin-bottom:10px"></p>
     <div id="6kart-oyuncular" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px"></div>
@@ -406,7 +406,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="ovbox" style="max-width:360px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div class="ovttl" id="7kart-baslik" style="margin-bottom:0">🃏 Kart Çek</div>
-      <button class="btn bo bs" onclick="closeOv('ov-7kart');buildSeats();goS(3)">Vazgeç</button>
+      <button class="btn bo bs" onclick="kartCekmeVazgec('ov-7kart')">Vazgeç</button>
     </div>
     <p id="7kart-aciklama" style="font-size:.78rem;color:var(--tx3);margin-bottom:10px"></p>
     <div id="7kart-oyuncular" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px"></div>
@@ -420,7 +420,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="ovbox" style="max-width:360px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div class="ovttl" style="margin-bottom:0">🃏 Ortak Seç</div>
-      <button class="btn bo bs" onclick="closeOv('ov-4kart');buildSeats();goS(3)">Vazgeç</button>
+      <button class="btn bo bs" onclick="kartCekmeVazgec('ov-4kart')">Vazgeç</button>
     </div>
     <p id="4kart-aciklama" style="font-size:.78rem;color:var(--tx3);margin-bottom:12px">Önce ismine dokun, sonra kart seç.</p>
     <div id="4kart-oyuncular" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px"></div>
@@ -428,6 +428,18 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div id="4kart-sonuc" style="display:none">
       <div id="4kart-sonuc-liste" style="margin-bottom:12px;font-size:.85rem"></div>
       <button class="btn bp bfw" onclick="basla4KisiSirali()">✓ Masayı Kur ve Başlat</button>
+    </div>
+  </div>
+</div>
+
+<!-- Kart çekmeden vazgeçince: oyuna dön mü, manuel mi kurulsun -->
+<div class="ov" id="ov-kart-vazgec" style="z-index:600;align-items:center">
+  <div class="ovbox" style="max-width:340px;text-align:center">
+    <div class="ovttl" style="margin-bottom:8px">Vazgeç</div>
+    <p style="font-size:.82rem;color:var(--tx3);margin-bottom:20px">Devam eden oyuna mı dönmek istersin, yoksa masaları manuel mi kurmak istersin?</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn bp bfw" onclick="kartCekmeVazgecOyunaDon()">Oyuna Dön</button>
+      <button class="btn bo bfw" onclick="kartCekmeVazgecManuel()">Masaları Manuel Ayarla</button>
     </div>
   </div>
 </div>
@@ -976,6 +988,31 @@ function goS(n) {
     document.getElementById('s' + i).style.display = (i === n) ? 'block' : 'none';
   }
   D.screen = n;
+}
+
+function kartCekmeVazgec(ovId) {
+  // Bu kart çekme, devam eden bir oturumun oyundan-oyuna rotasyonu sırasında
+  // açıldıysa (D.started true), iptal etmek mevcut oyunu bozmamalı — kullanıcıya
+  // oyuna mı dönmek yoksa masaları manuel mi kurmak istediğini sor. Aksi halde
+  // (ilk kurulum) eskisi gibi doğrudan manuel masa kurulumuna dön.
+  closeOv(ovId);
+  if (D.started) {
+    document.getElementById('ov-kart-vazgec').classList.add('on');
+  } else {
+    goS(3);
+    setTimeout(function() { buildSeats(); }, 50);
+  }
+}
+
+function kartCekmeVazgecOyunaDon() {
+  closeOv('ov-kart-vazgec');
+  goS(4);
+}
+
+function kartCekmeVazgecManuel() {
+  closeOv('ov-kart-vazgec');
+  goS(3);
+  setTimeout(function() { buildSeats(); }, 50);
 }
 
 function resetRoundAndGoS3() {
