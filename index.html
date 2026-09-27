@@ -3031,6 +3031,7 @@ function saveGame(masa, turler) {
   var pA = gv('m'+masa+'-Apts'), piA = gv('m'+masa+'-Api');
   var pB = gv('m'+masa+'-Bpts'), piB = gv('m'+masa+'-Bpi');
   if (!pA && !pB && !piA && !piB) { toast('En az bir deger girin'); return; }
+  if (Math.max(pA, pB) < 101) { toast('Bir takım en az 101 puana ulaşmadan kaydedilemez'); return; }
 
   var masaData = masa === 1 ? D.round.masa1 : D.round.masa2;
   if (!masaData || !masaData.A || !masaData.B) { toast('Masa kurulmamis'); return; }
