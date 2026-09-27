@@ -5207,11 +5207,20 @@ function _bitirOyunDevam(masa, savedTurler) {
       return;
     }
   }
-  if (!D.siraliMod && playerCount >= 8 && sessCount > 0 && sessCount % 2 === 0) {
-    setTimeout(function() {
-      closeOv('ov-skor');
-      showKartCekme();
-    }, 300);
+  if (!D.siraliMod && playerCount >= 8) {
+    if (!D._8910RoundDone) D._8910RoundDone = {};
+    D._8910RoundDone[masa] = true;
+    var masa1Bitti = !D.round.masa1active || D._8910RoundDone[1];
+    var masa2Bitti = !D.round.masa2active || D._8910RoundDone[2];
+    if (masa1Bitti && masa2Bitti) {
+      setTimeout(function() {
+        closeOv('ov-skor');
+        showKartCekme();
+      }, 300);
+      return;
+    }
+    // Bu masa bitti ama diğer masa henüz bitmedi — kart çekmeden normal devam et
+    showUndoToast(masa, savedTurler);
     return;
   }
 
@@ -6144,6 +6153,7 @@ function _kSonuc(){
 
 function kartOnayla(){
   _kPending=false;
+  D._8910RoundDone = {};
   var g=window._kMasaG||{m1K:[],m1S:[],m2K:[],m2S:[]};
   D.round.masa1={A:g.m1K.slice(),B:g.m1S.slice()};
   D.round.masa2={A:g.m2K.slice(),B:g.m2S.slice()};
