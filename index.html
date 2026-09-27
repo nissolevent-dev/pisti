@@ -122,6 +122,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .csdt{font-size:.75rem;font-weight:700;color:var(--g1)}
 .csinf{font-size:.68rem;color:var(--tx3)}
 @media(max-width:360px){.mcfg{grid-template-columns:1fr 1fr}}
+.kb,.kb-sm{display:inline-block;border-radius:4px;background:repeating-linear-gradient(45deg,#f5b93f 0 5px,#e8983a 5px 10px),repeating-linear-gradient(-45deg,#f5b93f 0 5px,#e8983a 5px 10px);background-blend-mode:multiply;box-shadow:inset 0 0 0 3px #fff,inset 0 0 0 5px #cf3348,inset 0 0 0 8px #fff,inset 0 0 0 10px #f1b7c2,inset 0 0 0 13px #fff}
+.kb{width:52px;height:76px}
+.kb-sm{width:32px;height:46px}
 </style>
 </head>
 <body>
@@ -1317,7 +1320,7 @@ function _6kRender() {
     }
     oyDiv.innerHTML = oyHtml;
     var active = !!_6k.secilen;
-    kartDiv.innerHTML = '<div data-6kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;background:var(--g1);opacity:'+(active?'1':'0.35')+';cursor:'+(active?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div style="font-size:2.5rem;">🂠</div></div>';
+    kartDiv.innerHTML = '<div data-6kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;background:var(--g1);opacity:'+(active?'1':'0.35')+';cursor:'+(active?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb"></div></div>';
     aksiyonDiv.innerHTML = '';
 
   } else if (_6k.asama === 2) {
@@ -1348,7 +1351,7 @@ function _6kRender() {
         var sah = Object.keys(_6k.ortakEslesen).find(function(p){return _6k.ortakEslesen[p]&&_6k.ortakEslesen[p]._idx===ki;}) || '';
         kartHtml2 += '<div style="font-size:.6rem;color:var(--tx3);">'+( sah ? sah.split(' ')[0] : '')+'</div></div>';
       } else {
-        kartHtml2 += '<div data-6kk="'+ki+'" style="min-width:68px;box-sizing:border-box;border:2px solid var(--bd2);border-radius:10px;padding:12px 4px;background:var(--g1);opacity:'+(active2?'1':'0.4')+';text-align:center;cursor:'+(active2?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div style="font-size:1.4rem;">🂠</div></div>';
+        kartHtml2 += '<div data-6kk="'+ki+'" style="min-width:68px;box-sizing:border-box;border:2px solid var(--bd2);border-radius:10px;padding:12px 4px;background:var(--g1);opacity:'+(active2?'1':'0.4')+';text-align:center;cursor:'+(active2?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb-sm"></div></div>';
       }
     }
     kartHtml2 += '</div>';
@@ -1370,7 +1373,7 @@ function _6kRender() {
     }
     oyDiv.innerHTML = oyHtml;
     var active3 = !!_6k.disSecilen;
-    kartDiv.innerHTML = '<div data-6kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;background:var(--g1);opacity:'+(active3?'1':'0.35')+';cursor:'+(active3?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div style="font-size:2.5rem;">🂠</div></div>';
+    kartDiv.innerHTML = '<div data-6kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;background:var(--g1);opacity:'+(active3?'1':'0.35')+';cursor:'+(active3?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb"></div></div>';
     aksiyonDiv.innerHTML = '';
   }
   _6kListen();
@@ -1561,7 +1564,7 @@ function _6kRenderY1() {
   }
   oyDiv.innerHTML = oyHtml;
   var active = !!_6k.secilen;
-  kartDiv.innerHTML = '<div data-6kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;background:var(--g1);opacity:'+(active?'1':'0.35')+';cursor:'+(active?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div style="font-size:2.5rem;">🂠</div></div>';
+  kartDiv.innerHTML = '<div data-6kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;background:var(--g1);opacity:'+(active?'1':'0.35')+';cursor:'+(active?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb"></div></div>';
   _6kListenY1();
 }
 
@@ -1754,7 +1757,7 @@ function _4kRender() {
       var kr = k.renk==='K' ? '#cc0000' : '#111';
       kartHtml += '<div style="border:2px solid '+kr+';border-radius:10px;padding:8px 4px;text-align:center;background:#fff;"><div style="font-size:1.5rem;color:'+kr+';font-weight:900;">A'+k.sembol+'</div></div>';
     } else {
-      kartHtml += '<div data-4kk="'+i+'" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 4px;background:var(--g1);opacity:'+(active?'1':'0.4')+';text-align:center;user-select:none;-webkit-user-select:none;"><div style="font-size:1.4rem;">🂠</div></div>';
+      kartHtml += '<div data-4kk="'+i+'" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 4px;background:var(--g1);opacity:'+(active?'1':'0.4')+';text-align:center;user-select:none;-webkit-user-select:none;"><div class="kb-sm"></div></div>';
     }
   }
   kartDiv.innerHTML = kartHtml;
@@ -1976,7 +1979,7 @@ function _skRender() {
     } else {
       kartHtml += '<div data-skk="' + i + '" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 4px;background:var(--g1);opacity:' +
         (active ? '1' : '0.4') + ';text-align:center;min-width:44px;user-select:none;-webkit-user-select:none;">' +
-        '<div style="font-size:1.4rem;">🂠</div></div>';
+        '<div class="kb-sm"></div></div>';
     }
   }
   kartDiv.innerHTML = kartHtml;
@@ -5372,7 +5375,7 @@ function _kRender(){
         kartHtml+='<div style="border:2px solid '+kr+';border-radius:10px;padding:8px;text-align:center;background:#fff;min-width:52px;"><div style="font-size:1.4rem;color:'+kr+';font-weight:900;">'+tl+k.sembol+'</div><div style="font-size:.65rem;color:var(--tx3);">'+sahibi+'</div></div>';
       } else {
         var active=!!_kSecilen;
-        kartHtml+='<div data-kk="'+i+'" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 8px;background:var(--g1);opacity:'+(active?'1':'0.4')+';min-width:52px;text-align:center;user-select:none;-webkit-user-select:none;"><div style="font-size:1.6rem;">🂠</div></div>';
+        kartHtml+='<div data-kk="'+i+'" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 8px;background:var(--g1);opacity:'+(active?'1':'0.4')+';min-width:52px;text-align:center;user-select:none;-webkit-user-select:none;"><div class="kb-sm"></div></div>';
       }
     }
     if(kartDiv)kartDiv.innerHTML=kartHtml;
@@ -5419,7 +5422,7 @@ function _kRender(){
         }
       } else {
         var active=!!_kDamSecilen;
-        kartHtml+='<div data-kk="'+i+'" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 8px;background:var(--g1);opacity:'+(active?'1':'0.4')+';min-width:52px;text-align:center;user-select:none;-webkit-user-select:none;"><div style="font-size:1.6rem;">🂠</div></div>';
+        kartHtml+='<div data-kk="'+i+'" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 8px;background:var(--g1);opacity:'+(active?'1':'0.4')+';min-width:52px;text-align:center;user-select:none;-webkit-user-select:none;"><div class="kb-sm"></div></div>';
       }
     }
     if(kartDiv)kartDiv.innerHTML=kartHtml;
