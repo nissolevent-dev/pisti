@@ -1018,6 +1018,8 @@ function kartCekmeVazgecManuel() {
   closeOv('ov-kart-vazgec');
   if (typeof _6k !== 'undefined') _6k.pending = false;
   if (typeof _7k !== 'undefined') _7k.pending = false;
+  if (typeof _kPending !== 'undefined') _kPending = false;
+  if (typeof _4kPending !== 'undefined') _4kPending = false;
   guncelleRotasyonBanner();
   goS(3);
   setTimeout(function() { buildSeats(); }, 50);
@@ -1026,7 +1028,7 @@ function kartCekmeVazgecManuel() {
 function guncelleRotasyonBanner() {
   var banner = document.getElementById('rotasyon-devam-banner');
   if (!banner) return;
-  var pending = (typeof _6k !== 'undefined' && _6k.pending) || (typeof _7k !== 'undefined' && _7k.pending);
+  var pending = (typeof _6k !== 'undefined' && _6k.pending) || (typeof _7k !== 'undefined' && _7k.pending) || (typeof _kPending !== 'undefined' && _kPending) || (typeof _4kPending !== 'undefined' && _4kPending);
   banner.style.display = pending ? 'block' : 'none';
 }
 
@@ -1041,6 +1043,16 @@ function rotasyonaDevamEt() {
     document.getElementById('ov-6kart').classList.add('on');
     if (_6k.asama === 'Y1') { _6kRenderY1(); _6kListenY1(); }
     else { _6kRender(); _6kListen(); }
+    return;
+  }
+  if (typeof _kPending !== 'undefined' && _kPending) {
+    document.getElementById('ov-kart').classList.add('on');
+    _kListen(); _kRender();
+    return;
+  }
+  if (typeof _4kPending !== 'undefined' && _4kPending) {
+    document.getElementById('ov-4kart').classList.add('on');
+    _4kListen(); _4kRender();
     return;
   }
 }
@@ -2195,8 +2207,10 @@ function _7kMasaKur() {
 var _4kEslesen = {}; // {oyuncu: 'K' veya 'S'}
 var _4kSecilen = null;
 var _4kDeste = [];
+var _4kPending = false;
 
 function show4KisiKartCekme() {
+  _4kPending = true;
   var players = D.sess.players;
   // Tüm 3 kombinasyonu hesapla
   var p = players;
@@ -2350,6 +2364,7 @@ function _4kSonuc() {
 }
 
 function _4kKurMasa(kirmizi, siyah) {
+  _4kPending = false;
   D.oncekiOrtaklik4 = {K: kirmizi.slice(), S: siyah.slice()};
   D.siraliMod4 = true;
   D.round.masa1 = {A: kirmizi.slice(), B: siyah.slice()};
@@ -2368,7 +2383,7 @@ function _4kKurMasa(kirmizi, siyah) {
   delete toSave.screen;
   REF.set(toSave).then(function() {
     saving = false; syncDot('#22c55e');
-    updateMasaLabels(); renderSessChips(); renderGameCards(); goS(4); switchMasa(1);
+    updateMasaLabels(); renderSessChips(); renderGameCards(); goS(4); switchMasa(1); guncelleRotasyonBanner();
     setTimeout(function() { showSkorTakip(); }, 100);
   }).catch(function() { saving = false; syncDot('#ef4444'); });
 }
@@ -5670,7 +5685,7 @@ function saveManualSession() {
 
 // ── KART ÇEKME ──
 var _kAsama=1, _kDeste1=[], _kDeste2=[], _kEslesen={}, _kDamlar=[], _kSecilen=null, _kDamSecilen=null, _kDamKartlar=[];
-var _kGruplar=[], _kGrupIdx=0, _kGrupSiradaki=0, _kDamYasakli=false, _kDamUyari=false;
+var _kGruplar=[], _kGrupIdx=0, _kGrupSiradaki=0, _kDamYasakli=false, _kDamUyari=false, _kPending=false;
 
 function _kShuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
 
@@ -5696,6 +5711,7 @@ function _kListen(){
 }
 
 function showKartCekme(){
+  _kPending=true;
   _kAsama=1; _kEslesen={}; _kDamlar=[]; _kSecilen=null; _kDamSecilen=null; _kDamKartlar=[];
   _kGruplar=[]; _kGrupIdx=0; _kGrupSiradaki=0; _kDamYasakli=false; _kDamUyari=false;
   window._kIlkSecim=null;
@@ -6110,6 +6126,7 @@ function _kSonuc(){
 }
 
 function kartOnayla(){
+  _kPending=false;
   var g=window._kMasaG||{m1K:[],m1S:[],m2K:[],m2S:[]};
   D.round.masa1={A:g.m1K.slice(),B:g.m1S.slice()};
   D.round.masa2={A:g.m2K.slice(),B:g.m2S.slice()};
@@ -6150,7 +6167,7 @@ function kartOnayla(){
   delete toSave.screen;
   REF.set(toSave).then(function(){
     saving=false;syncDot('#22c55e');
-    updateMasaLabels();renderSessChips();renderGameCards();goS(4);switchMasa(1);
+    updateMasaLabels();renderSessChips();renderGameCards();goS(4);switchMasa(1);guncelleRotasyonBanner();
     setTimeout(function(){showSkorTakip();},100);
   }).catch(function(){saving=false;syncDot('#ef4444');});
 }
