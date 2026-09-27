@@ -1916,12 +1916,16 @@ function _7kGercekOturanlar(g) {
 }
 
 function _7kUstusteOturanlar() {
-  // Bu oturumdaki SON 2 oyunda (arka arkaya) masada oturan kişileri döndürür
+  // Oturumun başından beri herhangi 2 ARDIŞIK oyunda masada oturan herkesi döndürür
+  // — leaderboard'daki "x2" rozetiyle birebir aynı hesap (tek bir geçmiş çift değil,
+  // sessGames içindeki tüm ardışık çiftler taranır).
   var result = {};
   if (!D.sessGames || D.sessGames.length < 2) return result;
-  var o1 = _7kGercekOturanlar(D.sessGames[D.sessGames.length - 2]);
-  var o2 = _7kGercekOturanlar(D.sessGames[D.sessGames.length - 1]);
-  for (var p in o1) { if (o2[p]) result[p] = true; }
+  for (var gi = 0; gi < D.sessGames.length - 1; gi++) {
+    var o1 = _7kGercekOturanlar(D.sessGames[gi]);
+    var o2 = _7kGercekOturanlar(D.sessGames[gi + 1]);
+    for (var p in o1) { if (o2[p]) result[p] = true; }
+  }
   return result;
 }
 
