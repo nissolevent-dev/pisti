@@ -1205,9 +1205,6 @@ function _6kKartTik(idx) {
     _6k.eslesen[_6k.secilen] = k;
     _6k.secilen = null;
     _6kRender();
-    if (Object.keys(_6k.eslesen).length === D.sess.players.length) {
-      setTimeout(function() { _6kAsamaBit1(); }, 600);
-    }
   } else if (_6k.asama === 2) {
     if (!_6k.ortakSecilen) return;
     // idx: hangi kart pozisyonuna tıklandı (0-3)
@@ -1321,7 +1318,9 @@ function _6kRender() {
     oyDiv.innerHTML = oyHtml;
     var active = !!_6k.secilen;
     kartDiv.innerHTML = '<div data-6kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;width:88px;background:var(--g1);opacity:'+(active?'1':'0.35')+';cursor:'+(active?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb"></div></div>';
-    aksiyonDiv.innerHTML = '';
+    aksiyonDiv.innerHTML = (Object.keys(_6k.eslesen).length === D.sess.players.length)
+      ? '<button class="btn bp bfw" onclick="_6kAsamaBit1()">Tamam</button>'
+      : '';
 
   } else if (_6k.asama === 2) {
     if (baslik) baslik.textContent = '🃏 Ortaklık Seçimi';
