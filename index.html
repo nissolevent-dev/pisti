@@ -122,9 +122,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .csdt{font-size:.75rem;font-weight:700;color:var(--g1)}
 .csinf{font-size:.68rem;color:var(--tx3)}
 @media(max-width:360px){.mcfg{grid-template-columns:1fr 1fr}}
-.kb,.kb-sm{display:inline-block;border-radius:4px;background:repeating-linear-gradient(45deg,#f5b93f 0 5px,#e8983a 5px 10px),repeating-linear-gradient(-45deg,#f5b93f 0 5px,#e8983a 5px 10px);background-blend-mode:multiply;box-shadow:inset 0 0 0 3px #fff,inset 0 0 0 5px #cf3348,inset 0 0 0 8px #fff,inset 0 0 0 10px #f1b7c2,inset 0 0 0 13px #fff}
-.kb{width:52px;height:76px}
-.kb-sm{width:32px;height:46px}
+.kb,.kb-sm{display:block;box-sizing:border-box;width:100%;max-width:100%;aspect-ratio:5/7;background:#fff;border:1px solid rgba(0,0,0,.28);border-radius:5px;padding:4px}
+.kb-sm{padding:3px;border-radius:3px}
+.kb::before,.kb-sm::before{content:"";display:block;width:100%;height:100%;border-radius:2px;background-color:#a41e46;box-shadow:inset 0 0 0 2px #fff,inset 0 0 0 4px #a41e46,inset 0 0 0 5px #fff;background-image:url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScyMCcgaGVpZ2h0PScyMCc+CjxyZWN0IHdpZHRoPScyMCcgaGVpZ2h0PScyMCcgZmlsbD0nI2E0MWU0NicvPgo8cGF0aCBkPSdNMCAxMCBMMTAgMCBMMjAgMTAgTDEwIDIwIFonIGZpbGw9J25vbmUnIHN0cm9rZT0nI2ZmZmZmZicgc3Ryb2tlLXdpZHRoPScxLjEnLz4KPGNpcmNsZSBjeD0nMTAnIGN5PScxMCcgcj0nMS42JyBmaWxsPScjZmZmZmZmJy8+CjxjaXJjbGUgY3g9JzAnIGN5PScwJyByPScxLjEnIGZpbGw9JyNmZmZmZmYnLz4KPGNpcmNsZSBjeD0nMjAnIGN5PScwJyByPScxLjEnIGZpbGw9JyNmZmZmZmYnLz4KPGNpcmNsZSBjeD0nMCcgY3k9JzIwJyByPScxLjEnIGZpbGw9JyNmZmZmZmYnLz4KPGNpcmNsZSBjeD0nMjAnIGN5PScyMCcgcj0nMS4xJyBmaWxsPScjZmZmZmZmJy8+Cjwvc3ZnPg==);background-repeat:repeat;background-size:10px 10px}
+.kb-sm::before{background-size:7px 7px;box-shadow:inset 0 0 0 1px #fff,inset 0 0 0 3px #a41e46,inset 0 0 0 4px #fff}
 </style>
 </head>
 <body>
@@ -1320,7 +1321,7 @@ function _6kRender() {
     }
     oyDiv.innerHTML = oyHtml;
     var active = !!_6k.secilen;
-    kartDiv.innerHTML = '<div data-6kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;background:var(--g1);opacity:'+(active?'1':'0.35')+';cursor:'+(active?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb"></div></div>';
+    kartDiv.innerHTML = '<div data-6kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;width:52px;background:var(--g1);opacity:'+(active?'1':'0.35')+';cursor:'+(active?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb"></div></div>';
     aksiyonDiv.innerHTML = '';
 
   } else if (_6k.asama === 2) {
@@ -1373,7 +1374,7 @@ function _6kRender() {
     }
     oyDiv.innerHTML = oyHtml;
     var active3 = !!_6k.disSecilen;
-    kartDiv.innerHTML = '<div data-6kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;background:var(--g1);opacity:'+(active3?'1':'0.35')+';cursor:'+(active3?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb"></div></div>';
+    kartDiv.innerHTML = '<div data-6kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;width:52px;background:var(--g1);opacity:'+(active3?'1':'0.35')+';cursor:'+(active3?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb"></div></div>';
     aksiyonDiv.innerHTML = '';
   }
   _6kListen();
@@ -1564,7 +1565,7 @@ function _6kRenderY1() {
   }
   oyDiv.innerHTML = oyHtml;
   var active = !!_6k.secilen;
-  kartDiv.innerHTML = '<div data-6kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;background:var(--g1);opacity:'+(active?'1':'0.35')+';cursor:'+(active?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb"></div></div>';
+  kartDiv.innerHTML = '<div data-6kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;width:52px;background:var(--g1);opacity:'+(active?'1':'0.35')+';cursor:'+(active?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb"></div></div>';
   _6kListenY1();
 }
 
