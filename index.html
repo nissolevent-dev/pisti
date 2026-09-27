@@ -3630,6 +3630,63 @@ function delClosedSess(sessId) {
   });
 }
 
+function delGameFromClosedSess(sessId, gameId) {
+  sifreSor('Oyun silmek için şifre:', function(sifre) {
+    if (sifre !== '2580') { toast('Yanlış şifre'); return; }
+
+    var sIdx = -1;
+    for (var i = 0; i < D.closedSess.length; i++) {
+      if (D.closedSess[i].id === sessId) { sIdx = i; break; }
+    }
+    if (sIdx === -1) { toast('Oturum bulunamadı'); return; }
+    var s = D.closedSess[sIdx];
+
+    var gIdx = -1;
+    for (var i = 0; i < D.allGames.length; i++) {
+      if (D.allGames[i].id === gameId) { gIdx = i; break; }
+    }
+    if (gIdx === -1) { toast('Oyun bulunamadı'); return; }
+    var g = D.allGames[gIdx];
+
+    if (!D.winLoss) D.winLoss = {};
+    if (!s.summary) s.summary = {};
+
+    for (var p in g.payMap) {
+      var val = g.payMap[p] || 0;
+
+      // Tüm zamanlar toplamından (ldg) geri al — basit kümülatif toplam
+      D.ldg[p] = (D.ldg[p] || 0) - val;
+
+      // Bu kapalı oturumun kendi özetinden (summary) geri al; W/L, o oturumun
+      // NET sonucuna göre sayıldığı için işaret değişirse W/L'yi de düzelt.
+      var oldSummary = s.summary[p] || 0;
+      var newSummary = oldSummary - val;
+      var oldSign = oldSummary > 0 ? 1 : (oldSummary < 0 ? -1 : 0);
+      var newSign = newSummary > 0 ? 1 : (newSummary < 0 ? -1 : 0);
+      if (oldSign !== newSign) {
+        if (!D.winLoss[p]) D.winLoss[p] = {w:0, l:0};
+        if (oldSign === 1) D.winLoss[p].w = Math.max(0, (D.winLoss[p].w || 0) - 1);
+        else if (oldSign === -1) D.winLoss[p].l = Math.max(0, (D.winLoss[p].l || 0) - 1);
+        if (newSign === 1) D.winLoss[p].w = (D.winLoss[p].w || 0) + 1;
+        else if (newSign === -1) D.winLoss[p].l = (D.winLoss[p].l || 0) + 1;
+      }
+      s.summary[p] = newSummary;
+    }
+
+    // Oyunu allGames'ten ve oturumun sessGameIds listesinden çıkar
+    D.allGames.splice(gIdx, 1);
+    if (s.sessGameIds) {
+      var idIdx = s.sessGameIds.indexOf(gameId);
+      if (idIdx > -1) s.sessGameIds.splice(idIdx, 1);
+    }
+    s.games = Math.max(0, (s.games || 1) - 1);
+
+    saveD();
+    renderHesap();
+    toast('Oyun silindi, toplamlar güncellendi');
+  });
+}
+
 function toggleCS(sid) {
   var el = document.getElementById(sid);
   if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
@@ -3865,12 +3922,15 @@ function renderHesap() {
               var tm=sg.payMap[tp]||0;
               return '<span style="'+(gP2[tp]?'color:#7c3aed':'')+'">'+tp+':'+(tm>=0?'+':'')+'TL'+Math.abs(tm)+'</span>';
             }).join(' ');
-            sessGamesHtml += '<div style="padding:6px 0;border-bottom:1px solid var(--bd);font-size:.73rem">'
+            sessGamesHtml += '<div style="padding:6px 0;border-bottom:1px solid var(--bd);font-size:.73rem;display:flex;justify-content:space-between;align-items:flex-start;gap:6px">'
+              + '<div style="flex:1">'
               + '<b style="color:var(--g2);margin-right:5px">#'+sg.num+'</b>'
               + '<span style="'+(wA2?'color:var(--win);font-weight:700':'')+'">K: '+tA+'</span>'
               + ' <span style="color:var(--tx3)">vs</span> '
               + '<span style="'+(wB2?'color:var(--win);font-weight:700':'')+'">S: '+tB+'</span>'
               + (sg.rubikon?'<span style="background:#dc2626;color:#fff;font-size:.55rem;padding:1px 4px;border-radius:3px;margin-left:4px">R</span>':'')
+              + '</div>'
+              + '<button onclick="delGameFromClosedSess('+s.id+','+sg.id+')" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:.68rem;padding:2px 4px;font-family:inherit;flex-shrink:0">Sil</button>'
               + '</div>';
           }
         }
