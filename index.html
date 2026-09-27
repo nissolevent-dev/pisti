@@ -2027,9 +2027,6 @@ function _7kKartTikY1() {
   _7k.eslesen[_7k.secilen] = k;
   _7k.secilen = null;
   _7kRenderY1();
-  if (Object.keys(_7k.eslesen).length === _7k._yenidenCekOyuncular.length) {
-    setTimeout(function() { _7kY1Sonuc(); }, 600);
-  }
 }
 
 function _7kRenderY1() {
@@ -2037,6 +2034,7 @@ function _7kRenderY1() {
   var aciklama = document.getElementById('7kart-aciklama');
   var oyDiv = document.getElementById('7kart-oyuncular');
   var kartDiv = document.getElementById('7kart-kart');
+  var aksiyonDiv = document.getElementById('7kart-aksiyon');
   if (baslik) baslik.textContent = '🃏 Kart Çek';
   var zorunluIsimler = (_7k._zorunluDisarida || []).map(function(p){return p.split(' ')[0];}).join(', ');
   if (aciklama) aciklama.textContent = zorunluIsimler
@@ -2056,6 +2054,11 @@ function _7kRenderY1() {
   oyDiv.innerHTML = oyHtml;
   var active = !!_7k.secilen;
   kartDiv.innerHTML = '<div data-7kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;width:88px;background:var(--g1);opacity:'+(active?'1':'0.35')+';cursor:'+(active?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb"></div></div>';
+  if (aksiyonDiv) {
+    aksiyonDiv.innerHTML = (Object.keys(_7k.eslesen).length === oyuncular.length)
+      ? '<button class="btn bp bfw" onclick="_7kY1Sonuc()">Tamam</button>'
+      : '';
+  }
   _7kListenY1();
 }
 
