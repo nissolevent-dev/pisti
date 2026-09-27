@@ -1906,6 +1906,43 @@ function _7kRender() {
   _7kListen();
 }
 
+function _7kGercekOturanlar(g) {
+  // Bir oyunda gerçekten masada oturan (dışarıdan ortak olmayan) kişileri döndürür
+  var oturanlar = {};
+  var partnerKeys = (g.roundSnapshot && g.roundSnapshot.partners) ? Object.keys(g.roundSnapshot.partners) : (g.partners || []);
+  var hepsi = (g.teamA || []).concat(g.teamB || []);
+  hepsi.forEach(function(p) { if (partnerKeys.indexOf(p) < 0) oturanlar[p] = true; });
+  return oturanlar;
+}
+
+function _7kUstusteOturanlar() {
+  // Bu oturumdaki SON 2 oyunda (arka arkaya) masada oturan kişileri döndürür
+  var result = {};
+  if (!D.sessGames || D.sessGames.length < 2) return result;
+  var o1 = _7kGercekOturanlar(D.sessGames[D.sessGames.length - 2]);
+  var o2 = _7kGercekOturanlar(D.sessGames[D.sessGames.length - 1]);
+  for (var p in o1) { if (o2[p]) result[p] = true; }
+  return result;
+}
+
+function _7kY1Finalize(kalan, disaridakilerTumu) {
+  _7k.disaridakiler = disaridakilerTumu;
+  var asama2Oyuncular = kalan.concat(_7k._oncekiDisarida);
+  _7k._asama2Oyuncular = asama2Oyuncular;
+  _7k.masadakiler = asama2Oyuncular;
+  var ortakKartlar = _kShuffle([
+    {deger:'A',renk:'K',sembol:'♥'},{deger:'A',renk:'K',sembol:'♦'},
+    {deger:'A',renk:'S',sembol:'♠'},{deger:'A',renk:'S',sembol:'♣'}
+  ]);
+  _7k.ortakKartDizisi = ortakKartlar;
+  _7k.ortakAcikKartlar = [null,null,null,null];
+  _7k.ortakEslesen = {};
+  _7k.ortakSecilen = null;
+  _7k.asama = 2;
+  _7kRender();
+  _7kListen();
+}
+
 function _7kYenidenCekFromGame(teamA, teamB, partnersList) {
   // Önceki oyunun masadaki 4 kişisi ve dışarıdaki 3 kişisi
   var oncekiMasada4 = teamA.concat(teamB).filter(function(p) {
@@ -1921,10 +1958,31 @@ function _7kYenidenCekFromGame(teamA, teamB, partnersList) {
   _7k.disOrtak = {};
   _7k.disSecilen = null;
 
-  // Önceki dışarıdaki 3 kişi masaya döner; önceki masadaki 4 kişi arasından
-  // yeniden kart çekilip en düşük 3'ü yeni dışarıda kalacak kişiler olur.
-  _7k._yenidenCekOyuncular = oncekiMasada4;
+  // Üst üste 2 oyun (bu oturumdaki son 2 oyun) masada oturanlar bir sonraki oyunda
+  // kart çekmez, otomatik dışarıda olur ve ortaklık (renk) kartı çeker.
+  var ustuste = _7kUstusteOturanlar();
+  var zorunluDisarida = oncekiMasada4.filter(function(p) { return ustuste[p]; });
+  var cekecekler = oncekiMasada4.filter(function(p) { return !ustuste[p]; });
+  // Güvenlik: normalde en fazla 1 kişi üst üste olabilir; hepsi zorunlu çıkarsa
+  // (beklenmeyen bir durum) normal akışa dön, kimseyi otomatik çıkarma.
+  if (cekecekler.length === 0) {
+    zorunluDisarida = [];
+    cekecekler = oncekiMasada4;
+  }
+
   _7k._oncekiDisarida = oncekiDisarida3;
+  _7k._zorunluDisarida = zorunluDisarida;
+
+  if (cekecekler.length <= 1) {
+    // Kart çekimine gerek yok: kalan tek kişi (varsa) doğrudan masada kalır.
+    _7kY1Finalize(cekecekler, zorunluDisarida);
+    document.getElementById('ov-7kart').classList.add('on');
+    return;
+  }
+
+  // Önceki dışarıdaki 3 kişi masaya döner; kart çekecekler arasından
+  // en düşük olan(lar) yeni dışarıda kalacak kişiler olur.
+  _7k._yenidenCekOyuncular = cekecekler;
   _7k.asama = 'Y1';
   _7kRenderY1();
   _7kListenY1();
@@ -1976,7 +2034,10 @@ function _7kRenderY1() {
   var oyDiv = document.getElementById('7kart-oyuncular');
   var kartDiv = document.getElementById('7kart-kart');
   if (baslik) baslik.textContent = '🃏 Kart Çek';
-  if (aciklama) aciklama.textContent = 'Önce ismine dokun, sonra kapalı karta dokun.';
+  var zorunluIsimler = (_7k._zorunluDisarida || []).map(function(p){return p.split(' ')[0];}).join(', ');
+  if (aciklama) aciklama.textContent = zorunluIsimler
+    ? (zorunluIsimler + ' üst üste 2 oyun oynadığı için otomatik dışarıda. Kalanlar için: önce ismine dokun, sonra kapalı karta dokun.')
+    : 'Önce ismine dokun, sonra kapalı karta dokun.';
   var oyHtml = '';
   var oyuncular = _7k._yenidenCekOyuncular;
   for (var i = 0; i < oyuncular.length; i++) {
@@ -1995,13 +2056,13 @@ function _7kRenderY1() {
 }
 
 function _7kY1Sonuc() {
-  var oyuncular = _7k._yenidenCekOyuncular; // önceki masadaki 4 kişi
+  var oyuncular = _7k._yenidenCekOyuncular; // kart çekecek havuz (üst üste oturanlar çıkarılmış, 3 ya da 4 kişi)
   var sirali = oyuncular.slice().sort(function(a, b) {
     return _6kDegerSira(_7k.eslesen[a].deger) - _6kDegerSira(_7k.eslesen[b].deger);
   });
-  // Sınırdaki (3. ve 4. sıra) kart değeri eşitse masada kimin kalacağı belli değildir — o değere sahip olanlar yeniden çeksin
-  var sinirDegerY1 = _6kDegerSira(_7k.eslesen[sirali[2]].deger);
-  if (_6kDegerSira(_7k.eslesen[sirali[3]].deger) === sinirDegerY1) {
+  var cutIdx = sirali.length - 1; // havuzdan en büyük 1 kişi masada kalır, gerisi dışarı
+  var sinirDegerY1 = _6kDegerSira(_7k.eslesen[sirali[cutIdx - 1]].deger);
+  if (_6kDegerSira(_7k.eslesen[sirali[cutIdx]].deger) === sinirDegerY1) {
     var esitOyuncularY1 = sirali.filter(function(p) {
       return _6kDegerSira(_7k.eslesen[p].deger) === sinirDegerY1;
     });
@@ -2010,25 +2071,10 @@ function _7kY1Sonuc() {
     setTimeout(function() { _7kRenderY1(); }, 900);
     return;
   }
-  var yeniDisarida = sirali.slice(0, 3); // en küçük 3 dışarıda
-  var kalan1 = sirali.slice(3);         // en büyük 1 masada kalır
-  _7k.disaridakiler = yeniDisarida;
-
-  // Aşama 2: masada kalan 1 + önceki dışarıdaki 3 (masaya dönen) = 4 kişi as çeker
-  var asama2Oyuncular = kalan1.concat(_7k._oncekiDisarida);
-  _7k._asama2Oyuncular = asama2Oyuncular;
-  _7k.masadakiler = asama2Oyuncular;
-  var ortakKartlar = _kShuffle([
-    {deger:'A',renk:'K',sembol:'♥'},{deger:'A',renk:'K',sembol:'♦'},
-    {deger:'A',renk:'S',sembol:'♠'},{deger:'A',renk:'S',sembol:'♣'}
-  ]);
-  _7k.ortakKartDizisi = ortakKartlar;
-  _7k.ortakAcikKartlar = [null,null,null,null];
-  _7k.ortakEslesen = {};
-  _7k.ortakSecilen = null;
-  _7k.asama = 2;
-  _7kRender();
-  _7kListen();
+  var yeniDisaridaCekilen = sirali.slice(0, cutIdx); // havuzdan dışarı kalanlar
+  var kalan1 = sirali.slice(cutIdx);                 // masada kalan 1 kişi
+  var disaridakilerTumu = (_7k._zorunluDisarida || []).concat(yeniDisaridaCekilen);
+  _7kY1Finalize(kalan1, disaridakilerTumu);
 }
 
 function _7kMasaKur() {
@@ -3697,24 +3743,9 @@ function renderLdg(elId, players, ldg) {
   var x2Set = {};
   var playerCount = D.sess && D.sess.players ? D.sess.players.length : 0;
   if (!isAllTime && playerCount === 7 && D.sessGames && D.sessGames.length >= 2) {
-    function gercekOturanlar(g) {
-      var oturanlar = {};
-      // roundSnapshot'tan partner anahtarlarını al (daha güvenilir)
-      var partnerKeys = [];
-      if (g.roundSnapshot && g.roundSnapshot.partners) {
-        partnerKeys = Object.keys(g.roundSnapshot.partners);
-      } else {
-        partnerKeys = g.partners || [];
-      }
-      var hepsi = (g.teamA || []).concat(g.teamB || []);
-      hepsi.forEach(function(p) {
-        if (partnerKeys.indexOf(p) < 0) oturanlar[p] = true;
-      });
-      return oturanlar;
-    }
     for (var gi = 0; gi < D.sessGames.length - 1; gi++) {
-      var o1 = gercekOturanlar(D.sessGames[gi]);
-      var o2 = gercekOturanlar(D.sessGames[gi + 1]);
+      var o1 = _7kGercekOturanlar(D.sessGames[gi]);
+      var o2 = _7kGercekOturanlar(D.sessGames[gi + 1]);
       for (var pp in o1) { if (o2[pp]) x2Set[pp] = true; }
     }
   }
