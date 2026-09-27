@@ -1686,9 +1686,6 @@ function _6kKartTikY1() {
   _6k.eslesen[_6k.secilen] = k;
   _6k.secilen = null;
   _6kRenderY1();
-  if (Object.keys(_6k.eslesen).length === _6k._yenidenCekOyuncular.length) {
-    setTimeout(function() { _6kY1Sonuc(); }, 600);
-  }
 }
 
 function _6kRenderY1() {
@@ -1696,6 +1693,7 @@ function _6kRenderY1() {
   var aciklama = document.getElementById('6kart-aciklama');
   var oyDiv = document.getElementById('6kart-oyuncular');
   var kartDiv = document.getElementById('6kart-kart');
+  var aksiyonDiv = document.getElementById('6kart-aksiyon');
   if (baslik) baslik.textContent = '🃏 Kart Çek';
   if (aciklama) aciklama.textContent = 'Önce ismine dokun, sonra kapalı karta dokun.';
   var oyHtml = '';
@@ -1712,6 +1710,11 @@ function _6kRenderY1() {
   oyDiv.innerHTML = oyHtml;
   var active = !!_6k.secilen;
   kartDiv.innerHTML = '<div data-6kk="1" style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;width:88px;background:var(--g1);opacity:'+(active?'1':'0.35')+';cursor:'+(active?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb"></div></div>';
+  if (aksiyonDiv) {
+    aksiyonDiv.innerHTML = (Object.keys(_6k.eslesen).length === oyuncular.length)
+      ? '<button class="btn bp bfw" onclick="_6kY1Sonuc()">Tamam</button>'
+      : '';
+  }
   _6kListenY1();
 }
 
