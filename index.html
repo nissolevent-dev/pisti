@@ -211,6 +211,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
   </div>
   <div id="s4" style="display:none">
+    <!-- Yarım kalan kart çekme rotasyonu varsa devam etme banner'ı -->
+    <div id="rotasyon-devam-banner" style="display:none;margin-bottom:12px">
+      <button class="btn bp bfw" onclick="rotasyonaDevamEt()" style="background:#e8c96a;border-color:#e8c96a;color:#3a2f00">🃏 Kart çekmeye devam et</button>
+    </div>
     <!-- Masa sekmeleri -->
     <div style="display:flex;gap:2px;background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:3px;margin-bottom:12px">
       <button id="mtab1" class="btn bp bfw" style="border-radius:8px;font-size:.8rem" onclick="switchMasa(1)">Masa 1</button>
@@ -1007,12 +1011,38 @@ function kartCekmeVazgec(ovId) {
 function kartCekmeVazgecOyunaDon() {
   closeOv('ov-kart-vazgec');
   goS(4);
+  guncelleRotasyonBanner();
 }
 
 function kartCekmeVazgecManuel() {
   closeOv('ov-kart-vazgec');
+  if (typeof _6k !== 'undefined') _6k.pending = false;
+  if (typeof _7k !== 'undefined') _7k.pending = false;
+  guncelleRotasyonBanner();
   goS(3);
   setTimeout(function() { buildSeats(); }, 50);
+}
+
+function guncelleRotasyonBanner() {
+  var banner = document.getElementById('rotasyon-devam-banner');
+  if (!banner) return;
+  var pending = (typeof _6k !== 'undefined' && _6k.pending) || (typeof _7k !== 'undefined' && _7k.pending);
+  banner.style.display = pending ? 'block' : 'none';
+}
+
+function rotasyonaDevamEt() {
+  if (typeof _7k !== 'undefined' && _7k.pending) {
+    document.getElementById('ov-7kart').classList.add('on');
+    if (_7k.asama === 'Y1') { _7kRenderY1(); _7kListenY1(); }
+    else { _7kRender(); _7kListen(); }
+    return;
+  }
+  if (typeof _6k !== 'undefined' && _6k.pending) {
+    document.getElementById('ov-6kart').classList.add('on');
+    if (_6k.asama === 'Y1') { _6kRenderY1(); _6kListenY1(); }
+    else { _6kRender(); _6kListen(); }
+    return;
+  }
 }
 
 function resetRoundAndGoS3() {
@@ -1433,6 +1463,7 @@ function _6kRender() {
 }
 
 function _6kYenidenCekFromGame(teamA, teamB, partnersList) {
+  _6k.pending = true;
   // sessGames'ten gelen verilerle çalış
   var oncekiMasada4 = teamA.concat(teamB).filter(function(p) {
     return partnersList.indexOf(p) < 0;
@@ -1660,6 +1691,8 @@ function _6kY1Sonuc() {
 
 
 function _6kMasaKur() {
+  _6k.pending = false;
+  guncelleRotasyonBanner();
   var kirmizilar = _6k.masadakiler.filter(function(p) { return _6k.ortakEslesen[p] && _6k.ortakEslesen[p].renk === 'K'; });
   var siyahlar = _6k.masadakiler.filter(function(p) { return _6k.ortakEslesen[p] && _6k.ortakEslesen[p].renk === 'S'; });
 
@@ -1985,6 +2018,7 @@ function _7kY1Finalize(kalan, disaridakilerTumu) {
 }
 
 function _7kYenidenCekFromGame(teamA, teamB, partnersList) {
+  _7k.pending = true;
   // Önceki oyunun masadaki 4 kişisi ve dışarıdaki 3 kişisi
   var oncekiMasada4 = teamA.concat(teamB).filter(function(p) {
     return partnersList.indexOf(p) < 0;
@@ -2122,6 +2156,8 @@ function _7kY1Sonuc() {
 }
 
 function _7kMasaKur() {
+  _7k.pending = false;
+  guncelleRotasyonBanner();
   var kirmizilar = _7k.masadakiler.filter(function(p) { return _7k.ortakEslesen[p] && _7k.ortakEslesen[p].renk === 'K'; });
   var siyahlar = _7k.masadakiler.filter(function(p) { return _7k.ortakEslesen[p] && _7k.ortakEslesen[p].renk === 'S'; });
 
