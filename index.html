@@ -3964,13 +3964,16 @@ function borcAlacakDuzenle() {
 function showBorcAlacakPaylas() {
   var canvas = document.getElementById('share-canvas');
   var dpr = window.devicePixelRatio || 1;
-  var W = 600, pad = 28;
+  var W = 600, pad = 22;
 
   var names = Object.keys(D.borcAlacak || {}).filter(function(p) { return (D.borcAlacak[p] || 0) !== 0; });
   names.sort(function(a, b) { return (D.borcAlacak[b] || 0) - (D.borcAlacak[a] || 0); });
+  var toplam = 0;
+  for (var i = 0; i < names.length; i++) toplam += (D.borcAlacak[names[i]] || 0);
 
-  var rowH = 44, secH = 40, titleH = 76, dateH = 32, footH = 44;
-  var H = titleH + dateH + secH + names.length * rowH + footH + pad * 2;
+  var rowH = 54, headH = 68, footH = 56, outerPad = 16;
+  var cardH = headH + names.length * rowH + footH;
+  var H = cardH + outerPad * 2 + 20;
 
   canvas.width = W * dpr;
   canvas.height = H * dpr;
@@ -3978,41 +3981,70 @@ function showBorcAlacakPaylas() {
   var ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
+  // Sayfa arka planı — uygulamadaki açık yeşilimsi beyaz
+  ctx.fillStyle = '#f1f5f1';
+  ctx.fillRect(0, 0, W, H);
+
+  // Üstte küçük uygulama etiketi
   ctx.fillStyle = '#1b4332';
-  roundRect(ctx, 0, 0, W, H, 16);
-  ctx.fill();
-
-  ctx.strokeStyle = '#e8c96a';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(pad, titleH + dateH - 8); ctx.lineTo(W - pad, titleH + dateH - 8); ctx.stroke();
-
-  ctx.fillStyle = '#e8c96a';
-  ctx.font = 'bold 38px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText('PİŞTİ', W / 2, 46);
-  ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.font = '15px Arial';
-  ctx.fillText('ORTAKLI TAKİP', W / 2, 66);
-
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = '15px Arial';
-  ctx.fillText(new Date().toLocaleDateString('tr-TR'), W / 2, titleH + dateH - 16);
-
-  var y = titleH + dateH + 8;
-  y = drawSection(ctx, 'BORÇ / ALACAK', names, function(p) {
-    return D.borcAlacak[p] || 0;
-  }, null, false, W, pad, y, rowH, secH);
-
-  ctx.strokeStyle = 'rgba(232,201,106,0.3)';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(pad, H - footH - 4); ctx.lineTo(W - pad, H - footH - 4); ctx.stroke();
-  ctx.fillStyle = '#e8c96a';
-  ctx.font = 'bold 14px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText('Borç / Alacak Durumu', W / 2, H - footH + 10);
-  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.font = 'bold 15px Arial';
+  ctx.textAlign = 'left';
+  ctx.fillText('PİŞTİ', outerPad + 4, outerPad + 18);
+  ctx.fillStyle = '#6a8a6a';
   ctx.font = '11px Arial';
-  ctx.fillText('piştitakip.pages.dev', W / 2, H - 8);
+  ctx.fillText('BORÇ / ALACAK', outerPad + 4, outerPad + 33);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#6a8a6a';
+  ctx.font = '11px Arial';
+  ctx.fillText(new Date().toLocaleDateString('tr-TR'), W - outerPad - 4, outerPad + 18);
+
+  var cardY = outerPad + 44;
+  var cardX = pad, cardW = W - pad * 2;
+
+  // Beyaz kart, açık yeşil kenarlık — ekrandaki ".card" ile aynı
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#c0d4c0';
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, cardX, cardY, cardW, cardH, 14);
+  ctx.fill(); ctx.stroke();
+
+  var innerX = cardX + 20;
+  var innerW = cardW - 40;
+  var y = cardY + rowH * 0.1;
+
+  for (var i = 0; i < names.length; i++) {
+    var p = names[i];
+    var val = D.borcAlacak[p];
+    if (i > 0) {
+      ctx.strokeStyle = '#e2ece2';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(innerX, y); ctx.lineTo(innerX + innerW, y); ctx.stroke();
+    }
+    ctx.fillStyle = '#1a2e1a';
+    ctx.font = '19px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(p, innerX, y + rowH / 2 + 7);
+
+    ctx.fillStyle = val > 0 ? '#166534' : '#991b1b';
+    ctx.font = 'bold 20px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText((val > 0 ? '+' : '') + val, innerX + innerW, y + rowH / 2 + 7);
+
+    y += rowH;
+  }
+
+  // Toplam satırı
+  ctx.strokeStyle = '#c0d4c0';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(innerX, y); ctx.lineTo(innerX + innerW, y); ctx.stroke();
+  var dengeli = toplam === 0;
+  var toplamRenk = dengeli ? '#6a8a6a' : '#dc2626';
+  ctx.fillStyle = toplamRenk;
+  ctx.font = 'bold 18px Arial';
+  ctx.textAlign = 'left';
+  ctx.fillText('Toplam' + (dengeli ? ' (dengeli)' : ' (dengesiz!)'), innerX, y + footH / 2 + 2);
+  ctx.textAlign = 'right';
+  ctx.fillText((toplam > 0 ? '+' : '') + toplam, innerX + innerW, y + footH / 2 + 2);
 
   document.getElementById('ov-share').classList.add('on');
 }
