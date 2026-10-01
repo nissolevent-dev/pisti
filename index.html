@@ -3373,6 +3373,7 @@ function odemeTahsilatOnayla() {
 function _closeSessionFinish(allSessPlayers, summary, odemeler) {
   if (!D.winLoss) D.winLoss = {};
   if (!D.borcAlacak) D.borcAlacak = {};
+  var borcAlacakDegisimi = {};
   for (var i = 0; i < allSessPlayers.length; i++) {
     var p = allSessPlayers[i];
     var sessResult = summary[p] || 0;
@@ -3388,6 +3389,7 @@ function _closeSessionFinish(allSessPlayers, summary, odemeler) {
     if (kalan !== 0) {
       var yeni = (D.borcAlacak[p] || 0) + kalan;
       if (yeni === 0) delete D.borcAlacak[p]; else D.borcAlacak[p] = yeni;
+      borcAlacakDegisimi[p] = kalan; // bu oturumun borç/alacak tablosuna net etkisi — silinirse geri alınacak
     }
   }
 
@@ -3400,7 +3402,8 @@ function _closeSessionFinish(allSessPlayers, summary, odemeler) {
     games: D.sessGames.length,
     players: allSessPlayers,
     summary: summary,
-    sessGameIds: sessIds
+    sessGameIds: sessIds,
+    borcAlacakDegisimi: borcAlacakDegisimi
   });
 
   // Görsel paylaşım için veriyi sakla
@@ -3713,6 +3716,15 @@ function delClosedSess(sessId) {
       if (!D.winLoss[p2]) D.winLoss[p2] = {w:0, l:0};
       if (val > 0) D.winLoss[p2].w = Math.max(0, (D.winLoss[p2].w || 0) - 1);
       else if (val < 0) D.winLoss[p2].l = Math.max(0, (D.winLoss[p2].l || 0) - 1);
+    }
+
+    // Bu oturumun borç/alacak tablosuna aktardığı tutarı geri al
+    if (!D.borcAlacak) D.borcAlacak = {};
+    if (s.borcAlacakDegisimi) {
+      for (var p3 in s.borcAlacakDegisimi) {
+        var yeniBA = (D.borcAlacak[p3] || 0) - (s.borcAlacakDegisimi[p3] || 0);
+        if (yeniBA === 0) delete D.borcAlacak[p3]; else D.borcAlacak[p3] = yeniBA;
+      }
     }
 
     // allGames'den o oturumun oyunlarını sil
