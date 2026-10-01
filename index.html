@@ -3337,21 +3337,34 @@ function showOdemeTahsilat(players, summary, onConfirm) {
     return;
   }
   _odemeTahsilatState = { players: ilgili, onConfirm: onConfirm };
-  var html = '';
-  for (var i = 0; i < ilgili.length; i++) {
-    var p = ilgili[i];
+
+  var alacakli = ilgili.filter(function(p) { return (summary[p]||0) > 0; });
+  var borclu = ilgili.filter(function(p) { return (summary[p]||0) < 0; });
+
+  function satirHtml(p) {
     var sonuc = summary[p] || 0;
     var borc = sonuc < 0;
     var tutar = Math.abs(sonuc);
     var safeId = 'ot-' + p.replace(/[^a-zA-Z0-9]/g, '_');
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd)">'
-      + '<div><div style="font-size:.85rem;font-weight:600">' + p + '</div>'
-      + '<div style="font-size:.7rem;color:' + (borc ? 'var(--lose)' : 'var(--win)') + '">' + (borc ? 'Borç' : 'Alacak') + ': TL' + tutar + '</div></div>'
-      + '<div style="text-align:right">'
-      + '<label style="font-size:.65rem;color:var(--tx3);display:block">' + (borc ? 'Ödeme' : 'Tahsilat') + '</label>'
-      + '<input type="number" id="' + safeId + '" value="' + tutar + '" style="width:100px;text-align:right;padding:5px 6px;border:1px solid var(--bd);border-radius:6px;font-size:.85rem">'
-      + '</div></div>';
+    return '<div style="padding:8px;margin-bottom:8px;background:var(--bg2);border-radius:8px">'
+      + '<div style="font-size:.8rem;font-weight:600;margin-bottom:2px">' + p + '</div>'
+      + '<div style="font-size:.68rem;color:' + (borc ? 'var(--lose)' : 'var(--win)') + ';margin-bottom:5px">' + (borc ? 'Borç' : 'Alacak') + ': TL' + tutar + '</div>'
+      + '<label style="font-size:.62rem;color:var(--tx3);display:block;margin-bottom:2px">' + (borc ? 'Ödeme' : 'Tahsilat') + '</label>'
+      + '<input type="number" id="' + safeId + '" value="' + tutar + '" style="width:100%;box-sizing:border-box;text-align:center;padding:5px 4px;border:1px solid var(--bd);border-radius:6px;font-size:.82rem">'
+      + '</div>';
   }
+
+  var html = '<div style="display:flex;gap:10px">';
+  html += '<div style="flex:1;min-width:0">';
+  html += '<div style="font-size:.68rem;font-weight:700;color:var(--win);margin-bottom:6px">ALACAKLILAR (+)</div>';
+  for (var i = 0; i < alacakli.length; i++) html += satirHtml(alacakli[i]);
+  html += '</div>';
+  html += '<div style="flex:1;min-width:0">';
+  html += '<div style="font-size:.68rem;font-weight:700;color:var(--lose);margin-bottom:6px">BORÇLULAR (-)</div>';
+  for (var i = 0; i < borclu.length; i++) html += satirHtml(borclu[i]);
+  html += '</div>';
+  html += '</div>';
+
   document.getElementById('odeme-tahsilat-liste').innerHTML = html;
   document.getElementById('ov-odeme-tahsilat').classList.add('on');
 }
@@ -3369,6 +3382,7 @@ function odemeTahsilatOnayla() {
   _odemeTahsilatState = null;
   cb(odemeler);
 }
+
 
 function _closeSessionFinish(allSessPlayers, summary, odemeler) {
   if (!D.winLoss) D.winLoss = {};
