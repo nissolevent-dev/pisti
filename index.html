@@ -3380,7 +3380,7 @@ function showOdemeTahsilat(players, summary, onConfirm) {
       + '<div style="font-size:.8rem;font-weight:600;margin-bottom:2px">' + p + '</div>'
       + '<div style="font-size:.68rem;color:' + (borc ? 'var(--lose)' : 'var(--win)') + ';margin-bottom:5px">' + (borc ? 'Borç' : 'Alacak') + ': TL' + tutar + '</div>'
       + '<label style="font-size:.62rem;color:var(--tx3);display:block;margin-bottom:2px">' + (borc ? 'Ödeme' : 'Tahsilat') + '</label>'
-      + '<input type="number" id="' + safeId + '" value="' + tutar + '" style="width:100%;box-sizing:border-box;text-align:center;padding:5px 4px;border:1px solid var(--bd);border-radius:6px;font-size:.82rem">'
+      + '<input type="number" id="' + safeId + '" placeholder="' + tutar + '" style="width:100%;box-sizing:border-box;text-align:center;padding:5px 4px;border:1px solid var(--bd);border-radius:6px;font-size:.82rem">'
       + '</div>';
   }
 
