@@ -991,6 +991,7 @@ function updateMasaLabels() {
 
 function refreshAll() {
   renderPool();
+  _rotasyonDurumunuYukle();
   var mpEl = document.getElementById('m-puan');
   if (mpEl) {
     mpEl.value = D.sess.mPuan;
@@ -1075,6 +1076,7 @@ function kartCekmeVazgecManuel() {
   if (typeof _7k !== 'undefined') _7k.pending = false;
   if (typeof _kPending !== 'undefined') _kPending = false;
   if (typeof _4kPending !== 'undefined') _4kPending = false;
+  D._rotasyonDurumu = null;
   // Manuel kuruluma geçildi — bu oyuncu sayısı değişmeden kaldığı sürece bir daha
   // kart çekme moduna otomatik dönmesin (sayı değişirse tekrar sorulur).
   D.kartCekmeModuKapaliSayi = D.sess.players.length;
@@ -1088,6 +1090,30 @@ function guncelleRotasyonBanner() {
   if (!banner) return;
   var pending = (typeof _6k !== 'undefined' && _6k.pending) || (typeof _7k !== 'undefined' && _7k.pending) || (typeof _kPending !== 'undefined' && _kPending) || (typeof _4kPending !== 'undefined' && _4kPending);
   banner.style.display = pending ? 'block' : 'none';
+}
+
+function _rotasyonKaydet() {
+  // Yarım kalmış kart çekme durumunu Firebase'e yazar — sayfa yenilense bile
+  // "kart çekmeye devam et" banner'ı ve ilerleme kaybolmasın.
+  if (typeof _6k !== 'undefined' && _6k.pending) {
+    D._rotasyonDurumu = { tip: '6k', data: JSON.parse(JSON.stringify(_6k)) };
+  } else if (typeof _7k !== 'undefined' && _7k.pending) {
+    D._rotasyonDurumu = { tip: '7k', data: JSON.parse(JSON.stringify(_7k)) };
+  } else {
+    D._rotasyonDurumu = null;
+  }
+  saveD();
+}
+
+function _rotasyonDurumunuYukle() {
+  // Sayfa (yeniden) yüklendiğinde, yarım kalmış bir kart çekme kaydı varsa geri yükle
+  if (!D._rotasyonDurumu || !D._rotasyonDurumu.data) return;
+  if (D._rotasyonDurumu.tip === '6k' && typeof _6k !== 'undefined') {
+    for (var k in D._rotasyonDurumu.data) _6k[k] = D._rotasyonDurumu.data[k];
+  } else if (D._rotasyonDurumu.tip === '7k' && typeof _7k !== 'undefined') {
+    for (var k2 in D._rotasyonDurumu.data) _7k[k2] = D._rotasyonDurumu.data[k2];
+  }
+  guncelleRotasyonBanner();
 }
 
 function rotasyonaDevamEt() {
@@ -1208,6 +1234,7 @@ function toggleSess(name) {
     _7k.pending = false;
     if (typeof _kPending !== 'undefined') _kPending = false;
     if (typeof _4kPending !== 'undefined') _4kPending = false;
+    D._rotasyonDurumu = null;
     if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
   }
 
@@ -1337,6 +1364,7 @@ function show6KisiKartCekme() {
   D._6kDisaridaGecmis = {};
   _6k.pending = false;
   _7k.pending = false;
+  D._rotasyonDurumu = null;
   if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
   _6k.asama = 1;
   _6k.deste52 = _6kDeste52();
@@ -1567,6 +1595,7 @@ function _6kRender() {
     aksiyonDiv.innerHTML = '';
   }
   _6kListen();
+  _rotasyonKaydet();
 }
 
 function _6kYenidenCekFromGame(teamA, teamB, partnersList) {
@@ -1760,6 +1789,7 @@ function _6kRenderY1() {
       : '';
   }
   _6kListenY1();
+  _rotasyonKaydet();
 }
 
 function _6kY1Sonuc() {
@@ -1802,6 +1832,7 @@ function _6kY1Sonuc() {
 
 function _6kMasaKur() {
   _6k.pending = false;
+  D._rotasyonDurumu = null;
   guncelleRotasyonBanner();
   var kirmizilar = _6k.masadakiler.filter(function(p) { return _6k.ortakEslesen[p] && _6k.ortakEslesen[p].renk === 'K'; });
   var siyahlar = _6k.masadakiler.filter(function(p) { return _6k.ortakEslesen[p] && _6k.ortakEslesen[p].renk === 'S'; });
@@ -1861,6 +1892,7 @@ var _7k = {
 function show7KisiKartCekme() {
   _7k.pending = false;
   _6k.pending = false;
+  D._rotasyonDurumu = null;
   if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
   _7k.asama = 1;
   _7k.deste52 = _6kDeste52();
@@ -2087,6 +2119,7 @@ function _7kRender() {
     aksiyonDiv.innerHTML = '';
   }
   _7kListen();
+  _rotasyonKaydet();
 }
 
 function _7kGercekOturanlar(g) {
@@ -2250,6 +2283,7 @@ function _7kRenderY1() {
       : '';
   }
   _7kListenY1();
+  _rotasyonKaydet();
 }
 
 function _7kY1Sonuc() {
@@ -2276,6 +2310,7 @@ function _7kY1Sonuc() {
 
 function _7kMasaKur() {
   _7k.pending = false;
+  D._rotasyonDurumu = null;
   guncelleRotasyonBanner();
   var kirmizilar = _7k.masadakiler.filter(function(p) { return _7k.ortakEslesen[p] && _7k.ortakEslesen[p].renk === 'K'; });
   var siyahlar = _7k.masadakiler.filter(function(p) { return _7k.ortakEslesen[p] && _7k.ortakEslesen[p].renk === 'S'; });
