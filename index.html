@@ -3952,6 +3952,9 @@ function renderBorcAlacak() {
       + '<button class="btn bo bs" onclick="borcAlacakYeniEkle()">Ekle</button>'
       + '</div>';
     html += '<button class="btn bp bfw" style="margin-top:12px" onclick="borcAlacakKilitle()">Tamam</button>';
+    if (names.length > 0) {
+      html += '<button class="btn bo bfw" style="margin-top:8px;color:#dc2626;border-color:#dc2626" onclick="borcAlacakTumunuSifirla()">Tümünü Sıfırla</button>';
+    }
   } else {
     html += '<button class="btn bo bfw" style="margin-top:12px" onclick="borcAlacakDuzenle()">🔒 Düzenle (şifre gerekli)</button>';
     html += '<button class="btn bp bfw" style="margin-top:8px" onclick="showBorcAlacakPaylas()">📤 Görsel Olarak Paylaş</button>';
@@ -3959,6 +3962,13 @@ function renderBorcAlacak() {
 
   html += '</div>';
   el.innerHTML = html;
+}
+
+function borcAlacakTumunuSifirla() {
+  if (!confirm('Borç/Alacak tablosundaki tüm kayıtlar silinecek. Emin misiniz?')) return;
+  D.borcAlacak = {};
+  saveD();
+  renderBorcAlacak();
 }
 
 function borcAlacakYeniEkle() {
@@ -4009,6 +4019,7 @@ function borcAlacakDuzenle() {
 }
 
 function showBorcAlacakPaylas() {
+  _shareImageTitle = 'Borç/Alacak Durumu';
   var canvas = document.getElementById('share-canvas');
   var dpr = window.devicePixelRatio || 1;
   var W = 600, pad = 22;
@@ -5822,6 +5833,7 @@ function sifreIptal() {
 
 // ── PAYLAŞIM GÖRSELİ ──
 function showShareCard(data) {
+  _shareImageTitle = 'Pişti Oturum Sonuçları';
   var canvas = document.getElementById('share-canvas');
   var dpr = window.devicePixelRatio || 1;
   var W = 600, pad = 28;
@@ -5967,13 +5979,15 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+var _shareImageTitle = 'Pişti Oturum Sonuçları';
+
 function shareImage() {
   var canvas = document.getElementById('share-canvas');
   canvas.toBlob(function(blob) {
     if (navigator.share && navigator.canShare && navigator.canShare({files:[new File([blob],'pişti.png',{type:'image/png'})]})) {
       navigator.share({
         files: [new File([blob], 'pişti-oturum.png', {type:'image/png'})],
-        title: 'Pişti Oturum Sonuçları'
+        title: _shareImageTitle
       }).catch(function(){});
     } else {
       // Fallback: indir
