@@ -3853,25 +3853,69 @@ function renderBorcAlacak() {
   var el = document.getElementById('h-borc-alacak');
   if (!el) return;
   if (!D.borcAlacak) D.borcAlacak = {};
-  // Herkesi göster: havuzdaki herkes + borç/alacak tablosunda ismi geçen herkes
-  var names = D.pool.slice();
-  for (var p0 in D.borcAlacak) { if (names.indexOf(p0) < 0) names.push(p0); }
-  names.sort();
+  // Sadece sıfır olmayanları göster — sıfırlananlar listeden düşer
+  var names = Object.keys(D.borcAlacak).filter(function(p) { return (D.borcAlacak[p] || 0) !== 0; }).sort();
+  var toplam = 0;
+  for (var i = 0; i < names.length; i++) toplam += (D.borcAlacak[names[i]] || 0);
 
+  var kilitli = !!D.borcAlacakKilitli;
   var html = '<div class="card" style="margin-bottom:0">';
+
+  if (names.length === 0) {
+    html += '<div class="empty">Kayıtlı borç/alacak yok</div>';
+  }
+
   for (var i = 0; i < names.length; i++) {
     var p = names[i];
-    var val = D.borcAlacak[p] || 0;
-    var renk = val > 0 ? 'var(--win)' : (val < 0 ? 'var(--lose)' : 'var(--tx3)');
+    var val = D.borcAlacak[p];
+    var renk = val > 0 ? 'var(--win)' : 'var(--lose)';
     html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd)">'
-      + '<span style="font-size:.85rem">' + p + '</span>'
-      + '<div style="display:flex;align-items:center;gap:4px">'
-      + '<span style="font-size:.78rem;color:' + renk + ';font-weight:700;min-width:16px">' + (val > 0 ? '+' : '') + '</span>'
-      + '<input type="number" value="' + val + '" style="width:92px;text-align:right;padding:5px 6px;border:1px solid var(--bd);border-radius:6px;font-size:.85rem;color:' + renk + ';font-weight:700" onchange="updateBorcAlacak(\'' + p.replace(/'/g, "\\'") + '\', this.value)">'
-      + '</div></div>';
+      + '<span style="font-size:.85rem">' + p + '</span>';
+    if (kilitli) {
+      html += '<span style="font-size:.9rem;color:' + renk + ';font-weight:700">' + (val > 0 ? '+' : '') + val + '</span>';
+    } else {
+      html += '<div style="display:flex;align-items:center;gap:4px">'
+        + '<span style="font-size:.78rem;color:' + renk + ';font-weight:700;min-width:16px">' + (val > 0 ? '+' : '') + '</span>'
+        + '<input type="number" value="' + val + '" style="width:92px;text-align:right;padding:5px 6px;border:1px solid var(--bd);border-radius:6px;font-size:.85rem;color:' + renk + ';font-weight:700" onchange="updateBorcAlacak(\'' + p.replace(/'/g, "\\'") + '\', this.value)">'
+        + '</div>';
+    }
+    html += '</div>';
   }
+
+  var dengeli = toplam === 0;
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0 2px;font-weight:700;font-size:.85rem">'
+    + '<span style="color:' + (dengeli ? 'var(--tx3)' : '#dc2626') + '">Toplam' + (dengeli ? ' (dengeli)' : ' (dengesiz!)') + '</span>'
+    + '<span style="color:' + (dengeli ? 'var(--tx3)' : '#dc2626') + '">' + (toplam > 0 ? '+' : '') + toplam + '</span>'
+    + '</div>';
+
+  if (!kilitli) {
+    var mevcutOlmayanlar = D.pool.filter(function(p) { return !D.borcAlacak[p]; });
+    html += '<div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)">'
+      + '<select id="ba-yeni-kisi" style="flex:1;padding:6px;border:1px solid var(--bd);border-radius:6px;font-size:.82rem">'
+      + mevcutOlmayanlar.map(function(p) { return '<option value="' + p + '">' + p + '</option>'; }).join('')
+      + '</select>'
+      + '<input type="number" id="ba-yeni-tutar" placeholder="Tutar" style="width:84px;padding:6px;border:1px solid var(--bd);border-radius:6px;font-size:.82rem">'
+      + '<button class="btn bo bs" onclick="borcAlacakYeniEkle()">Ekle</button>'
+      + '</div>';
+    html += '<button class="btn bp bfw" style="margin-top:12px" onclick="borcAlacakKilitle()">Tamam</button>';
+  } else {
+    html += '<button class="btn bo bfw" style="margin-top:12px" onclick="borcAlacakDuzenle()">🔒 Düzenle (şifre gerekli)</button>';
+  }
+
   html += '</div>';
   el.innerHTML = html;
+}
+
+function borcAlacakYeniEkle() {
+  var sel = document.getElementById('ba-yeni-kisi');
+  var inp = document.getElementById('ba-yeni-tutar');
+  if (!sel || !sel.value) { toast('Kişi seçin'); return; }
+  var n = parseFloat(inp.value) || 0;
+  if (n === 0) { toast('Bir tutar girin'); return; }
+  if (!D.borcAlacak) D.borcAlacak = {};
+  D.borcAlacak[sel.value] = n;
+  saveD();
+  renderBorcAlacak();
 }
 
 function updateBorcAlacak(p, val) {
@@ -3881,6 +3925,32 @@ function updateBorcAlacak(p, val) {
   else { D.borcAlacak[p] = n; }
   saveD();
   renderBorcAlacak();
+}
+
+function borcAlacakKilitle() {
+  var toplam = 0;
+  for (var p in D.borcAlacak) toplam += (D.borcAlacak[p] || 0);
+  var devamEt = function() {
+    sifreSor('Tabloyu kapatmak için şifre:', function(sifre) {
+      if (sifre !== '2580') { toast('Yanlış şifre'); return; }
+      D.borcAlacakKilitli = true;
+      saveD();
+      renderBorcAlacak();
+    });
+  };
+  if (toplam !== 0) {
+    if (!confirm('Toplam sıfır değil (' + (toplam > 0 ? '+' : '') + toplam + '), dengesiz görünüyor. Yine de kapatmak istiyor musunuz?')) return;
+  }
+  devamEt();
+}
+
+function borcAlacakDuzenle() {
+  sifreSor('Düzenlemek için şifre:', function(sifre) {
+    if (sifre !== '2580') { toast('Yanlış şifre'); return; }
+    D.borcAlacakKilitli = false;
+    saveD();
+    renderBorcAlacak();
+  });
 }
 
 function renderHesap() {
