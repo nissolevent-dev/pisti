@@ -1100,6 +1100,17 @@ function _rotasyonKaydet() {
     D._rotasyonDurumu = { tip: '6k', sayi: sayi, data: JSON.parse(JSON.stringify(_6k)) };
   } else if (typeof _7k !== 'undefined' && _7k.pending) {
     D._rotasyonDurumu = { tip: '7k', sayi: sayi, data: JSON.parse(JSON.stringify(_7k)) };
+  } else if (typeof _kPending !== 'undefined' && _kPending) {
+    D._rotasyonDurumu = { tip: 'k', sayi: sayi, data: JSON.parse(JSON.stringify({
+      _kAsama: _kAsama, _kDeste1: _kDeste1, _kDeste2: _kDeste2, _kEslesen: _kEslesen,
+      _kDamlar: _kDamlar, _kSecilen: _kSecilen, _kDamSecilen: _kDamSecilen, _kDamKartlar: _kDamKartlar,
+      _kGruplar: _kGruplar, _kGrupIdx: _kGrupIdx, _kGrupSiradaki: _kGrupSiradaki,
+      _kDamYasakli: _kDamYasakli, _kDamUyari: _kDamUyari
+    })) };
+  } else if (typeof _4kPending !== 'undefined' && _4kPending) {
+    D._rotasyonDurumu = { tip: '4k', sayi: sayi, data: JSON.parse(JSON.stringify({
+      _4kEslesen: _4kEslesen, _4kSecilen: _4kSecilen, _4kDeste: _4kDeste
+    })) };
   } else {
     D._rotasyonDurumu = null;
   }
@@ -1117,10 +1128,21 @@ function _rotasyonDurumunuYukle() {
     saveD();
     return;
   }
-  if (D._rotasyonDurumu.tip === '6k' && typeof _6k !== 'undefined') {
-    for (var k in D._rotasyonDurumu.data) _6k[k] = D._rotasyonDurumu.data[k];
-  } else if (D._rotasyonDurumu.tip === '7k' && typeof _7k !== 'undefined') {
-    for (var k2 in D._rotasyonDurumu.data) _7k[k2] = D._rotasyonDurumu.data[k2];
+  var tip = D._rotasyonDurumu.tip;
+  var data = D._rotasyonDurumu.data;
+  if (tip === '6k' && typeof _6k !== 'undefined') {
+    for (var k in data) _6k[k] = data[k];
+  } else if (tip === '7k' && typeof _7k !== 'undefined') {
+    for (var k2 in data) _7k[k2] = data[k2];
+  } else if (tip === 'k') {
+    _kAsama = data._kAsama; _kDeste1 = data._kDeste1; _kDeste2 = data._kDeste2; _kEslesen = data._kEslesen;
+    _kDamlar = data._kDamlar; _kSecilen = data._kSecilen; _kDamSecilen = data._kDamSecilen; _kDamKartlar = data._kDamKartlar;
+    _kGruplar = data._kGruplar; _kGrupIdx = data._kGrupIdx; _kGrupSiradaki = data._kGrupSiradaki;
+    _kDamYasakli = data._kDamYasakli; _kDamUyari = data._kDamUyari;
+    _kPending = true;
+  } else if (tip === '4k') {
+    _4kEslesen = data._4kEslesen; _4kSecilen = data._4kSecilen; _4kDeste = data._4kDeste;
+    _4kPending = true;
   }
   guncelleRotasyonBanner();
 }
@@ -2368,6 +2390,7 @@ function show4KisiKartCekme() {
   _4kPending = true;
   if (typeof _6k !== 'undefined') _6k.pending = false;
   if (typeof _7k !== 'undefined') _7k.pending = false;
+  if (typeof _kPending !== 'undefined') _kPending = false;
   D._rotasyonDurumu = null;
   if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
   var players = D.sess.players;
@@ -2485,6 +2508,7 @@ function _4kRender() {
     }
   }
   kartDiv.innerHTML = kartHtml;
+  _rotasyonKaydet();
 }
 
 function _4kSonuc() {
@@ -2524,6 +2548,7 @@ function _4kSonuc() {
 
 function _4kKurMasa(kirmizi, siyah) {
   _4kPending = false;
+  D._rotasyonDurumu = null;
   D.oncekiOrtaklik4 = {K: kirmizi.slice(), S: siyah.slice()};
   D.siraliMod4 = true;
   D.round.masa1 = {A: kirmizi.slice(), B: siyah.slice()};
@@ -6279,6 +6304,7 @@ function showKartCekme(){
   _kPending=true;
   if (typeof _6k !== 'undefined') _6k.pending = false;
   if (typeof _7k !== 'undefined') _7k.pending = false;
+  if (typeof _4kPending !== 'undefined') _4kPending = false;
   D._rotasyonDurumu = null;
   if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
   _kAsama=1; _kEslesen={}; _kDamlar=[]; _kSecilen=null; _kDamSecilen=null; _kDamKartlar=[];
@@ -6587,6 +6613,7 @@ function _kRender(){
     if(sonucDiv)sonucDiv.style.display='none';
   }
   _kListen();
+  _rotasyonKaydet();
 }
 
 function _kIkinciMasaHayir(){
@@ -6697,6 +6724,7 @@ function _kSonuc(){
 
 function kartOnayla(){
   _kPending=false;
+  D._rotasyonDurumu = null;
   D._8910RoundDone = {};
   var g=window._kMasaG||{m1K:[],m1S:[],m2K:[],m2S:[]};
   D.round.masa1={A:g.m1K.slice(),B:g.m1S.slice()};
