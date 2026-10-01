@@ -1095,10 +1095,11 @@ function guncelleRotasyonBanner() {
 function _rotasyonKaydet() {
   // Yarım kalmış kart çekme durumunu Firebase'e yazar — sayfa yenilense bile
   // "kart çekmeye devam et" banner'ı ve ilerleme kaybolmasın.
+  var sayi = D.sess && D.sess.players ? D.sess.players.length : 0;
   if (typeof _6k !== 'undefined' && _6k.pending) {
-    D._rotasyonDurumu = { tip: '6k', data: JSON.parse(JSON.stringify(_6k)) };
+    D._rotasyonDurumu = { tip: '6k', sayi: sayi, data: JSON.parse(JSON.stringify(_6k)) };
   } else if (typeof _7k !== 'undefined' && _7k.pending) {
-    D._rotasyonDurumu = { tip: '7k', data: JSON.parse(JSON.stringify(_7k)) };
+    D._rotasyonDurumu = { tip: '7k', sayi: sayi, data: JSON.parse(JSON.stringify(_7k)) };
   } else {
     D._rotasyonDurumu = null;
   }
@@ -1106,8 +1107,16 @@ function _rotasyonKaydet() {
 }
 
 function _rotasyonDurumunuYukle() {
-  // Sayfa (yeniden) yüklendiğinde, yarım kalmış bir kart çekme kaydı varsa geri yükle
+  // Sayfa (yeniden) yüklendiğinde, yarım kalmış bir kart çekme kaydı varsa geri yükle.
+  // Kayıt, GÜNCEL oyuncu sayısına ait değilse (ör. önceki bir 6 kişilik oturumdan
+  // kalmışsa) geri yüklemeyi atla ve kaydı temizle — yanlış ekrana dönmesin.
   if (!D._rotasyonDurumu || !D._rotasyonDurumu.data) return;
+  var guncelSayi = D.sess && D.sess.players ? D.sess.players.length : 0;
+  if (D._rotasyonDurumu.sayi !== guncelSayi) {
+    D._rotasyonDurumu = null;
+    saveD();
+    return;
+  }
   if (D._rotasyonDurumu.tip === '6k' && typeof _6k !== 'undefined') {
     for (var k in D._rotasyonDurumu.data) _6k[k] = D._rotasyonDurumu.data[k];
   } else if (D._rotasyonDurumu.tip === '7k' && typeof _7k !== 'undefined') {
@@ -1364,6 +1373,8 @@ function show6KisiKartCekme() {
   D._6kDisaridaGecmis = {};
   _6k.pending = false;
   _7k.pending = false;
+  if (typeof _kPending !== 'undefined') _kPending = false;
+  if (typeof _4kPending !== 'undefined') _4kPending = false;
   D._rotasyonDurumu = null;
   if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
   _6k.asama = 1;
@@ -1892,6 +1903,8 @@ var _7k = {
 function show7KisiKartCekme() {
   _7k.pending = false;
   _6k.pending = false;
+  if (typeof _kPending !== 'undefined') _kPending = false;
+  if (typeof _4kPending !== 'undefined') _4kPending = false;
   D._rotasyonDurumu = null;
   if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
   _7k.asama = 1;
@@ -2353,6 +2366,10 @@ var _4kPending = false;
 
 function show4KisiKartCekme() {
   _4kPending = true;
+  if (typeof _6k !== 'undefined') _6k.pending = false;
+  if (typeof _7k !== 'undefined') _7k.pending = false;
+  D._rotasyonDurumu = null;
+  if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
   var players = D.sess.players;
   // Tüm 3 kombinasyonu hesapla
   var p = players;
@@ -6260,6 +6277,10 @@ function _kListen(){
 
 function showKartCekme(){
   _kPending=true;
+  if (typeof _6k !== 'undefined') _6k.pending = false;
+  if (typeof _7k !== 'undefined') _7k.pending = false;
+  D._rotasyonDurumu = null;
+  if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
   _kAsama=1; _kEslesen={}; _kDamlar=[]; _kSecilen=null; _kDamSecilen=null; _kDamKartlar=[];
   _kGruplar=[]; _kGrupIdx=0; _kGrupSiradaki=0; _kDamYasakli=false; _kDamUyari=false;
   window._kIlkSecim=null;
