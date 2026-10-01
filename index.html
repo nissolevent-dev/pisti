@@ -3457,7 +3457,7 @@ function showOdemeTahsilat(players, summary, onConfirm) {
       + '<div style="font-size:.8rem;font-weight:600;margin-bottom:2px">' + p + '</div>'
       + '<div style="font-size:.68rem;color:' + (borc ? 'var(--lose)' : 'var(--win)') + ';margin-bottom:5px">' + (borc ? 'Borç' : 'Alacak') + ': TL' + tutar + '</div>'
       + '<label style="font-size:.62rem;color:var(--tx3);display:block;margin-bottom:2px">' + (borc ? 'Ödeme' : 'Tahsilat') + '</label>'
-      + '<input type="number" id="' + safeId + '" placeholder="' + tutar + '" style="width:100%;box-sizing:border-box;text-align:center;padding:5px 4px;border:1px solid var(--bd);border-radius:6px;font-size:.82rem">'
+      + '<input type="number" inputmode="decimal" id="' + safeId + '" placeholder="' + tutar + '" style="width:100%;box-sizing:border-box;text-align:center;padding:5px 4px;border:1px solid var(--bd);border-radius:6px;font-size:.82rem">'
       + '</div>';
   }
 
@@ -4017,7 +4017,7 @@ function renderBorcAlacak() {
     } else {
       html += '<div style="display:flex;align-items:center;gap:4px">'
         + '<span style="font-size:.78rem;color:' + renk + ';font-weight:700;min-width:16px">' + (val > 0 ? '+' : '') + '</span>'
-        + '<input type="number" value="' + val + '" style="width:92px;text-align:right;padding:5px 6px;border:1px solid var(--bd);border-radius:6px;font-size:.85rem;color:' + renk + ';font-weight:700" onchange="updateBorcAlacak(\'' + p.replace(/'/g, "\\'") + '\', this.value)">'
+        + '<input type="number" inputmode="decimal" value="' + val + '" style="width:92px;text-align:right;padding:5px 6px;border:1px solid var(--bd);border-radius:6px;font-size:.85rem;color:' + renk + ';font-weight:700" onchange="updateBorcAlacak(\'' + p.replace(/'/g, "\\'") + '\', this.value)">'
         + '</div>';
     }
     html += '</div>';
@@ -4036,7 +4036,7 @@ function renderBorcAlacak() {
       + '<select id="ba-yeni-kisi" style="flex:1;padding:6px;border:1px solid var(--bd);border-radius:6px;font-size:.82rem">'
       + mevcutOlmayanlar.map(function(p) { return '<option value="' + p + '">' + p + '</option>'; }).join('')
       + '</select>'
-      + '<input type="number" id="ba-yeni-tutar" placeholder="Tutar" style="width:84px;padding:6px;border:1px solid var(--bd);border-radius:6px;font-size:.82rem">'
+      + '<input type="number" inputmode="decimal" id="ba-yeni-tutar" placeholder="Tutar" style="width:84px;padding:6px;border:1px solid var(--bd);border-radius:6px;font-size:.82rem">'
       + '<button class="btn bo bs" onclick="borcAlacakYeniEkle()">Ekle</button>'
       + '</div>';
     html += '<button class="btn bp bfw" style="margin-top:12px" onclick="borcAlacakKilitle()">Tamam</button>';
