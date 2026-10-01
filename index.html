@@ -3889,7 +3889,8 @@ function renderBorcAlacak() {
     + '</div>';
 
   if (!kilitli) {
-    var mevcutOlmayanlar = D.pool.filter(function(p) { return !D.borcAlacak[p]; });
+    var temelListe = ['Kasa'].concat(D.pool);
+    var mevcutOlmayanlar = temelListe.filter(function(p) { return !D.borcAlacak[p]; });
     html += '<div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)">'
       + '<select id="ba-yeni-kisi" style="flex:1;padding:6px;border:1px solid var(--bd);border-radius:6px;font-size:.82rem">'
       + mevcutOlmayanlar.map(function(p) { return '<option value="' + p + '">' + p + '</option>'; }).join('')
