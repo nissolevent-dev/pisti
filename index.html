@@ -3853,12 +3853,18 @@ function renderBorcAlacak() {
   var el = document.getElementById('h-borc-alacak');
   if (!el) return;
   if (!D.borcAlacak) D.borcAlacak = {};
+  var kilitli = !!D.borcAlacakKilitli;
   // Sadece sıfır olmayanları göster — sıfırlananlar listeden düşer
-  var names = Object.keys(D.borcAlacak).filter(function(p) { return (D.borcAlacak[p] || 0) !== 0; }).sort();
+  var names = Object.keys(D.borcAlacak).filter(function(p) { return (D.borcAlacak[p] || 0) !== 0; });
+  if (kilitli) {
+    // Kilitliyken büyükten küçüğe sırala
+    names.sort(function(a, b) { return (D.borcAlacak[b] || 0) - (D.borcAlacak[a] || 0); });
+  } else {
+    names.sort();
+  }
   var toplam = 0;
   for (var i = 0; i < names.length; i++) toplam += (D.borcAlacak[names[i]] || 0);
 
-  var kilitli = !!D.borcAlacakKilitli;
   var html = '<div class="card" style="margin-bottom:0">';
 
   if (names.length === 0) {
@@ -3901,6 +3907,7 @@ function renderBorcAlacak() {
     html += '<button class="btn bp bfw" style="margin-top:12px" onclick="borcAlacakKilitle()">Tamam</button>';
   } else {
     html += '<button class="btn bo bfw" style="margin-top:12px" onclick="borcAlacakDuzenle()">🔒 Düzenle (şifre gerekli)</button>';
+    html += '<button class="btn bp bfw" style="margin-top:8px" onclick="showBorcAlacakPaylas()">📤 Görsel Olarak Paylaş</button>';
   }
 
   html += '</div>';
@@ -3952,6 +3959,62 @@ function borcAlacakDuzenle() {
     saveD();
     renderBorcAlacak();
   });
+}
+
+function showBorcAlacakPaylas() {
+  var canvas = document.getElementById('share-canvas');
+  var dpr = window.devicePixelRatio || 1;
+  var W = 600, pad = 28;
+
+  var names = Object.keys(D.borcAlacak || {}).filter(function(p) { return (D.borcAlacak[p] || 0) !== 0; });
+  names.sort(function(a, b) { return (D.borcAlacak[b] || 0) - (D.borcAlacak[a] || 0); });
+
+  var rowH = 44, secH = 40, titleH = 76, dateH = 32, footH = 44;
+  var H = titleH + dateH + secH + names.length * rowH + footH + pad * 2;
+
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.height = H + 'px';
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  ctx.fillStyle = '#1b4332';
+  roundRect(ctx, 0, 0, W, H, 16);
+  ctx.fill();
+
+  ctx.strokeStyle = '#e8c96a';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(pad, titleH + dateH - 8); ctx.lineTo(W - pad, titleH + dateH - 8); ctx.stroke();
+
+  ctx.fillStyle = '#e8c96a';
+  ctx.font = 'bold 38px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('PİŞTİ', W / 2, 46);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '15px Arial';
+  ctx.fillText('ORTAKLI TAKİP', W / 2, 66);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = '15px Arial';
+  ctx.fillText(new Date().toLocaleDateString('tr-TR'), W / 2, titleH + dateH - 16);
+
+  var y = titleH + dateH + 8;
+  y = drawSection(ctx, 'BORÇ / ALACAK', names, function(p) {
+    return D.borcAlacak[p] || 0;
+  }, null, false, W, pad, y, rowH, secH);
+
+  ctx.strokeStyle = 'rgba(232,201,106,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad, H - footH - 4); ctx.lineTo(W - pad, H - footH - 4); ctx.stroke();
+  ctx.fillStyle = '#e8c96a';
+  ctx.font = 'bold 14px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('Borç / Alacak Durumu', W / 2, H - footH + 10);
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.font = '11px Arial';
+  ctx.fillText('piştitakip.pages.dev', W / 2, H - 8);
+
+  document.getElementById('ov-share').classList.add('on');
 }
 
 function renderHesap() {
