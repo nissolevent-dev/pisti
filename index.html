@@ -3416,13 +3416,14 @@ function _closeSessionFinish(allSessPlayers, summary, odemeler) {
     initialLdg: JSON.parse(JSON.stringify(D.initialLdg || {})),
     pool: (function() {
       var allNames = {};
-      for (var i = 0; i < D.pool.length; i++) allNames[D.pool[i]] = true;
+      var gecerli = function(n) { return n && n !== 'undefined'; };
+      for (var i = 0; i < D.pool.length; i++) { if (gecerli(D.pool[i])) allNames[D.pool[i]] = true; }
       for (var i = 0; i < D.allGames.length; i++) {
         var gp = D.allGames[i];
         var allIn = (gp.teamA||[]).concat(gp.teamB||[]).concat(gp.partners||[]);
-        for (var j = 0; j < allIn.length; j++) allNames[allIn[j]] = true;
+        for (var j = 0; j < allIn.length; j++) { if (gecerli(allIn[j])) allNames[allIn[j]] = true; }
       }
-      for (var p in D.ldg) allNames[p] = true;
+      for (var p in D.ldg) { if (gecerli(p)) allNames[p] = true; }
       return Object.keys(allNames);
     })(),
     winLoss: JSON.parse(JSON.stringify(D.winLoss || {}))
@@ -3680,13 +3681,14 @@ function shareClosedSess(sessId) {
     initialLdg: JSON.parse(JSON.stringify(D.initialLdg || {})),
     pool: (function() {
       var allNames = {};
-      for (var i = 0; i < D.pool.length; i++) allNames[D.pool[i]] = true;
+      var gecerli = function(n) { return n && n !== 'undefined'; };
+      for (var i = 0; i < D.pool.length; i++) { if (gecerli(D.pool[i])) allNames[D.pool[i]] = true; }
       for (var i = 0; i < D.allGames.length; i++) {
         var gp = D.allGames[i];
         var allIn = (gp.teamA||[]).concat(gp.teamB||[]).concat(gp.partners||[]);
-        for (var j = 0; j < allIn.length; j++) allNames[allIn[j]] = true;
+        for (var j = 0; j < allIn.length; j++) { if (gecerli(allIn[j])) allNames[allIn[j]] = true; }
       }
-      for (var p in D.ldg) allNames[p] = true;
+      for (var p in D.ldg) { if (gecerli(p)) allNames[p] = true; }
       return Object.keys(allNames);
     })(),
     winLoss: JSON.parse(JSON.stringify(D.winLoss || {}))
@@ -4106,20 +4108,21 @@ function renderHesap() {
 
   var allP = [];
   var seen = {};
+  var _gecerliAd3 = function(n) { return n && n !== 'undefined'; };
   for (var i = 0; i < D.allGames.length; i++) {
     var g = D.allGames[i];
     var all = g.teamA.concat(g.teamB);
     for (var j = 0; j < all.length; j++) {
-      if (!seen[all[j]]) { seen[all[j]] = true; allP.push(all[j]); }
+      if (_gecerliAd3(all[j]) && !seen[all[j]]) { seen[all[j]] = true; allP.push(all[j]); }
     }
   }
   // initialLdg'deki oyuncuları da ekle
   for (var p0 in D.initialLdg) {
-    if (!seen[p0]) { seen[p0] = true; allP.push(p0); }
+    if (_gecerliAd3(p0) && !seen[p0]) { seen[p0] = true; allP.push(p0); }
   }
   // Pool'daki herkesi ekle (hiç oynamamış olsalar bile)
   for (var pi0 = 0; pi0 < D.pool.length; pi0++) {
-    if (!seen[D.pool[pi0]]) { seen[D.pool[pi0]] = true; allP.push(D.pool[pi0]); }
+    if (_gecerliAd3(D.pool[pi0]) && !seen[D.pool[pi0]]) { seen[D.pool[pi0]] = true; allP.push(D.pool[pi0]); }
   }
   // Toplam = initialLdg + ldg
   var totalLdg = {};
@@ -4302,13 +4305,14 @@ function renderStat() {
 
   // Tüm oyuncuları belirle (havuzdan silinmişler dahil) - en başta hesapla
   var allPlayerNames = {};
-  for (var i = 0; i < D.pool.length; i++) allPlayerNames[D.pool[i]] = true;
+  var _gecerliAd = function(n) { return n && n !== 'undefined'; };
+  for (var i = 0; i < D.pool.length; i++) { if (_gecerliAd(D.pool[i])) allPlayerNames[D.pool[i]] = true; }
   for (var i = 0; i < games.length; i++) {
     var gp = games[i];
     var allInGame = (gp.teamA||[]).concat(gp.teamB||[]).concat(gp.partners||[]);
-    for (var j = 0; j < allInGame.length; j++) allPlayerNames[allInGame[j]] = true;
+    for (var j = 0; j < allInGame.length; j++) { if (_gecerliAd(allInGame[j])) allPlayerNames[allInGame[j]] = true; }
   }
-  for (var p0 in D.ldg) allPlayerNames[p0] = true;
+  for (var p0 in D.ldg) { if (_gecerliAd(p0)) allPlayerNames[p0] = true; }
   var minPts = null, minPtsGame = null, minPtsTeam = null;
   // Bir oyunda en fazla pişti farkı
   var maxPiDiff = 0, maxPiDiffGame = null;
@@ -4873,13 +4877,14 @@ function renderStat() {
 
   // Tüm oyunculari belirle (havuzdan silinmişler dahil)
   var allPlayerNames = {};
-  for (var i = 0; i < D.pool.length; i++) allPlayerNames[D.pool[i]] = true;
+  var _gecerliAd2 = function(n) { return n && n !== 'undefined'; };
+  for (var i = 0; i < D.pool.length; i++) { if (_gecerliAd2(D.pool[i])) allPlayerNames[D.pool[i]] = true; }
   for (var i = 0; i < games.length; i++) {
     var gp = games[i];
     var allInGame = (gp.teamA||[]).concat(gp.teamB||[]).concat(gp.partners||[]);
-    for (var j = 0; j < allInGame.length; j++) allPlayerNames[allInGame[j]] = true;
+    for (var j = 0; j < allInGame.length; j++) { if (_gecerliAd2(allInGame[j])) allPlayerNames[allInGame[j]] = true; }
   }
-  for (var p in D.ldg) allPlayerNames[p] = true;
+  for (var p in D.ldg) { if (_gecerliAd2(p)) allPlayerNames[p] = true; }
 
   var ps = {};
   for (var pn in allPlayerNames) {
@@ -6110,13 +6115,14 @@ function saveManualSession() {
     initialLdg: JSON.parse(JSON.stringify(D.initialLdg || {})),
     pool: (function() {
       var allNames = {};
-      for (var i = 0; i < D.pool.length; i++) allNames[D.pool[i]] = true;
+      var gecerli = function(n) { return n && n !== 'undefined'; };
+      for (var i = 0; i < D.pool.length; i++) { if (gecerli(D.pool[i])) allNames[D.pool[i]] = true; }
       for (var i = 0; i < D.allGames.length; i++) {
         var gp = D.allGames[i];
         var allIn = (gp.teamA||[]).concat(gp.teamB||[]).concat(gp.partners||[]);
-        for (var j = 0; j < allIn.length; j++) allNames[allIn[j]] = true;
+        for (var j = 0; j < allIn.length; j++) { if (gecerli(allIn[j])) allNames[allIn[j]] = true; }
       }
-      for (var p in D.ldg) allNames[p] = true;
+      for (var p in D.ldg) { if (gecerli(p)) allNames[p] = true; }
       return Object.keys(allNames);
     })(),
     winLoss: JSON.parse(JSON.stringify(D.winLoss || {}))
