@@ -3252,9 +3252,20 @@ function saveGame(masa, turler) {
     }
   }
 
+  // Oyun numarası: dizi uzunluğuna göre değil, hiç azalmayan kalıcı bir sayaçtan
+  // alınır — böylece bir oyun silinse bile numarası bir daha asla tekrar kullanılmaz.
+  if (!D._gameNumSayac) {
+    var _maxNum = 0;
+    for (var _gi = 0; _gi < D.allGames.length; _gi++) {
+      if ((D.allGames[_gi].num||0) > _maxNum) _maxNum = D.allGames[_gi].num;
+    }
+    D._gameNumSayac = _maxNum;
+  }
+  D._gameNumSayac = D._gameNumSayac + 1;
+
   var g = {
     id: Date.now(),
-    num: D.allGames.length + 1,
+    num: D._gameNumSayac,
     snum: D.sessGames.length + 1,
     masa: masa,
     pts: [pA, pB],
@@ -5120,7 +5131,7 @@ function renderStat() {
     }
     html += '<div onclick="showGameTurDetay(' + g.id + ')" style="cursor:pointer;background:var(--wh);border:1px solid var(--bd);border-radius:9px;padding:10px 13px;margin-bottom:8px;font-size:.79rem">' +
       '<div style="display:flex;justify-content:space-between;margin-bottom:5px">' +
-        '<b style="color:var(--g2)">#' + g.num + (g.rubikon ? ' [R]' : '') + '</b>' +
+        '<b style="color:var(--g2)">#' + g.num + '</b>' + (g.rubikon ? ' <b style="color:#dc2626">[R]</b>' : '') +
         '<span style="color:var(--tx3)">' + g.date + '</span>' +
         '<b style="color:' + (g.winner ? 'var(--win)' : 'var(--tx3)') + '">' + (g.winner ? g.winner==='A'?'Kırmızı Takım':'Siyah Takım' : 'Berabere') + '</b>' +
       '</div>' +
