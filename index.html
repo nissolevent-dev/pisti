@@ -6020,6 +6020,19 @@ function drawSection(ctx, title, players, getVal, winLoss, showWL, W, pad, y, ro
 
   var innerX = cardX + 18;
   var innerW = cardW - 36;
+  var rightEdge = innerX + innerW;
+
+  // W/L sütununun tüm satırlarda aynı noktada durması için, önce bu bölümdeki
+  // EN GENİŞ tutar metnini bul — W/L sütununu ona göre sabitleyeceğiz.
+  var maxTutarW = 0;
+  ctx.font = 'bold 17px Arial';
+  for (var mi = 0; mi < players.length; mi++) {
+    var mval = getVal(players[mi]);
+    var mStr = (mval>=0?'+':'') + 'TL' + Math.abs(mval);
+    var mw = ctx.measureText(mStr).width;
+    if (mw > maxTutarW) maxTutarW = mw;
+  }
+  var wlRightEdge = rightEdge - maxTutarW - 14;
 
   for (var i = 0; i < players.length; i++) {
     var p = players[i];
@@ -6045,7 +6058,6 @@ function drawSection(ctx, title, players, getVal, winLoss, showWL, W, pad, y, ro
     ctx.font = '600 17px Arial';
     ctx.fillText(p, innerX + 22, midY);
 
-    var rightEdge = innerX + innerW;
     var tutarStr = (val>=0?'+':'') + 'TL' + Math.abs(val);
 
     // Tutar (en sağda)
@@ -6054,20 +6066,18 @@ function drawSection(ctx, title, players, getVal, winLoss, showWL, W, pad, y, ro
     ctx.textAlign = 'right';
     ctx.fillText(tutarStr, rightEdge, midY);
 
-    // W/L — tutarın solunda, ayrı renklerde
+    // W/L — sabit bir sütunda, tüm satırlarda aynı hizada, ayrı renklerde
     if (showWL && winLoss && winLoss[p]) {
       var wl = winLoss[p];
-      var tutarW = ctx.measureText(tutarStr).width;
       var lStr = (wl.l||0) + 'L';
       ctx.font = '12px Arial';
       ctx.fillStyle = '#991b1b';
       ctx.textAlign = 'right';
-      var lX = rightEdge - tutarW - 14;
-      ctx.fillText(lStr, lX, midY);
+      ctx.fillText(lStr, wlRightEdge, midY);
       var lW = ctx.measureText(lStr).width;
       var wStr = (wl.w||0) + 'W';
       ctx.fillStyle = '#166534';
-      ctx.fillText(wStr, lX - lW - 6, midY);
+      ctx.fillText(wStr, wlRightEdge - lW - 6, midY);
     }
   }
   return cardY + cardH;
