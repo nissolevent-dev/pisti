@@ -3621,12 +3621,16 @@ function yiliArsivle() {
       pool: D.pool.slice()
     });
 
-    // Sıfırla - havuzu koru
+    // Sıfırla - havuzu ve borç/alacak tablosunu koru (bunlar oyun/yıl verisinden bağımsız)
     var pool = D.pool.slice();
     var arsiv = D.arsiv.slice();
+    var borcAlacak = JSON.parse(JSON.stringify(D.borcAlacak || {}));
+    var borcAlacakKilitli = !!D.borcAlacakKilitli;
     D = JSON.parse(JSON.stringify(DEF));
     D.pool = pool;
     D.arsiv = arsiv;
+    D.borcAlacak = borcAlacak;
+    D.borcAlacakKilitli = borcAlacakKilitli;
     saveD();
     document.getElementById('yil-adi').value = '';
     renderHesap();
