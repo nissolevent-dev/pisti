@@ -5932,8 +5932,8 @@ function showShareCard(data) {
   _shareImageTitle = 'Pişti Oturum Sonuçları';
   var canvas = document.getElementById('share-canvas');
   var dpr = window.devicePixelRatio || 1;
-  var W = 600, pad = 28;
-  
+  var W = 600, pad = 22;
+
   // Satır sayısına göre yükseklik hesapla
   var players = data.players.slice().sort(function(a,b) {
     return (data.summary[b]||0) - (data.summary[a]||0);
@@ -5944,8 +5944,12 @@ function showShareCard(data) {
     return totB - totA;
   });
 
-  var rowH = 44, secH = 40, titleH = 76, dateH = 32, gapH = 20, footH = 44;
-  var H = titleH + dateH + secH + players.length*rowH + gapH + secH + allP.length*rowH + footH + pad*2;
+  var rowH = 46, secH = 30, headH = 64, gapH = 22, footH = 40, outerPad = 16;
+  var H = outerPad*2 + headH
+    + secH + players.length*rowH
+    + gapH
+    + secH + allP.length*rowH
+    + footH;
 
   canvas.width = W * dpr;
   canvas.height = H * dpr;
@@ -5953,31 +5957,23 @@ function showShareCard(data) {
   var ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  // Arka plan
+  // Sayfa arka planı — uygulamadaki açık yeşilimsi beyaz
+  ctx.fillStyle = '#f1f5f1';
+  ctx.fillRect(0, 0, W, H);
+
+  // Üst başlık
   ctx.fillStyle = '#1b4332';
-  roundRect(ctx, 0, 0, W, H, 16);
-  ctx.fill();
-
-  // İnce altın çizgi üst
-  ctx.strokeStyle = '#e8c96a';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(pad, titleH+dateH-8); ctx.lineTo(W-pad, titleH+dateH-8); ctx.stroke();
-
-  // Başlık
-  ctx.fillStyle = '#e8c96a';
-  ctx.font = 'bold 38px Arial';
+  ctx.font = 'bold 26px Arial';
   ctx.textAlign = 'center';
-  ctx.fillText('PİŞTİ', W/2, 46);
-  ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.font = '15px Arial';
-  ctx.fillText('ORTAKLI TAKİP', W/2, 66);
+  ctx.fillText('PİŞTİ', W/2, outerPad + 28);
+  ctx.fillStyle = '#6a8a6a';
+  ctx.font = '12px Arial';
+  ctx.fillText('ORTAKLI TAKİP', W/2, outerPad + 44);
+  ctx.fillStyle = '#6a8a6a';
+  ctx.font = '13px Arial';
+  ctx.fillText(data.date + '  •  ' + data.games + ' oyun', W/2, outerPad + headH - 4);
 
-  // Tarih & oyun sayısı
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = '15px Arial';
-  ctx.fillText(data.date + '  •  ' + data.games + ' oyun', W/2, titleH+dateH-16);
-
-  var y = titleH + dateH + 8;
+  var y = outerPad + headH;
 
   // Oturum sonuçları bölümü
   y = drawSection(ctx, 'BU OTURUM', players, function(p) {
@@ -5991,74 +5987,90 @@ function showShareCard(data) {
     return (data.allLdg[p]||0) + (data.initialLdg[p]||0);
   }, data.winLoss, true, W, pad, y, rowH, secH);
 
-  // Alt çizgi
-  ctx.strokeStyle = 'rgba(232,201,106,0.3)';
+  // Alt bilgi
+  ctx.strokeStyle = '#c0d4c0';
   ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(pad, H-footH-4); ctx.lineTo(W-pad, H-footH-4); ctx.stroke();
-  ctx.fillStyle = '#e8c96a';
-  ctx.font = 'bold 14px Arial';
+  ctx.beginPath(); ctx.moveTo(pad, H-footH); ctx.lineTo(W-pad, H-footH); ctx.stroke();
+  ctx.fillStyle = '#1b4332';
+  ctx.font = 'bold 13px Arial';
   ctx.textAlign = 'center';
-  ctx.fillText(data.date + ' tarihli oyun sonucu', W/2, H-footH+10);
-  ctx.fillStyle = 'rgba(255,255,255,0.3)';
-  ctx.font = '11px Arial';
-  ctx.fillText('piştitakip.pages.dev', W/2, H-8);
+  ctx.fillText(data.date + ' tarihli oyun sonucu', W/2, H-footH+20);
 
   document.getElementById('ov-share').classList.add('on');
 }
 
 function drawSection(ctx, title, players, getVal, winLoss, showWL, W, pad, y, rowH, secH) {
   // Bölüm başlığı
-  ctx.fillStyle = 'rgba(255,255,255,0.15)';
-  roundRect(ctx, pad, y, W-pad*2, secH-4, 7);
-  ctx.fill();
-  ctx.fillStyle = '#e8c96a';
-  ctx.font = 'bold 14px Arial';
+  ctx.fillStyle = '#2d6a4f';
+  ctx.font = 'bold 13px Arial';
   ctx.textAlign = 'left';
-  ctx.fillText(title, pad+12, y+secH/2+1);
-  y += secH + 2;
+  ctx.fillText(title, pad + 4, y + secH - 10);
+  y += secH;
+
+  var cardX = pad, cardW = W - pad*2;
+  var cardY = y;
+  var cardH = Math.max(players.length, 1) * rowH;
+
+  // Beyaz kart, açık yeşil kenarlık — ekrandaki ".card" ile aynı
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#c0d4c0';
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, cardX, cardY, cardW, cardH, 14);
+  ctx.fill(); ctx.stroke();
+
+  var innerX = cardX + 18;
+  var innerW = cardW - 36;
 
   for (var i = 0; i < players.length; i++) {
     var p = players[i];
     var val = getVal(p);
     var isPos = val > 0, isNeg = val < 0;
+    var rowY = cardY + i * rowH;
+    var midY = rowY + rowH/2 + 6;
 
-    // Satır arka plan (alternatif)
-    if (i % 2 === 0) {
-      ctx.fillStyle = 'rgba(255,255,255,0.05)';
-      roundRect(ctx, pad, y, W-pad*2, rowH-2, 5);
-      ctx.fill();
+    if (i > 0) {
+      ctx.strokeStyle = '#e2ece2';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(innerX, rowY); ctx.lineTo(innerX + innerW, rowY); ctx.stroke();
     }
 
     // Sıra no
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.font = '14px Arial';
-    ctx.textAlign = 'right';
-    ctx.fillText(i+1, pad+20, y+rowH/2+5);
+    ctx.fillStyle = '#9ab89a';
+    ctx.font = '13px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(i+1, innerX, midY);
 
     // İsim
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '500 18px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText(p, pad+30, y+rowH/2+5);
+    ctx.fillStyle = '#1a2e1a';
+    ctx.font = '600 17px Arial';
+    ctx.fillText(p, innerX + 22, midY);
 
-    // W/L - sadece Tüm Zamanlar bölümünde, tutardan önce ayrı sütunda
+    var rightEdge = innerX + innerW;
+    var tutarStr = (val>=0?'+':'') + 'TL' + Math.abs(val);
+
+    // Tutar (en sağda)
+    ctx.font = 'bold 17px Arial';
+    ctx.fillStyle = isPos ? '#166534' : isNeg ? '#991b1b' : '#6a8a6a';
+    ctx.textAlign = 'right';
+    ctx.fillText(tutarStr, rightEdge, midY);
+
+    // W/L — tutarın solunda, ayrı renklerde
     if (showWL && winLoss && winLoss[p]) {
       var wl = winLoss[p];
-      ctx.font = '13px Arial';
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      var tutarW = ctx.measureText(tutarStr).width;
+      var lStr = (wl.l||0) + 'L';
+      ctx.font = '12px Arial';
+      ctx.fillStyle = '#991b1b';
       ctx.textAlign = 'right';
-      ctx.fillText((wl.w||0)+'W '+(wl.l||0)+'L', W-pad-80, y+rowH/2+5);
+      var lX = rightEdge - tutarW - 14;
+      ctx.fillText(lStr, lX, midY);
+      var lW = ctx.measureText(lStr).width;
+      var wStr = (wl.w||0) + 'W';
+      ctx.fillStyle = '#166534';
+      ctx.fillText(wStr, lX - lW - 6, midY);
     }
-
-    // Tutar
-    ctx.font = 'bold 18px Arial';
-    ctx.fillStyle = isPos ? '#4ade80' : isNeg ? '#f87171' : 'rgba(255,255,255,0.5)';
-    ctx.textAlign = 'right';
-    ctx.fillText((val>=0?'+':'') + 'TL' + Math.abs(val), W-pad, y+rowH/2+5);
-
-    y += rowH;
   }
-  return y;
+  return cardY + cardH;
 }
 
 function roundRect(ctx, x, y, w, h, r) {
