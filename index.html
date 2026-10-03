@@ -4039,9 +4039,10 @@ function renderBorcAlacak() {
     if (kilitli) {
       html += '<span style="font-size:.9rem;color:' + renk + ';font-weight:700">' + (val > 0 ? '+' : '') + val + '</span>';
     } else {
+      var pEsc = p.replace(/'/g, "\\'");
       html += '<div style="display:flex;align-items:center;gap:4px">'
-        + '<span style="font-size:.78rem;color:' + renk + ';font-weight:700;min-width:16px">' + (val > 0 ? '+' : '') + '</span>'
-        + '<input type="number" inputmode="decimal" value="' + val + '" style="width:92px;text-align:right;padding:5px 6px;border:1px solid var(--bd);border-radius:6px;font-size:.85rem;color:' + renk + ';font-weight:700" onchange="updateBorcAlacak(\'' + p.replace(/'/g, "\\'") + '\', this.value)">'
+        + '<button type="button" onclick="borcAlacakIsaretDegistir(\'' + pEsc + '\')" style="width:30px;height:30px;flex-shrink:0;border-radius:6px;border:1.5px solid ' + renk + ';color:' + renk + ';background:none;font-weight:700;font-size:1rem;line-height:1">' + (val >= 0 ? '+' : '−') + '</button>'
+        + '<input type="number" inputmode="decimal" value="' + Math.abs(val) + '" style="width:84px;text-align:right;padding:5px 6px;border:1px solid var(--bd);border-radius:6px;font-size:.85rem;color:' + renk + ';font-weight:700" onchange="updateBorcAlacak(\'' + pEsc + '\', this.value)">'
         + '</div>';
     }
     html += '</div>';
@@ -4060,7 +4061,8 @@ function renderBorcAlacak() {
       + '<select id="ba-yeni-kisi" style="flex:1;padding:6px;border:1px solid var(--bd);border-radius:6px;font-size:.82rem">'
       + mevcutOlmayanlar.map(function(p) { return '<option value="' + p + '">' + p + '</option>'; }).join('')
       + '</select>'
-      + '<input type="number" inputmode="decimal" id="ba-yeni-tutar" placeholder="Tutar" style="width:84px;padding:6px;border:1px solid var(--bd);border-radius:6px;font-size:.82rem">'
+      + '<button type="button" id="ba-yeni-sign" data-sign="1" onclick="borcAlacakYeniSignToggle()" style="width:34px;flex-shrink:0;border-radius:6px;border:1.5px solid var(--win);color:var(--win);background:none;font-weight:700;font-size:1rem">+</button>'
+      + '<input type="number" inputmode="decimal" id="ba-yeni-tutar" placeholder="Tutar" style="width:72px;padding:6px;border:1px solid var(--bd);border-radius:6px;font-size:.82rem">'
       + '<button class="btn bo bs" onclick="borcAlacakYeniEkle()">Ekle</button>'
       + '</div>';
     html += '<button class="btn bp bfw" style="margin-top:12px" onclick="borcAlacakKilitle()">Tamam</button>';
@@ -4091,11 +4093,30 @@ function borcSifirlaOnayEvet() {
   renderBorcAlacak();
 }
 
+function borcAlacakYeniSignToggle() {
+  var btn = document.getElementById('ba-yeni-sign');
+  if (!btn) return;
+  var yeni = -(parseInt(btn.getAttribute('data-sign')) || 1);
+  btn.setAttribute('data-sign', yeni);
+  btn.textContent = yeni > 0 ? '+' : '−';
+  btn.style.color = yeni > 0 ? 'var(--win)' : 'var(--lose)';
+  btn.style.borderColor = yeni > 0 ? 'var(--win)' : 'var(--lose)';
+}
+
+function borcAlacakIsaretDegistir(p) {
+  if (!D.borcAlacak || !D.borcAlacak[p]) return;
+  D.borcAlacak[p] = -D.borcAlacak[p];
+  saveD();
+  renderBorcAlacak();
+}
+
 function borcAlacakYeniEkle() {
   var sel = document.getElementById('ba-yeni-kisi');
   var inp = document.getElementById('ba-yeni-tutar');
+  var signBtn = document.getElementById('ba-yeni-sign');
   if (!sel || !sel.value) { toast('Kişi seçin'); return; }
-  var n = parseFloat(inp.value) || 0;
+  var sign = signBtn ? (parseInt(signBtn.getAttribute('data-sign')) || 1) : 1;
+  var n = Math.abs(parseFloat(inp.value) || 0) * sign;
   if (n === 0) { toast('Bir tutar girin'); return; }
   if (!D.borcAlacak) D.borcAlacak = {};
   D.borcAlacak[sel.value] = n;
@@ -4105,7 +4126,10 @@ function borcAlacakYeniEkle() {
 
 function updateBorcAlacak(p, val) {
   if (!D.borcAlacak) D.borcAlacak = {};
-  var n = parseFloat(val) || 0;
+  // Girilen değer her zaman mutlak tutardır (işaret ayrı bir butonla kontrol edilir);
+  // mevcut işareti koru.
+  var oncekiIsaret = (D.borcAlacak[p] || 0) < 0 ? -1 : 1;
+  var n = Math.abs(parseFloat(val) || 0) * oncekiIsaret;
   if (n === 0) { delete D.borcAlacak[p]; }
   else { D.borcAlacak[p] = n; }
   saveD();
