@@ -4690,7 +4690,7 @@ function renderStat() {
   // Bir oyunda en çok kaybedilen tutar (tek kişi bazında)
   var maxLoss = 0, maxLossPlayer = null, maxLossGame = null;
   // HTTB: kaç oyunda en az 1 kez yazıldı, bunların kaçında geride olan taraf kazandı
-  var httbGameCount = 0, httbComebackCount = 0;
+  var httbGameCount = 0, httbComebackCount = 0, httbRubikondanCikanCount = 0;
 
   for (var i = 0; i < games.length; i++) {
     var g = games[i];
@@ -4733,6 +4733,11 @@ function renderStat() {
         var geridekiTaraf = cumK2 < cumS2 ? 'A' : (cumS2 < cumK2 ? 'B' : null);
         if (geridekiTaraf && g.winner === geridekiTaraf) {
           httbComebackCount++;
+        }
+        // Geride olan taraf, oyunun sonunda rubikondan (51 altı) çıkabildi mi?
+        if (geridekiTaraf) {
+          var geridekiFinalPuan = geridekiTaraf === 'A' ? g.pts[0] : g.pts[1];
+          if (geridekiFinalPuan >= 51) httbRubikondanCikanCount++;
         }
       }
     }
@@ -4827,8 +4832,8 @@ function renderStat() {
     '</div>';
 
   var card5 = '<div class="stcard">' +
-    '<div class="stv">' + httbGameCount + '</div>' +
-    '<div class="stl">HTTB Yazılan Oyun</div>' +
+    '<div class="stv">' + httbRubikondanCikanCount + ' / ' + httbGameCount + '</div>' +
+    '<div class="stl">HTTB\'de Rubikondan Çıkan</div>' +
     '</div>';
 
   var card6 = '<div class="stcard">' +
