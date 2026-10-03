@@ -951,9 +951,36 @@ db.ref('.info/connected').on('value', function(snap) {
   syncDot(snap.val() ? '#22c55e' : '#f59e0b');
 });
 
+function _rotasyonEkraniniCanliYenile() {
+  // Başka bir cihazda yapılan kart çekme ilerlemesini, bu cihazda açık olan
+  // kart çekme ekranına (varsa) canlı yansıtır. Burada tetiklenen render,
+  // _rotasyonKaydet'in tekrar Firebase'e yazıp bir "ping-pong" yaratmasını
+  // önlemek için kayıt baskılanarak yapılır.
+  _suppressRotasyonKaydet = true;
+  try {
+    _rotasyonDurumunuYukle();
+    var ov6 = document.getElementById('ov-6kart');
+    var ov7 = document.getElementById('ov-7kart');
+    var ovK = document.getElementById('ov-kart');
+    var ov4 = document.getElementById('ov-4kart');
+    if (ov6 && ov6.classList.contains('on')) {
+      if (_6k.asama === 'Y1') { _6kRenderY1(); } else { _6kRender(); }
+    } else if (ov7 && ov7.classList.contains('on')) {
+      if (_7k.asama === 'Y1') { _7kRenderY1(); } else { _7kRender(); }
+    } else if (ovK && ovK.classList.contains('on')) {
+      _kRender();
+    } else if (ov4 && ov4.classList.contains('on')) {
+      _4kRender();
+    }
+  } finally {
+    _suppressRotasyonKaydet = false;
+  }
+}
+
 function refreshAllRemote(localScreen) {
   renderPool();
   if (localScreen === 2) renderSessChips();
+  _rotasyonEkraniniCanliYenile();
 
   // Gerçek ekran durumunu DOM'dan oku
   var currentScreen = 1;
@@ -964,6 +991,13 @@ function refreshAllRemote(localScreen) {
 
   var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active);
   if (reallyStarted) {
+    // Masa başka bir cihazda kuruldu — bu cihazda hâlâ açık kalmış olabilecek
+    // kart çekme ekranlarını kapat, aksi halde oyun ekranının üstünde takılı kalır.
+    ['ov-6kart','ov-7kart','ov-kart','ov-4kart','ov-kart-vazgec'].forEach(function(id) {
+      var ov = document.getElementById(id);
+      if (ov) ov.classList.remove('on');
+    });
+    if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
     if (currentScreen !== 4) goS(4);
     updateMasaLabels();
     renderSessChips();
@@ -1101,9 +1135,12 @@ function guncelleRotasyonBanner() {
   banner.style.display = pending ? 'block' : 'none';
 }
 
+var _suppressRotasyonKaydet = false;
+
 function _rotasyonKaydet() {
   // Yarım kalmış kart çekme durumunu Firebase'e yazar — sayfa yenilense bile
   // "kart çekmeye devam et" banner'ı ve ilerleme kaybolmasın.
+  if (_suppressRotasyonKaydet) return; // başka cihazdan gelen veriyi ekrana yansıtırken tekrar yazma
   var sayi = D.sess && D.sess.players ? D.sess.players.length : 0;
   if (typeof _6k !== 'undefined' && _6k.pending) {
     D._rotasyonDurumu = { tip: '6k', sayi: sayi, data: JSON.parse(JSON.stringify(_6k)) };
