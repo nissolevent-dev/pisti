@@ -4689,6 +4689,8 @@ function renderStat() {
   var maxPiDiff = 0, maxPiDiffGame = null;
   // Bir oyunda en çok kaybedilen tutar (tek kişi bazında)
   var maxLoss = 0, maxLossPlayer = null, maxLossGame = null;
+  // HTTB: kaç oyunda en az 1 kez yazıldı, bunların kaçında geride olan taraf kazandı
+  var httbGameCount = 0, httbComebackCount = 0;
 
   for (var i = 0; i < games.length; i++) {
     var g = games[i];
@@ -4713,6 +4715,25 @@ function renderStat() {
         maxLoss = Math.abs(loss);
         maxLossPlayer = p;
         maxLossGame = g;
+      }
+    }
+    // HTTB: bu oyunda en az 1 kez yazıldı mı, yazıldıysa o anda geride olan taraf sonunda kazandı mı
+    if (g.turler && g.turler.length) {
+      var httbIdx = -1;
+      for (var ti = 0; ti < g.turler.length; ti++) {
+        if (g.turler[ti].httb) { httbIdx = ti; break; } // sadece ilk HTTB anı sayılır
+      }
+      if (httbIdx >= 0) {
+        httbGameCount++;
+        var cumK2 = 0, cumS2 = 0;
+        for (var ti2 = 0; ti2 <= httbIdx; ti2++) {
+          cumK2 += (g.turler[ti2].k||0);
+          cumS2 += (g.turler[ti2].s||0);
+        }
+        var geridekiTaraf = cumK2 < cumS2 ? 'A' : (cumS2 < cumK2 ? 'B' : null);
+        if (geridekiTaraf && g.winner === geridekiTaraf) {
+          httbComebackCount++;
+        }
       }
     }
   }
@@ -4805,7 +4826,17 @@ function renderStat() {
     (maxLossGameObj ? '<div style="font-size:.62rem;color:var(--tx3);margin-top:2px">' + nameList(maxLossTeam, gPartMap(maxLossGameObj)) + '</div>' : '') +
     '</div>';
 
-  document.getElementById('st-summary').innerHTML = card1 + card2 + card3 + card4;
+  var card5 = '<div class="stcard">' +
+    '<div class="stv">' + httbGameCount + '</div>' +
+    '<div class="stl">HTTB Yazılan Oyun</div>' +
+    '</div>';
+
+  var card6 = '<div class="stcard">' +
+    '<div class="stv">' + httbComebackCount + ' / ' + httbGameCount + '</div>' +
+    '<div class="stl">HTTB\'de Geriden Kazanan</div>' +
+    '</div>';
+
+  document.getElementById('st-summary').innerHTML = card1 + card2 + card3 + card4 + card5 + card6;
 
   // ── Ek istatistikler ──
   // Oyunları tarihe/numaraya göre sırala
