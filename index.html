@@ -972,18 +972,18 @@ function _rotasyonEkraniniCanliYenile() {
   _suppressRotasyonKaydet = true;
   try {
     _rotasyonDurumunuYukle();
+    if (durum.tip === '4k') {
+      // Önceki bir ortaklık turundan kalma "sonuç" görünümünü her senkronizasyonda
+      // sıfırla, aksi halde oyuncu/kart alanları dolup da gizli kalabilir.
+      var s4 = document.getElementById('4kart-sonuc');
+      var o4 = document.getElementById('4kart-oyuncular');
+      var k4 = document.getElementById('4kart-kartlar');
+      if (s4) s4.style.display = 'none';
+      if (o4) o4.style.display = 'grid';
+      if (k4) k4.style.display = 'grid';
+    }
     if (!ov.classList.contains('on')) {
       // Başka bir cihaz bu çekilişi zaten başlattı — bu cihazda da otomatik aç
-      if (durum.tip === '4k') {
-        // Önceki bir ortaklık turundan kalma "sonuç" görünümünü sıfırla,
-        // aksi halde oyuncu/kart alanları dolup da gizli kalabilir.
-        var s4 = document.getElementById('4kart-sonuc');
-        var o4 = document.getElementById('4kart-oyuncular');
-        var k4 = document.getElementById('4kart-kartlar');
-        if (s4) s4.style.display = 'none';
-        if (o4) o4.style.display = 'grid';
-        if (k4) k4.style.display = 'grid';
-      }
       ov.classList.add('on');
       if (durum.tip === '6k') _6kListen();
       else if (durum.tip === '7k') _7kListen();
@@ -1012,7 +1012,13 @@ function refreshAllRemote(localScreen) {
   }
 
   var reallyStarted = D.started && D.round && (D.round.masa1active || D.round.masa2active);
-  if (reallyStarted) {
+  // D.started, oturumun İLK oyunundan itibaren hep true kalır — yani 2. ve sonraki
+  // oyunların rotasyon çekilişi sırasında da reallyStarted true olur. Bu yüzden
+  // kart çekme ekranlarını SADECE gerçekten aktif bir rotasyon YOKKEN kapat;
+  // aksi halde devam eden bir rotasyonu her güncellemede açar-kapar.
+  var guncelSayi2 = D.sess && D.sess.players ? D.sess.players.length : 0;
+  var rotasyonAktif = D._rotasyonDurumu && D._rotasyonDurumu.data && D._rotasyonDurumu.sayi === guncelSayi2;
+  if (reallyStarted && !rotasyonAktif) {
     // Masa başka bir cihazda kuruldu — bu cihazda hâlâ açık kalmış olabilecek
     // kart çekme ekranlarını kapat, aksi halde oyun ekranının üstünde takılı kalır.
     ['ov-6kart','ov-7kart','ov-kart','ov-4kart','ov-kart-vazgec'].forEach(function(id) {
