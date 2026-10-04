@@ -1004,8 +1004,10 @@ function refreshAllRemote(localScreen) {
     renderGameCards();
     if (D.round && D.round.masa1active) switchMasa(1);
     else if (D.round && D.round.masa2active) switchMasa(2);
-  } else if (!D.started) {
-    // Oturum kapandı veya sıfırlandı - ana ekrana git
+  } else if (!D.started && (!D.sess || !D.sess.players || D.sess.players.length === 0)) {
+    // Oturum gerçekten kapandı veya sıfırlandı (oyuncu seçimi de boşaldı) - ana ekrana git.
+    // Oyuncular seçiliyken henüz oyun başlamamışsa (kurulum/kart çekme aşaması) bu dalı
+    // çalıştırma — aksi halde her kart çekimi diğer cihazı ana ekrana fırlatır.
     renderPool();
     renderSessChips();
     goS(1);
