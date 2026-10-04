@@ -958,7 +958,10 @@ function _rotasyonEkraniniCanliYenile() {
   // "ping-pong" yaratmasını önlemek için kayıt baskılanarak yapılır.
   var durum = D._rotasyonDurumu;
   var guncelSayi = D.sess && D.sess.players ? D.sess.players.length : 0;
-  if (!durum || !durum.data || durum.sayi !== guncelSayi || D.started) return;
+  // NOT: D.started burada kontrol edilmez — 2. oyun ve sonrasındaki rotasyonlar
+  // (6k/7k/8-9-10k/4k hepsi) zaten D.started=true iken gerçekleşir; bu alanı
+  // kontrol etmek sonraki tüm oyunlardaki otomatik açılmayı engellerdi.
+  if (!durum || !durum.data || durum.sayi !== guncelSayi) return;
 
   var ovMap = { '6k': 'ov-6kart', '7k': 'ov-7kart', 'k': 'ov-kart', '4k': 'ov-4kart' };
   var ovId = ovMap[durum.tip];
