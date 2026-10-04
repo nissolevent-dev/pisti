@@ -971,6 +971,16 @@ function _rotasyonEkraniniCanliYenile() {
     _rotasyonDurumunuYukle();
     if (!ov.classList.contains('on')) {
       // Başka bir cihaz bu çekilişi zaten başlattı — bu cihazda da otomatik aç
+      if (durum.tip === '4k') {
+        // Önceki bir ortaklık turundan kalma "sonuç" görünümünü sıfırla,
+        // aksi halde oyuncu/kart alanları dolup da gizli kalabilir.
+        var s4 = document.getElementById('4kart-sonuc');
+        var o4 = document.getElementById('4kart-oyuncular');
+        var k4 = document.getElementById('4kart-kartlar');
+        if (s4) s4.style.display = 'none';
+        if (o4) o4.style.display = 'grid';
+        if (k4) k4.style.display = 'grid';
+      }
       ov.classList.add('on');
       if (durum.tip === '6k') _6kListen();
       else if (durum.tip === '7k') _7kListen();
@@ -2625,6 +2635,9 @@ function show4KisiKartCekme() {
   if (_devamEdenCekilisVarMi('4k')) {
     // Başka bir cihaz zaten bu çekilişi başlattı — aynı kartlarla ona katıl
     _rotasyonDurumunuYukle();
+    document.getElementById('4kart-sonuc').style.display = 'none';
+    document.getElementById('4kart-oyuncular').style.display = 'grid';
+    document.getElementById('4kart-kartlar').style.display = 'grid';
     document.getElementById('ov-4kart').classList.add('on');
     _4kListen();
     _4kRender();
