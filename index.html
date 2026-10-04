@@ -6345,6 +6345,18 @@ function _gosterSonucVeDevam(masa, totK, totS, totKpi, totSpi, rubikon, winTeam,
   document.getElementById('ov-oyun-sonucu').classList.add('on');
 }
 
+function _8910MasaBittiMi(m) {
+  // Bu turda (son kart çekmeden beri) m numaralı masada kaydedilmiş bir oyun var mı?
+  var tid = D.round && D.round.turId;
+  if (tid) {
+    return (D.sessGames || []).some(function(g) {
+      return g && g.masa === m && g.roundSnapshot && g.roundSnapshot.turId === tid;
+    });
+  }
+  // Güncellemeden önce başlamış tur: eski bayrağa bak
+  return !!(D._8910RoundDone && D._8910RoundDone[m]);
+}
+
 function _bitirOyunDevam(masa, savedTurler) {
   var sessCount = D.sessGames ? D.sessGames.length : 0;
   var playerCount = D.sess && D.sess.players ? D.sess.players.length : 0;
@@ -6394,10 +6406,14 @@ function _bitirOyunDevam(masa, savedTurler) {
       }
     }
     if (!D.siraliMod && playerCount >= 8) {
+      // "Masa bitti" bilgisi sadece bu cihazın hafızasında tutuluyordu; ikinci bir cihaz
+      // açıkken gelen her güncelleme onu siliyordu ve diğer masayı bitiren cihaz da hiç
+      // görmüyordu. Artık Firebase'e kaydedilmiş oyunlardan (sessGames) hesaplanıyor.
       if (!D._8910RoundDone) D._8910RoundDone = {};
       D._8910RoundDone[masa] = true;
-      var masa1Bitti = !D.round.masa1active || D._8910RoundDone[1];
-      var masa2Bitti = !D.round.masa2active || D._8910RoundDone[2];
+      var masa1Bitti = !D.round.masa1active || masa === 1 || _8910MasaBittiMi(1);
+      var masa2Bitti = !D.round.masa2active || masa === 2 || _8910MasaBittiMi(2);
+      if (!(masa1Bitti && masa2Bitti)) saveD(); // eski turlar için yedek bayrak da kaydedilsin
       if (masa1Bitti && masa2Bitti) {
         setTimeout(function() {
           closeOv('ov-skor');
@@ -7423,6 +7439,7 @@ function kartOnayla(){
   D.round.masa1={A:g.m1K.slice(),B:g.m1S.slice()};
   D.round.masa2={A:g.m2K.slice(),B:g.m2S.slice()};
   D.round.masa1active=true; D.round.masa2active=true; D.round.partners={};
+  D.round.turId = Date.now(); // bu turdaki oyunları tanımak için (her oyun roundSnapshot'ında saklanır)
   D.siraliMod=false; D.siraliSira=[]; D.siraliOyunIdx=0;
   _siraliSira=[]; _siraliOyunIdx=0;
 
