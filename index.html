@@ -771,6 +771,170 @@ var app = firebase.initializeApp(FB_CFG);
 var db  = firebase.database(app);
 var REF = db.ref('pisti');
 
+// ══ KART ÇEKME CANLI SENKRONU ══
+// Kart çekme durumu ana 'pisti' ağacından AYRI bir düğümde (pisti_cekilis) tutulur.
+//  • Eskiden her dokunuşta tüm veri REF.set ile yazılıyordu: iki cihaz aynı anda
+//    çekince biri diğerinin çekimini eziyor, "saving" bayrağı yüzünden de başka
+//    cihazdan gelen çekimler çoğu zaman ekrana yansımıyordu.
+//  • Veri JSON metni olarak saklanır — Firebase boş dizi/nesne ve null değerleri
+//    siliyordu; bu da diğer cihazda eski kartların kalmasına / hata vermesine yol açıyordu.
+//  • Her yazım rev numaralı transaction'dır: iki cihaz aynı anda çekerse ilk gelen
+//    kazanır, diğeri otomatik olarak sunucudaki duruma döner (aynı kart iki kez çekilmez).
+//  • İsme dokunarak oyuncu seçme cihaza özeldir, senkronize edilmez (çakışma yaratmasın).
+var CEK = db.ref('pisti_cekilis');
+var CIHAZ_ID = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+var _cekSunucu = null;    // sunucudaki son kayıt {rev, by, tip, sayi, oy, json | bos}
+var _cekYuklendi = false;
+var _cekSonJson = 'null'; // sunucuyla aynı olduğu bilinen son paylaşılan durum (kanonik JSON)
+var _cekMesgul = false;   // yolda bir transaction var mı
+var _cekKirli = false;    // yoldayken yeni yerel değişiklik oldu mu
+var _anaYazimNo = 0;
+var _anaSonYazim = null;  // ana ağaca yaptığımız son yazımın damgası
+
+var _CEK_YEREL_ALANLAR = {
+  '6k': ['secilen', 'ortakSecilen', 'disSecilen'],
+  '7k': ['secilen', 'ortakSecilen', 'disSecilen'],
+  'k':  ['_kSecilen', '_kDamSecilen'],
+  '4k': ['_4kSecilen'],
+  'sk': ['_skSecilen']
+};
+
+function _kanonik(v) {
+  // Anahtar sırasından bağımsız JSON — sadece karşılaştırma için
+  if (v === undefined) v = null;
+  if (v === null || typeof v !== 'object') return JSON.stringify(v);
+  if (Array.isArray(v)) return '[' + v.map(function(x) { return _kanonik(x); }).join(',') + ']';
+  return '{' + Object.keys(v).sort().filter(function(k) { return v[k] !== undefined; })
+    .map(function(k) { return JSON.stringify(k) + ':' + _kanonik(v[k]); }).join(',') + '}';
+}
+
+function _oyuncuImza() {
+  return (D.sess && D.sess.players ? D.sess.players.slice().sort() : []).join('|');
+}
+
+function _beklenenTip(n) {
+  if (n === 4) return '4k';
+  if (n === 5) return 'sk';
+  if (n === 6) return '6k';
+  if (n === 7) return '7k';
+  if (n >= 8 && n <= 10) return 'k';
+  return null;
+}
+
+function _rotasyonGecerliMi(durum) {
+  // Kayıt şu anki oyuncu grubuna mı ait?
+  if (!durum || !durum.data) return false;
+  var sayi = D.sess && D.sess.players ? D.sess.players.length : 0;
+  if (durum.sayi !== sayi) return false;
+  if (durum.oy && durum.oy !== _oyuncuImza()) return false;
+  return true;
+}
+
+function _cekPaylasilan(durum) {
+  if (!durum || !durum.data) return null;
+  var data = JSON.parse(JSON.stringify(durum.data));
+  (_CEK_YEREL_ALANLAR[durum.tip] || []).forEach(function(a) { delete data[a]; });
+  return { tip: durum.tip, sayi: durum.sayi, oy: durum.oy || null, data: data };
+}
+
+function _cekSunucudanCoz(val) {
+  if (!val || val.bos || !val.json) return null;
+  try {
+    return { tip: val.tip, sayi: val.sayi, oy: val.oy || null, data: JSON.parse(val.json) };
+  } catch (e) { return null; }
+}
+
+function _cekSenkron() {
+  // D._rotasyonDurumu değiştiyse pisti_cekilis düğümüne yazar.
+  var pay = _cekPaylasilan(D._rotasyonDurumu);
+  var json = _kanonik(pay);
+  if (json === _cekSonJson) return;                         // değişiklik yok (ör. sadece isim seçildi)
+  if (!_cekYuklendi || _cekMesgul) { _cekKirli = true; return; } // sırası gelince gönderilecek
+  _cekMesgul = true;
+  _cekKirli = false;
+  _cekSonJson = json;
+  var tabanRev = _cekSunucu ? (_cekSunucu.rev || 0) : 0;
+  var yeni = { rev: tabanRev + 1, by: CIHAZ_ID, ts: Date.now() };
+  if (pay) {
+    yeni.tip = pay.tip; yeni.sayi = pay.sayi; yeni.json = JSON.stringify(pay.data);
+    if (pay.oy) yeni.oy = pay.oy;
+  } else {
+    yeni.bos = true; // çekiliş bitti / iptal
+  }
+  CEK.transaction(function(cur) {
+    var curRev = cur ? (cur.rev || 0) : 0;
+    if (curRev !== tabanRev) return; // başka bir cihaz bizden önce yazdı → iptal
+    return yeni;
+  }, function(err, committed, snap) {
+    _cekMesgul = false;
+    if (err) {
+      console.log('kart cekme kayit hatasi', err);
+      syncDot('#ef4444');
+      _cekSonJson = '__hata__'; // bir sonraki değişiklikte yeniden denensin
+      toast('Kart çekme kaydedilemedi (bağlantı/izin)');
+      return;
+    }
+    var sunucu = snap ? snap.val() : null;
+    if (!committed) {
+      // Çakışma: aynı anda başka cihaz da çekti — onun durumunu uygula
+      _cekUzaktanUygula(sunucu, true);
+      toast('Aynı anda başka cihazdan çekildi — ekran güncellendi');
+      return;
+    }
+    if (!_cekSunucu || !sunucu || (sunucu.rev || 0) >= (_cekSunucu.rev || 0)) _cekSunucu = sunucu;
+    if (_cekKirli) _cekSenkron();
+  }, false);
+}
+
+function _cekUzaktanUygula(val, cakisma) {
+  // Sunucudaki (başka cihazın yazdığı) kart çekme durumunu bu cihaza uygular.
+  _cekSunucu = val;
+  _cekKirli = false;
+  var pay = _cekSunucudanCoz(val);
+  _cekSonJson = _kanonik(pay);
+  D._rotasyonDurumu = pay;
+  if (firstLoad) return; // ana veri henüz gelmedi — ilk yüklemede açılacak
+  if (pay) {
+    _rotasyonEkraniniCanliYenile();
+    return;
+  }
+  // Çekiliş başka cihazda bitti (masa kuruldu) veya iptal edildi
+  if (typeof _6k !== 'undefined') _6k.pending = false;
+  if (typeof _7k !== 'undefined') _7k.pending = false;
+  _kPending = false;
+  _4kPending = false;
+  _skPending = false;
+  guncelleRotasyonBanner();
+  var kapandi = false;
+  ['ov-6kart', 'ov-7kart', 'ov-kart', 'ov-4kart', 'ov-sirali'].forEach(function(id) {
+    var ov = document.getElementById(id);
+    if (ov && ov.classList.contains('on')) { ov.classList.remove('on'); kapandi = true; }
+  });
+  if (kapandi && !cakisma) refreshAllRemote(D.screen);
+}
+
+CEK.on('value', function(snap) {
+  var val = snap.val();
+  var ilk = !_cekYuklendi;
+  _cekYuklendi = true;
+  if (!ilk && val && val.by === CIHAZ_ID) {
+    // Kendi yazdığımız kayıt geri geldi — ekran zaten güncel
+    if (!_cekSunucu || (val.rev || 0) >= (_cekSunucu.rev || 0)) _cekSunucu = val;
+    return;
+  }
+  _cekUzaktanUygula(val, false);
+});
+
+function _anaKayitHazirla(toSave) {
+  // Ana ağaca (pisti) yapılan her REF.set'ten önce çağrılır.
+  delete toSave._rotasyonDurumu;          // kart çekme ayrı düğümde
+  _anaYazimNo++;
+  _anaSonYazim = CIHAZ_ID + ':' + _anaYazimNo;
+  toSave._yazan = _anaSonYazim;           // kendi yazımımızı güvenle tanımak için
+  _cekSenkron();                          // rotasyon durumu değiştiyse (ör. null) onu da yaz
+  return toSave;
+}
+
 // ── STATE ──
 var SIDS = ['s-m1A1','s-m1A2','s-m1B1','s-m1B2','s-m2A1','s-m2A2','s-m2B1','s-m2B2'];
 
@@ -814,7 +978,7 @@ function saveD() {
   // screen'i Firebase'e kaydetme - her cihaz kendi ekranını yönetsin
   var toSave = JSON.parse(JSON.stringify(D));
   delete toSave.screen;
-  REF.set(toSave).then(function() {
+  REF.set(_anaKayitHazirla(toSave)).then(function() {
     saving = false;
     syncDot('#22c55e');
   }).catch(function(e) {
@@ -832,12 +996,15 @@ REF.on('value', function(snap) {
   var val = snap.val();
   if (!val) {
     syncDot('#22c55e');
-    if (firstLoad) { firstLoad = false; refreshAll(); }
+    if (firstLoad) { firstLoad = false; refreshAll(); _rotasyonEkraniniCanliYenile(true); }
     return;
   }
 
-  var isOwnSave = saving;
+  // Kendi yazımımız mı? Sadece "saving" bayrağına bakmak yetmiyordu: kayıt sürerken
+  // başka cihazdan gelen güncelleme de "kendi kaydımız" sanılıp ekrana yansımıyordu.
+  var isOwnSave = saving && val._yazan === _anaSonYazim;
   var isSkorSave = savingSkor;
+  var _yerelRotasyon = D._rotasyonDurumu; // kart çekme durumu ayrı düğümden yönetilir
   var isDagiticiSave = savingDagitici;
 
   if (isDagiticiSave) {
@@ -872,6 +1039,8 @@ REF.on('value', function(snap) {
     // siraliElIdx: en yüksek değeri koru (Firebase'e henüz yazılmamış olabilir)
     if (savedSiraliElIdx > (D.siraliElIdx || 0)) D.siraliElIdx = savedSiraliElIdx;
   }
+
+  D._rotasyonDurumu = _yerelRotasyon;
 
   // Eksik anahtarları doldur
   Object.keys(DEF).forEach(function(k) {
@@ -909,6 +1078,7 @@ REF.on('value', function(snap) {
   if (firstLoad) {
     firstLoad = false;
     refreshAll();
+    _rotasyonEkraniniCanliYenile(true); // devam eden bir kart çekme varsa aç
   } else if (isDagiticiSave) {
     // Sadece dagitici kaydedildi - skor ekranı açıksa dagitici güncelle
     if (document.getElementById('ov-skor').classList.contains('on')) {
@@ -951,30 +1121,56 @@ db.ref('.info/connected').on('value', function(snap) {
   syncDot(snap.val() ? '#22c55e' : '#f59e0b');
 });
 
-function _rotasyonEkraniniCanliYenile() {
+function _cekSecimTemizle(tip) {
+  // Başka cihazdan gelen durumla artık geçersiz kalan yerel seçimleri temizle
+  // (ör. seçtiğim oyuncu için başka cihaz kart çektiyse).
+  if (tip === '6k' || tip === '7k') {
+    var h = tip === '6k' ? _6k : _7k;
+    if (h.secilen && (!(h.asama === 1 || h.asama === 'Y1') || (h.eslesen && h.eslesen[h.secilen]))) h.secilen = null;
+    if (h.ortakSecilen && (h.asama !== 2 || (h.ortakEslesen && h.ortakEslesen[h.ortakSecilen]))) h.ortakSecilen = null;
+    if (h.disSecilen && (h.asama !== 3 || (h.disOrtak && h.disOrtak[h.disSecilen]))) h.disSecilen = null;
+  } else if (tip === 'k') {
+    if (_kSecilen && (_kAsama !== 1 || _kEslesen[_kSecilen])) _kSecilen = null;
+    if (_kDamSecilen) {
+      var secmis = (_kDamKartlar || []).some(function(d) { return d.oyuncu === _kDamSecilen; });
+      if (_kAsama !== 2 || secmis) _kDamSecilen = null;
+    }
+  } else if (tip === '4k') {
+    if (_4kSecilen && _4kEslesen[_4kSecilen]) _4kSecilen = null;
+  } else if (tip === 'sk') {
+    if (_skSecilen && _skEslesen[_skSecilen]) _skSecilen = null;
+  }
+}
+
+function _kTamamlandiMi() {
+  var n = D.sess && D.sess.players ? D.sess.players.length : 0;
+  if (_kAsama === 3) return true;
+  return _kAsama === 1 && Object.keys(_kEslesen || {}).length === n && (_kDamlar || []).length === 0;
+}
+
+function _rotasyonEkraniniCanliYenile(sadeceAc) {
   // Başka bir cihazda başlatılan/ilerleyen bir kart çekme durumu varsa, bu
   // cihazda da aynı ekranı (henüz açık değilse otomatik açarak) canlı gösterir.
-  // Burada tetiklenen render, _rotasyonKaydet'in tekrar Firebase'e yazıp bir
-  // "ping-pong" yaratmasını önlemek için kayıt baskılanarak yapılır.
-  var durum = D._rotasyonDurumu;
-  var guncelSayi = D.sess && D.sess.players ? D.sess.players.length : 0;
+  // sadeceAc=true: ekran zaten açıksa dokunma (ana veri güncellemelerinde yerel
+  // değişiklikleri ezmemek için).
   // NOT: D.started burada kontrol edilmez — 2. oyun ve sonrasındaki rotasyonlar
-  // (6k/7k/8-9-10k/4k hepsi) zaten D.started=true iken gerçekleşir; bu alanı
-  // kontrol etmek sonraki tüm oyunlardaki otomatik açılmayı engellerdi.
-  if (!durum || !durum.data || durum.sayi !== guncelSayi) return;
+  // zaten D.started=true iken gerçekleşir.
+  var durum = D._rotasyonDurumu;
+  if (!_rotasyonGecerliMi(durum)) return;
 
-  var ovMap = { '6k': 'ov-6kart', '7k': 'ov-7kart', 'k': 'ov-kart', '4k': 'ov-4kart' };
+  var ovMap = { '6k': 'ov-6kart', '7k': 'ov-7kart', 'k': 'ov-kart', '4k': 'ov-4kart', 'sk': 'ov-sirali' };
   var ovId = ovMap[durum.tip];
   if (!ovId) return;
   var ov = document.getElementById(ovId);
   if (!ov) return;
+  if (sadeceAc && ov.classList.contains('on')) return;
 
   _suppressRotasyonKaydet = true;
   try {
     _rotasyonDurumunuYukle();
+    _cekSecimTemizle(durum.tip);
     if (durum.tip === '4k') {
-      // Önceki bir ortaklık turundan kalma "sonuç" görünümünü her senkronizasyonda
-      // sıfırla, aksi halde oyuncu/kart alanları dolup da gizli kalabilir.
+      // Önceki bir turdan kalma "sonuç" görünümünü sıfırla
       var s4 = document.getElementById('4kart-sonuc');
       var o4 = document.getElementById('4kart-oyuncular');
       var k4 = document.getElementById('4kart-kartlar');
@@ -982,18 +1178,22 @@ function _rotasyonEkraniniCanliYenile() {
       if (o4) o4.style.display = 'grid';
       if (k4) k4.style.display = 'grid';
     }
+    if (durum.tip === 'sk') _skEkranHazirla();
     if (!ov.classList.contains('on')) {
       // Başka bir cihaz bu çekilişi zaten başlattı — bu cihazda da otomatik aç
       ov.classList.add('on');
-      if (durum.tip === '6k') _6kListen();
-      else if (durum.tip === '7k') _7kListen();
-      else if (durum.tip === 'k') _kListen();
-      else if (durum.tip === '4k') _4kListen();
     }
     if (durum.tip === '6k') { if (_6k.asama === 'Y1') { _6kRenderY1(); } else { _6kRender(); } }
     else if (durum.tip === '7k') { if (_7k.asama === 'Y1') { _7kRenderY1(); } else { _7kRender(); } }
-    else if (durum.tip === 'k') { _kRender(); }
-    else if (durum.tip === '4k') { _4kRender(); }
+    else if (durum.tip === 'k') { _kListen(); _kRender(); if (_kTamamlandiMi()) _kSonuc(); }
+    else if (durum.tip === '4k') {
+      _4kListen(); _4kRender();
+      if (Object.keys(_4kEslesen).length === 4) _4kSonuc(true);
+    }
+    else if (durum.tip === 'sk') {
+      _skListen(); _skRender();
+      if (Object.keys(_skEslesen).length === D.sess.players.length) _skSonuc();
+    }
   } finally {
     _suppressRotasyonKaydet = false;
   }
@@ -1002,7 +1202,7 @@ function _rotasyonEkraniniCanliYenile() {
 function refreshAllRemote(localScreen) {
   renderPool();
   if (localScreen === 2) renderSessChips();
-  _rotasyonEkraniniCanliYenile();
+  _rotasyonEkraniniCanliYenile(true);
 
   // Gerçek ekran durumunu DOM'dan oku
   var currentScreen = 1;
@@ -1136,6 +1336,7 @@ function kartCekmeVazgec(ovId) {
     if (typeof _7k !== 'undefined') _7k.pending = false;
     if (typeof _kPending !== 'undefined') _kPending = false;
     if (typeof _4kPending !== 'undefined') _4kPending = false;
+    _skPending = false;
     D._rotasyonDurumu = null;
     saveD();
     goS(3);
@@ -1155,10 +1356,12 @@ function kartCekmeVazgecManuel() {
   if (typeof _7k !== 'undefined') _7k.pending = false;
   if (typeof _kPending !== 'undefined') _kPending = false;
   if (typeof _4kPending !== 'undefined') _4kPending = false;
+  _skPending = false;
   D._rotasyonDurumu = null;
   // Manuel kuruluma geçildi — bu oyuncu sayısı değişmeden kaldığı sürece bir daha
   // kart çekme moduna otomatik dönmesin (sayı değişirse tekrar sorulur).
   D.kartCekmeModuKapaliSayi = D.sess.players.length;
+  saveD(); // diğer cihazlardaki kart çekme ekranları da kapansın
   guncelleRotasyonBanner();
   goS(3);
   setTimeout(function() { buildSeats(); }, 50);
@@ -1167,72 +1370,80 @@ function kartCekmeVazgecManuel() {
 function guncelleRotasyonBanner() {
   var banner = document.getElementById('rotasyon-devam-banner');
   if (!banner) return;
-  var pending = (typeof _6k !== 'undefined' && _6k.pending) || (typeof _7k !== 'undefined' && _7k.pending) || (typeof _kPending !== 'undefined' && _kPending) || (typeof _4kPending !== 'undefined' && _4kPending);
+  var pending = (typeof _6k !== 'undefined' && _6k.pending) || (typeof _7k !== 'undefined' && _7k.pending) || (typeof _kPending !== 'undefined' && _kPending) || (typeof _4kPending !== 'undefined' && _4kPending) || _skPending;
   banner.style.display = pending ? 'block' : 'none';
 }
 
 var _suppressRotasyonKaydet = false;
 
 function _rotasyonKaydet() {
-  // Yarım kalmış kart çekme durumunu Firebase'e yazar — sayfa yenilense bile
-  // "kart çekmeye devam et" banner'ı ve ilerleme kaybolmasın.
+  // Kart çekme durumunu canlı olarak diğer cihazlara iletir (pisti_cekilis düğümü).
   if (_suppressRotasyonKaydet) return; // başka cihazdan gelen veriyi ekrana yansıtırken tekrar yazma
+  var oncekiVardi = !!(D._rotasyonDurumu && D._rotasyonDurumu.data);
   var sayi = D.sess && D.sess.players ? D.sess.players.length : 0;
-  if (typeof _6k !== 'undefined' && _6k.pending) {
-    D._rotasyonDurumu = { tip: '6k', sayi: sayi, data: JSON.parse(JSON.stringify(_6k)) };
-  } else if (typeof _7k !== 'undefined' && _7k.pending) {
-    D._rotasyonDurumu = { tip: '7k', sayi: sayi, data: JSON.parse(JSON.stringify(_7k)) };
-  } else if (typeof _kPending !== 'undefined' && _kPending) {
-    D._rotasyonDurumu = { tip: 'k', sayi: sayi, data: JSON.parse(JSON.stringify({
-      _kAsama: _kAsama, _kDeste1: _kDeste1, _kDeste2: _kDeste2, _kEslesen: _kEslesen,
-      _kDamlar: _kDamlar, _kSecilen: _kSecilen, _kDamSecilen: _kDamSecilen, _kDamKartlar: _kDamKartlar,
-      _kGruplar: _kGruplar, _kGrupIdx: _kGrupIdx, _kGrupSiradaki: _kGrupSiradaki,
-      _kDamYasakli: _kDamYasakli, _kDamUyari: _kDamUyari
-    })) };
-  } else if (typeof _4kPending !== 'undefined' && _4kPending) {
-    D._rotasyonDurumu = { tip: '4k', sayi: sayi, data: JSON.parse(JSON.stringify({
-      _4kEslesen: _4kEslesen, _4kSecilen: _4kSecilen, _4kDeste: _4kDeste
-    })) };
+  var p = {
+    '6k': typeof _6k !== 'undefined' && !!_6k.pending,
+    '7k': typeof _7k !== 'undefined' && !!_7k.pending,
+    'k':  !!_kPending,
+    '4k': !!_4kPending,
+    'sk': !!_skPending
+  };
+  var bek = _beklenenTip(sayi);
+  var tip = (bek && p[bek]) ? bek : (['6k', '7k', 'k', '4k', 'sk'].filter(function(t) { return p[t]; })[0] || null);
+  var data = null;
+  if (tip === '6k') data = JSON.parse(JSON.stringify(_6k));
+  else if (tip === '7k') data = JSON.parse(JSON.stringify(_7k));
+  else if (tip === 'k') data = JSON.parse(JSON.stringify({
+    _kAsama: _kAsama, _kDeste1: _kDeste1, _kDeste2: _kDeste2, _kEslesen: _kEslesen,
+    _kDamlar: _kDamlar, _kDamKartlar: _kDamKartlar,
+    _kGruplar: _kGruplar, _kGrupIdx: _kGrupIdx, _kGrupSiradaki: _kGrupSiradaki,
+    _kDamYasakli: _kDamYasakli, _kDamUyari: _kDamUyari, _kIlkSecim: window._kIlkSecim || null
+  }));
+  else if (tip === '4k') data = JSON.parse(JSON.stringify({ _4kEslesen: _4kEslesen, _4kDeste: _4kDeste }));
+  else if (tip === 'sk') data = JSON.parse(JSON.stringify({ _skEslesen: _skEslesen, _skDeste: _skDeste }));
+  D._rotasyonDurumu = tip ? { tip: tip, sayi: sayi, oy: _oyuncuImza(), data: data } : null;
+  if (!oncekiVardi && D._rotasyonDurumu) {
+    saveD();        // yeni çekiliş: ana veriyi de bir kez yaz (içinde _cekSenkron çağrılır)
   } else {
-    D._rotasyonDurumu = null;
+    _cekSenkron();  // sadece kart çekme düğümünü güncelle
   }
-  saveD();
 }
 
 function _devamEdenCekilisVarMi(tip) {
   // Başka bir cihaz zaten bu türde (aynı oyuncu sayısıyla) bir çekiliş başlattıysa
   // true döner — bu durumda yeni bir rastgele deste ile baştan başlamak yerine
   // mevcut çekilişe (aynı kartlarla) katılmak gerekir.
-  var guncelSayi = D.sess && D.sess.players ? D.sess.players.length : 0;
-  return !!(D._rotasyonDurumu && D._rotasyonDurumu.tip === tip && D._rotasyonDurumu.sayi === guncelSayi && D._rotasyonDurumu.data);
+  return !!(D._rotasyonDurumu && D._rotasyonDurumu.tip === tip && _rotasyonGecerliMi(D._rotasyonDurumu));
 }
 
 function _rotasyonDurumunuYukle() {
-  // Sayfa (yeniden) yüklendiğinde, yarım kalmış bir kart çekme kaydı varsa geri yükle.
-  // Kayıt, GÜNCEL oyuncu sayısına ait değilse (ör. önceki bir 6 kişilik oturumdan
-  // kalmışsa) geri yüklemeyi atla ve kaydı temizle — yanlış ekrana dönmesin.
+  // Kayıtlı (yerel ya da başka cihazdan gelen) kart çekme durumunu değişkenlere yükler.
+  // Kayıt GÜNCEL oyuncu grubuna ait değilse (ör. eski bir oturumdan kalmışsa) yok sayılır.
   if (!D._rotasyonDurumu || !D._rotasyonDurumu.data) return;
-  var guncelSayi = D.sess && D.sess.players ? D.sess.players.length : 0;
-  if (D._rotasyonDurumu.sayi !== guncelSayi) {
-    D._rotasyonDurumu = null;
-    saveD();
-    return;
-  }
+  if (!_rotasyonGecerliMi(D._rotasyonDurumu)) return;
   var tip = D._rotasyonDurumu.tip;
-  var data = D._rotasyonDurumu.data;
-  if (tip === '6k' && typeof _6k !== 'undefined') {
-    for (var k in data) _6k[k] = data[k];
-  } else if (tip === '7k' && typeof _7k !== 'undefined') {
-    for (var k2 in data) _7k[k2] = data[k2];
+  var data = JSON.parse(JSON.stringify(D._rotasyonDurumu.data));
+  var yerel = _CEK_YEREL_ALANLAR[tip] || [];
+  if (tip === '6k' || tip === '7k') {
+    var h = (tip === '6k') ? _6k : _7k;
+    if (typeof h === 'undefined') return;
+    // Kayıtta olmayan eski alanları sil (önceki turdan kalanlar karışmasın), sonra kopyala
+    Object.keys(h).forEach(function(a) { if (yerel.indexOf(a) < 0 && !(a in data)) delete h[a]; });
+    Object.keys(data).forEach(function(a) { if (yerel.indexOf(a) < 0) h[a] = data[a]; });
+    h.pending = true;
   } else if (tip === 'k') {
-    _kAsama = data._kAsama; _kDeste1 = data._kDeste1; _kDeste2 = data._kDeste2; _kEslesen = data._kEslesen;
-    _kDamlar = data._kDamlar; _kSecilen = data._kSecilen; _kDamSecilen = data._kDamSecilen; _kDamKartlar = data._kDamKartlar;
-    _kGruplar = data._kGruplar; _kGrupIdx = data._kGrupIdx; _kGrupSiradaki = data._kGrupSiradaki;
-    _kDamYasakli = data._kDamYasakli; _kDamUyari = data._kDamUyari;
+    _kAsama = data._kAsama; _kDeste1 = data._kDeste1 || []; _kDeste2 = data._kDeste2 || []; _kEslesen = data._kEslesen || {};
+    _kDamlar = data._kDamlar || []; _kDamKartlar = data._kDamKartlar || [];
+    _kGruplar = data._kGruplar || []; _kGrupIdx = data._kGrupIdx || 0; _kGrupSiradaki = data._kGrupSiradaki || 0;
+    _kDamYasakli = !!data._kDamYasakli; _kDamUyari = !!data._kDamUyari;
+    window._kIlkSecim = data._kIlkSecim || null;
     _kPending = true;
   } else if (tip === '4k') {
-    _4kEslesen = data._4kEslesen; _4kSecilen = data._4kSecilen; _4kDeste = data._4kDeste;
+    _4kEslesen = data._4kEslesen || {}; _4kDeste = data._4kDeste || [];
     _4kPending = true;
+  } else if (tip === 'sk') {
+    _skEslesen = data._skEslesen || {}; _skDeste = data._skDeste || [];
+    _skPending = true;
   }
   guncelleRotasyonBanner();
 }
@@ -1258,6 +1469,13 @@ function rotasyonaDevamEt() {
   if (typeof _4kPending !== 'undefined' && _4kPending) {
     document.getElementById('ov-4kart').classList.add('on');
     _4kListen(); _4kRender();
+    return;
+  }
+  if (_skPending) {
+    _skEkranHazirla();
+    document.getElementById('ov-sirali').classList.add('on');
+    _skListen(); _skRender();
+    if (Object.keys(_skEslesen).length === D.sess.players.length) _skSonuc();
     return;
   }
 }
@@ -1355,6 +1573,7 @@ function toggleSess(name) {
     _7k.pending = false;
     if (typeof _kPending !== 'undefined') _kPending = false;
     if (typeof _4kPending !== 'undefined') _4kPending = false;
+    _skPending = false;
     D._rotasyonDurumu = null;
     if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
   }
@@ -1366,7 +1585,7 @@ function toggleSess(name) {
     saving = false;
     var toSave = JSON.parse(JSON.stringify(D));
     delete toSave.screen;
-    REF.set(toSave);
+    REF.set(_anaKayitHazirla(toSave));
     renderSessChips();
     return;
   }
@@ -1587,6 +1806,8 @@ function _6kKartTik(idx) {
 }
 
 function _6kAsamaBit1() {
+  if (_6k.asama !== 1) return; // başka cihaz zaten sonraki aşamaya geçirdi
+  if (Object.keys(_6k.eslesen).length < D.sess.players.length && !_6k._aktifCekenler) return;
   // İlk çağrı: havuzu ve kesinleşmiş (kilitli) grupları başlat. Bir eşitlik
   // yüzünden tekrar çağrıldığında kaldığı yerden (sadece eşit çekenlerin
   // havuzuyla) devam eder — kesinleşmiş oyuncular bir daha karışmaz.
@@ -1651,6 +1872,8 @@ function _6kAsamaBit1() {
 }
 
 function _6kAsamaBit2() {
+  if (_6k.asama !== 2) return;
+  if (Object.keys(_6k.ortakEslesen).length < (_6k._asama2Oyuncular || _6k.masadakiler).length) return;
   // masadakiler = ortakEslesen'deki kırmızılar ve siyahlar
   var kirmizilar = (_6k._asama2Oyuncular || _6k.masadakiler).filter(function(p) {
     return _6k.ortakEslesen[p] && _6k.ortakEslesen[p].renk === 'K';
@@ -1667,6 +1890,8 @@ function _6kAsamaBit2() {
 }
 
 function _6kAsamaBit3() {
+  if (_6k.asama !== 3) return;
+  if (Object.keys(_6k.disOrtak).length < _6k.disaridakiler.length) return;
   // İki dışarıdaki aynı renk mi? ("4'e 2" kuralı aktifse aynı renk çekilmesine izin verilir
   var renkler = _6k.disaridakiler.map(function(p) { return _6k.disOrtak[p]; });
   if (renkler[0] === renkler[1] && !D.sess.dortE2) {
@@ -1965,6 +2190,7 @@ function _6kRenderY1() {
 }
 
 function _6kY1Sonuc() {
+  if (_6k.asama !== 'Y1') return;
   // İlk çağrı: havuzu ve kilitli grupları başlat. Eşitlik yüzünden tekrar
   // çağrıldığında sadece eşit çekenlerin küçük havuzuyla devam eder —
   // kesinleşmiş oyuncular bir daha karışmaz.
@@ -2034,6 +2260,7 @@ function _6kY1Sonuc() {
 
 
 function _6kMasaKur() {
+  if (_6k.asama !== 3) return; // masa başka cihazda kuruldu / durum değişti
   _6k.pending = false;
   D._rotasyonDurumu = null;
   guncelleRotasyonBanner();
@@ -2063,7 +2290,7 @@ function _6kMasaKur() {
   closeOv('ov-6kart');
   saving = true; syncDot('#f59e0b');
   var toSave = JSON.parse(JSON.stringify(D)); delete toSave.screen;
-  REF.set(toSave).then(function() {
+  REF.set(_anaKayitHazirla(toSave)).then(function() {
     saving = false; syncDot('#22c55e');
     updateMasaLabels(); renderSessChips(); renderGameCards(); goS(4); switchMasa(1);
     setTimeout(function() { showSkorTakip(); }, 100);
@@ -2197,6 +2424,8 @@ function _7kKartTik(idx) {
 }
 
 function _7kAsamaBit1() {
+  if (_7k.asama !== 1) return;
+  if (Object.keys(_7k.eslesen).length < D.sess.players.length && !_7k._aktifCekenler) return;
   // İlk çağrı: havuzu ve kesinleşmiş (kilitli) grupları başlat.
   // Bir eşitlik yüzünden tekrar çağrıldığında ise kaldığı yerden (sadece eşit
   // çekenlerin oluşturduğu küçük havuzla) devam eder — kesinleşmiş oyuncular
@@ -2265,6 +2494,8 @@ function _7kAsamaBit1() {
 }
 
 function _7kAsamaBit2() {
+  if (_7k.asama !== 2) return;
+  if (Object.keys(_7k.ortakEslesen).length < (_7k._asama2Oyuncular || _7k.masadakiler).length) return;
   var kirmizilar = (_7k._asama2Oyuncular || _7k.masadakiler).filter(function(p) {
     return _7k.ortakEslesen[p] && _7k.ortakEslesen[p].renk === 'K';
   });
@@ -2280,6 +2511,8 @@ function _7kAsamaBit2() {
 }
 
 function _7kAsamaBit3() {
+  if (_7k.asama !== 3) return;
+  if (Object.keys(_7k.disOrtak).length < _7k.disaridakiler.length) return;
   // Dışarıdaki 3 kişi renk çekti — 3'ü birden aynı renk olamaz
   var renkler = _7k.disaridakiler.map(function(p) { return _7k.disOrtak[p]; });
   var hepsiAyni = renkler.every(function(r) { return r === renkler[0]; });
@@ -2546,6 +2779,7 @@ function _7kRenderY1() {
 }
 
 function _7kY1Sonuc() {
+  if (_7k.asama !== 'Y1') return;
   // İlk çağrı: havuzu ve kilitli grupları başlat. Eşitlik yüzünden tekrar
   // çağrıldığında sadece eşit çekenlerin küçük havuzuyla devam eder —
   // kesinleşmiş oyuncular bir daha karışmaz.
@@ -2598,6 +2832,7 @@ function _7kY1Sonuc() {
 }
 
 function _7kMasaKur() {
+  if (_7k.asama !== 3) return;
   _7k.pending = false;
   D._rotasyonDurumu = null;
   guncelleRotasyonBanner();
@@ -2627,7 +2862,7 @@ function _7kMasaKur() {
   closeOv('ov-7kart');
   saving = true; syncDot('#f59e0b');
   var toSave = JSON.parse(JSON.stringify(D)); delete toSave.screen;
-  REF.set(toSave).then(function() {
+  REF.set(_anaKayitHazirla(toSave)).then(function() {
     saving = false; syncDot('#22c55e');
     updateMasaLabels(); renderSessChips(); renderGameCards(); goS(4); switchMasa(1);
     setTimeout(function() { showSkorTakip(); }, 100);
@@ -2776,7 +3011,8 @@ function _4kRender() {
   _rotasyonKaydet();
 }
 
-function _4kSonuc() {
+function _4kSonuc(uzaktan) {
+  if (Object.keys(_4kEslesen).length < 4) return;
   var kirmizi = [], siyah = [];
   for (var p in _4kEslesen) {
     if (_4kEslesen[p] === 'K') kirmizi.push(p);
@@ -2796,7 +3032,13 @@ function _4kSonuc() {
   });
   if (zatenOynandi) {
     document.getElementById('4kart-aciklama').textContent = '⚠️ Bu ortaklık oynandı! Yeniden karıştırılıyor...';
-    setTimeout(function() { show4KisiKartCekme(); }, 1200);
+    if (uzaktan) return; // yeniden karıştırmayı çeken cihaz yapar
+    setTimeout(function() {
+      // Biten çekilişe yeniden "katılmamak" için eski durumu temizle, yeni deste karıştır
+      _4kPending = false;
+      D._rotasyonDurumu = null;
+      show4KisiKartCekme();
+    }, 1200);
     return;
   }
 
@@ -2830,7 +3072,7 @@ function _4kKurMasa(kirmizi, siyah) {
   saving = true; syncDot('#f59e0b');
   var toSave = JSON.parse(JSON.stringify(D));
   delete toSave.screen;
-  REF.set(toSave).then(function() {
+  REF.set(_anaKayitHazirla(toSave)).then(function() {
     saving = false; syncDot('#22c55e');
     updateMasaLabels(); renderSessChips(); renderGameCards(); goS(4); switchMasa(1); guncelleRotasyonBanner();
     setTimeout(function() { showSkorTakip(); }, 100);
@@ -2840,6 +3082,7 @@ function _4kKurMasa(kirmizi, siyah) {
 function basla4KisiSirali() {
   var d = window._4kSonucData;
   if (!d) return;
+  if (!_4kPending) { closeOv('ov-4kart'); return; } // masa başka cihazda zaten kuruldu
   _4kKurMasa(d.K, d.S);
 }
 
@@ -2847,6 +3090,17 @@ function basla4KisiSirali() {
 var _skEslesen = {}; // {oyuncu: kartDegeri}
 var _skSecilen = null;
 var _skDeste = [];
+var _skPending = false;
+
+function _skEkranHazirla() {
+  document.getElementById('sirali-ov-baslik').textContent = '🃏 Sıralama Kart Çek';
+  document.getElementById('sirali-aciklama').textContent = 'Önce ismine dokun, sonra bir kart seç.';
+  document.getElementById('sirali-kart-vazgec').style.display = '';
+  document.getElementById('sirali-sonuc').style.display = 'none';
+  document.getElementById('sirali-manuel').style.display = 'none';
+  document.getElementById('sirali-oyuncular').style.display = 'grid';
+  document.getElementById('sirali-kartlar').style.display = 'grid';
+}
 
 function showSiraliSiralama() {
   closeOv('ov-oyun-modu');
@@ -2857,20 +3111,31 @@ function showSiraliSiralama() {
     show4KisiKartCekme();
     return;
   }
-  // Kart çekme modunu başlat
+  if (_devamEdenCekilisVarMi('sk')) {
+    // Başka bir cihaz bu çekilişi zaten başlattı — aynı kartlarla ona katıl
+    _rotasyonDurumunuYukle();
+    _skEkranHazirla();
+    _skRender();
+    _skListen();
+    document.getElementById('ov-sirali').classList.add('on');
+    if (Object.keys(_skEslesen).length === D.sess.players.length) _skSonuc();
+    return;
+  }
+  // Kart çekme modunu başlat (diğer cihazlara canlı yansır)
+  _skPending = true;
+  if (typeof _6k !== 'undefined') _6k.pending = false;
+  if (typeof _7k !== 'undefined') _7k.pending = false;
+  _kPending = false;
+  _4kPending = false;
+  D._rotasyonDurumu = null;
+  guncelleRotasyonBanner();
   _skEslesen = {};
   _skSecilen = null;
   var deger = ['A','2','3','4','5'];
   _kShuffle(deger);
   _skDeste = deger.map(function(d){return {deger:d, acik:false};});
 
-  document.getElementById('sirali-ov-baslik').textContent = '🃏 Sıralama Kart Çek';
-  document.getElementById('sirali-aciklama').textContent = 'Önce ismine dokun, sonra bir kart seç.';
-  document.getElementById('sirali-kart-vazgec').style.display = '';
-  document.getElementById('sirali-sonuc').style.display = 'none';
-  document.getElementById('sirali-manuel').style.display = 'none';
-  document.getElementById('sirali-oyuncular').style.display = 'grid';
-  document.getElementById('sirali-kartlar').style.display = 'grid';
+  _skEkranHazirla();
 
   _skRender();
   _skListen();
@@ -2881,6 +3146,10 @@ function siraliVazgec() {
   // Kart çekmeyi iptal et, manuel dropdown moduna geç
   _skEslesen = {};
   _skSecilen = null;
+  _skPending = false;
+  D._rotasyonDurumu = null;
+  _cekSenkron(); // diğer cihazlardaki çekiliş ekranı da kapansın
+  guncelleRotasyonBanner();
   document.getElementById('sirali-ov-baslik').textContent = 'Sıralı Oyun — Sıralama';
   document.getElementById('sirali-aciklama').textContent = '';
   document.getElementById('sirali-kart-vazgec').style.display = 'none';
@@ -2998,9 +3267,11 @@ function _skRender() {
     }
   }
   kartDiv.innerHTML = kartHtml;
+  _rotasyonKaydet();
 }
 
 function _skSonuc() {
+  if (Object.keys(_skEslesen).length < D.sess.players.length) return;
   // Kartlara göre sıralama: A=1, 2=2, 3=3, 4=4, 5=5
   var siraMap = {A:1, '2':2, '3':3, '4':4, '5':5};
   var siralanmis = D.sess.players.slice().sort(function(a, b) {
@@ -3028,6 +3299,10 @@ function _skSonuc() {
 function baslaSiraliKart() {
   var siralanmis = window._skSiralanmis;
   if (!siralanmis || siralanmis.length !== 5) return;
+  if (!_skPending) { closeOv('ov-sirali'); return; } // başka cihazda zaten başlatıldı
+  _skPending = false;
+  D._rotasyonDurumu = null;
+  guncelleRotasyonBanner();
   _siraliSira = siralanmis;
   _siraliOyunIdx = 0;
   D.siraliMod = true;
@@ -3081,6 +3356,8 @@ function baslaSirali() {
   }
   _siraliSira = sira;
   _siraliOyunIdx = 0;
+  _skPending = false;
+  D._rotasyonDurumu = null;
   D.siraliMod = true;
   D.siraliSira = sira.slice();
   D.siraliElIdx = 0;
@@ -3336,7 +3613,7 @@ function startPlay() {
   syncDot('#f59e0b');
   var toSave = JSON.parse(JSON.stringify(D));
   delete toSave.screen;
-  REF.set(toSave).then(function() {
+  REF.set(_anaKayitHazirla(toSave)).then(function() {
     saving = false;
     syncDot('#22c55e');
     renderGameCards();
@@ -3659,7 +3936,7 @@ function _delGameExec(id) {
     // Tüm D'yi Firebase'e yaz
     var toSave = JSON.parse(JSON.stringify(D));
     delete toSave.screen;
-    REF.set(toSave).then(function() {
+    REF.set(_anaKayitHazirla(toSave)).then(function() {
       syncDot('#22c55e');
     });
     renderPool();
@@ -7138,6 +7415,7 @@ function _kSonuc(){
 }
 
 function kartOnayla(){
+  if (!_kPending) { closeOv('ov-kart'); return; } // masa başka cihazda zaten kuruldu
   _kPending=false;
   D._rotasyonDurumu = null;
   D._8910RoundDone = {};
@@ -7179,7 +7457,7 @@ function kartOnayla(){
   saving=true; syncDot('#f59e0b');
   var toSave=JSON.parse(JSON.stringify(D));
   delete toSave.screen;
-  REF.set(toSave).then(function(){
+  REF.set(_anaKayitHazirla(toSave)).then(function(){
     saving=false;syncDot('#22c55e');
     updateMasaLabels();renderSessChips();renderGameCards();goS(4);switchMasa(1);guncelleRotasyonBanner();
     setTimeout(function(){showSkorTakip();},100);
