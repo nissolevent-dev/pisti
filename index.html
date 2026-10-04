@@ -1102,6 +1102,12 @@ function kartCekmeVazgec(ovId) {
   if (D.started) {
     document.getElementById('ov-kart-vazgec').classList.add('on');
   } else {
+    if (typeof _6k !== 'undefined') _6k.pending = false;
+    if (typeof _7k !== 'undefined') _7k.pending = false;
+    if (typeof _kPending !== 'undefined') _kPending = false;
+    if (typeof _4kPending !== 'undefined') _4kPending = false;
+    D._rotasyonDurumu = null;
+    saveD();
     goS(3);
     setTimeout(function() { buildSeats(); }, 50);
   }
@@ -1161,6 +1167,14 @@ function _rotasyonKaydet() {
     D._rotasyonDurumu = null;
   }
   saveD();
+}
+
+function _devamEdenCekilisVarMi(tip) {
+  // Başka bir cihaz zaten bu türde (aynı oyuncu sayısıyla) bir çekiliş başlattıysa
+  // true döner — bu durumda yeni bir rastgele deste ile baştan başlamak yerine
+  // mevcut çekilişe (aynı kartlarla) katılmak gerekir.
+  var guncelSayi = D.sess && D.sess.players ? D.sess.players.length : 0;
+  return !!(D._rotasyonDurumu && D._rotasyonDurumu.tip === tip && D._rotasyonDurumu.sayi === guncelSayi && D._rotasyonDurumu.data);
 }
 
 function _rotasyonDurumunuYukle() {
@@ -1437,9 +1451,18 @@ function secDortE2(val) {
 }
 
 function show6KisiKartCekme() {
+  if (_devamEdenCekilisVarMi('6k')) {
+    // Başka bir cihaz zaten bu çekilişi başlattı — aynı kartlarla ona katıl
+    _rotasyonDurumunuYukle();
+    document.getElementById('ov-6kart').classList.add('on');
+    _6kListen();
+    if (_6k.asama === 'Y1') { _6kRenderY1(); } else { _6kRender(); }
+    return;
+  }
   // Yeni (baştan) bir 6 kişilik çekiliş — önceki rotasyon geçmişini/işaretlerini sıfırla
   D._6kDisaridaGecmis = {};
-  _6k.pending = false;
+  // pending=true: bu ilk çekiliş de diğer cihazlara canlı yansısın
+  _6k.pending = true;
   _7k.pending = false;
   if (typeof _kPending !== 'undefined') _kPending = false;
   if (typeof _4kPending !== 'undefined') _4kPending = false;
@@ -2040,7 +2063,16 @@ var _7k = {
 };
 
 function show7KisiKartCekme() {
-  _7k.pending = false;
+  if (_devamEdenCekilisVarMi('7k')) {
+    // Başka bir cihaz zaten bu çekilişi başlattı — aynı kartlarla ona katıl
+    _rotasyonDurumunuYukle();
+    document.getElementById('ov-7kart').classList.add('on');
+    _7kListen();
+    if (_7k.asama === 'Y1') { _7kRenderY1(); } else { _7kRender(); }
+    return;
+  }
+  // pending=true: bu ilk çekiliş de diğer cihazlara canlı yansısın
+  _7k.pending = true;
   _6k.pending = false;
   if (typeof _kPending !== 'undefined') _kPending = false;
   if (typeof _4kPending !== 'undefined') _4kPending = false;
@@ -2579,6 +2611,14 @@ var _4kDeste = [];
 var _4kPending = false;
 
 function show4KisiKartCekme() {
+  if (_devamEdenCekilisVarMi('4k')) {
+    // Başka bir cihaz zaten bu çekilişi başlattı — aynı kartlarla ona katıl
+    _rotasyonDurumunuYukle();
+    document.getElementById('ov-4kart').classList.add('on');
+    _4kListen();
+    _4kRender();
+    return;
+  }
   _4kPending = true;
   if (typeof _6k !== 'undefined') _6k.pending = false;
   if (typeof _7k !== 'undefined') _7k.pending = false;
@@ -6634,6 +6674,15 @@ function _kListen(){
 }
 
 function showKartCekme(){
+  if (_devamEdenCekilisVarMi('k')) {
+    // Başka bir cihaz zaten bu çekilişi (aynı rastgele desteyle) başlattı —
+    // yeni bir deste karıştırıp çakışma yaratmak yerine mevcut çekilişe katıl.
+    _rotasyonDurumunuYukle();
+    document.getElementById('ov-kart').classList.add('on');
+    _kListen();
+    _kRender();
+    return;
+  }
   _kPending=true;
   if (typeof _6k !== 'undefined') _6k.pending = false;
   if (typeof _7k !== 'undefined') _7k.pending = false;
