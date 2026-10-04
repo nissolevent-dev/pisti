@@ -827,6 +827,8 @@ function _rotasyonGecerliMi(durum) {
   var sayi = D.sess && D.sess.players ? D.sess.players.length : 0;
   if (durum.sayi !== sayi) return false;
   if (durum.oy && durum.oy !== _oyuncuImza()) return false;
+  // Başka (önceki) bir oturumdan kalan kayıt geçersizdir
+  if (!durum.oturum || durum.oturum !== D.oturumId) return false;
   return true;
 }
 
@@ -834,13 +836,13 @@ function _cekPaylasilan(durum) {
   if (!durum || !durum.data) return null;
   var data = JSON.parse(JSON.stringify(durum.data));
   (_CEK_YEREL_ALANLAR[durum.tip] || []).forEach(function(a) { delete data[a]; });
-  return { tip: durum.tip, sayi: durum.sayi, oy: durum.oy || null, data: data };
+  return { tip: durum.tip, sayi: durum.sayi, oy: durum.oy || null, oturum: durum.oturum || null, data: data };
 }
 
 function _cekSunucudanCoz(val) {
   if (!val || val.bos || !val.json) return null;
   try {
-    return { tip: val.tip, sayi: val.sayi, oy: val.oy || null, data: JSON.parse(val.json) };
+    return { tip: val.tip, sayi: val.sayi, oy: val.oy || null, oturum: val.oturum || null, data: JSON.parse(val.json) };
   } catch (e) { return null; }
 }
 
@@ -858,6 +860,7 @@ function _cekSenkron() {
   if (pay) {
     yeni.tip = pay.tip; yeni.sayi = pay.sayi; yeni.json = JSON.stringify(pay.data);
     if (pay.oy) yeni.oy = pay.oy;
+    if (pay.oturum) yeni.oturum = pay.oturum;
   } else {
     yeni.bos = true; // çekiliş bitti / iptal
   }
@@ -886,6 +889,32 @@ function _cekSenkron() {
   }, false);
 }
 
+var _cekBekleyen = false;
+
+function _cekBekleyeniAc() {
+  // Daha önce gelip o an açılamayan (ör. oyuncu listesi henüz gelmemiş) kaydı aç
+  if (!_cekBekleyen) return;
+  if (!_rotasyonGecerliMi(D._rotasyonDurumu)) return;
+  _cekBekleyen = false;
+  _rotasyonEkraniniCanliYenile(true);
+}
+
+function _cekilisIptal() {
+  // Devam eden/yarım kalmış kart çekmeyi tüm cihazlarda iptal eder (bir sonraki saveD ile yazılır)
+  if (typeof _6k !== 'undefined') _6k.pending = false;
+  if (typeof _7k !== 'undefined') _7k.pending = false;
+  _kPending = false;
+  _4kPending = false;
+  _skPending = false;
+  D._rotasyonDurumu = null;
+  _cekBekleyen = false;
+  ['ov-6kart', 'ov-7kart', 'ov-kart', 'ov-4kart', 'ov-sirali', 'ov-kart-vazgec'].forEach(function(id) {
+    var ov = document.getElementById(id);
+    if (ov) ov.classList.remove('on');
+  });
+  guncelleRotasyonBanner();
+}
+
 function _cekUzaktanUygula(val, cakisma) {
   // Sunucudaki (başka cihazın yazdığı) kart çekme durumunu bu cihaza uygular.
   _cekSunucu = val;
@@ -893,9 +922,16 @@ function _cekUzaktanUygula(val, cakisma) {
   var pay = _cekSunucudanCoz(val);
   _cekSonJson = _kanonik(pay);
   D._rotasyonDurumu = pay;
+  // Yeni gelen kayıt henüz açılamıyorsa (ana veri/oyuncular gelmedi) "bekleyen" olarak işaretle.
+  // Ekran SADECE böyle yeni bir kayıt geldiğinde otomatik açılır — artık her ana veri
+  // güncellemesinde (oyun silme, oyuncu seçme vb.) eski kayıt yeniden açılmaz.
+  _cekBekleyen = !!pay;
   if (firstLoad) return; // ana veri henüz gelmedi — ilk yüklemede açılacak
   if (pay) {
-    _rotasyonEkraniniCanliYenile();
+    if (_rotasyonGecerliMi(pay)) {
+      _cekBekleyen = false;
+      _rotasyonEkraniniCanliYenile();
+    }
     return;
   }
   // Çekiliş başka cihazda bitti (masa kuruldu) veya iptal edildi
@@ -996,7 +1032,7 @@ REF.on('value', function(snap) {
   var val = snap.val();
   if (!val) {
     syncDot('#22c55e');
-    if (firstLoad) { firstLoad = false; refreshAll(); _rotasyonEkraniniCanliYenile(true); }
+    if (firstLoad) { firstLoad = false; refreshAll(); _cekBekleyeniAc(); }
     return;
   }
 
@@ -1078,7 +1114,7 @@ REF.on('value', function(snap) {
   if (firstLoad) {
     firstLoad = false;
     refreshAll();
-    _rotasyonEkraniniCanliYenile(true); // devam eden bir kart çekme varsa aç
+    _cekBekleyeniAc(); // devam eden bir kart çekme varsa aç
   } else if (isDagiticiSave) {
     // Sadece dagitici kaydedildi - skor ekranı açıksa dagitici güncelle
     if (document.getElementById('ov-skor').classList.contains('on')) {
@@ -1202,7 +1238,7 @@ function _rotasyonEkraniniCanliYenile(sadeceAc) {
 function refreshAllRemote(localScreen) {
   renderPool();
   if (localScreen === 2) renderSessChips();
-  _rotasyonEkraniniCanliYenile(true);
+  _cekBekleyeniAc();
 
   // Gerçek ekran durumunu DOM'dan oku
   var currentScreen = 1;
@@ -1401,7 +1437,8 @@ function _rotasyonKaydet() {
   }));
   else if (tip === '4k') data = JSON.parse(JSON.stringify({ _4kEslesen: _4kEslesen, _4kDeste: _4kDeste }));
   else if (tip === 'sk') data = JSON.parse(JSON.stringify({ _skEslesen: _skEslesen, _skDeste: _skDeste }));
-  D._rotasyonDurumu = tip ? { tip: tip, sayi: sayi, oy: _oyuncuImza(), data: data } : null;
+  if (tip && !D.oturumId) D.oturumId = Date.now(); // eski veride oturum kimliği yoksa oluştur
+  D._rotasyonDurumu = tip ? { tip: tip, sayi: sayi, oy: _oyuncuImza(), oturum: D.oturumId, data: data } : null;
   if (!oncekiVardi && D._rotasyonDurumu) {
     saveD();        // yeni çekiliş: ana veriyi de bir kez yaz (içinde _cekSenkron çağrılır)
   } else {
@@ -1568,14 +1605,8 @@ function toggleSess(name) {
 
   // Oyuncu sayısı değiştiği için, eski sayıya göre yarım kalmış bir kart çekme
   // varsa artık geçerli değildir — "devam et" işaretini temizle.
-  if (D.started) {
-    _6k.pending = false;
-    _7k.pending = false;
-    if (typeof _kPending !== 'undefined') _kPending = false;
-    if (typeof _4kPending !== 'undefined') _4kPending = false;
-    _skPending = false;
-    D._rotasyonDurumu = null;
-    if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
+  if (D.started || D._rotasyonDurumu) {
+    _cekilisIptal();
   }
 
   // Eğer oyun başlamamışsa ve tüm oyuncular kaldırıldıysa started'ı sıfırla
@@ -3893,6 +3924,8 @@ function _delGameExec(id) {
   for (var i = 0; i < D.sessGames.length; i++) { if (D.sessGames[i].id === id) { si = i; break; } }
   if (ai === -1) return;
   var g = D.allGames[ai];
+  // Silinen oyun oturumun son oyunuysa, onun bitişiyle başlayan kart çekme artık geçersiz
+  if (si > -1 && si === D.sessGames.length - 1) _cekilisIptal();
   for (var p in g.payMap) {
     D.ldg[p] = (D.ldg[p] || 0) - g.payMap[p];
     D.sessLdg[p] = (D.sessLdg[p] || 0) - g.payMap[p];
@@ -3931,6 +3964,7 @@ function _delGameExec(id) {
     D.sessLdg = {};
   D.masallahGoster = {};
     D.sess.players = [];
+    D.oturumId = Date.now(); _cekilisIptal();
     // Önce saving'i false yap ki listener engellenmesin
     saving = false;
     // Tüm D'yi Firebase'e yaz
@@ -4104,6 +4138,7 @@ function _closeSessionFinish(allSessPlayers, summary, odemeler) {
   };
 
   D.sessGames = []; D.sessLdg = {}; D.sess.players = [];
+  D.oturumId = Date.now(); _cekilisIptal(); // önceki oturumun kart çekmesi yeni oturumda açılmasın
   D.round = JSON.parse(JSON.stringify(DEF.round));
   D.started = false;
   D.siraliMod = false;
@@ -4127,6 +4162,7 @@ function _closeSessionFinish(allSessPlayers, summary, odemeler) {
 function newSession() {
   if (!confirm('Yeni oturum? Bu oturum kaydedilmeden sıfırlanır.')) return;
   D.sessGames = []; D.sessLdg = {}; D.sess.players = [];
+  D.oturumId = Date.now(); _cekilisIptal(); // önceki oturumun kart çekmesi yeni oturumda açılmasın
   D.round = JSON.parse(JSON.stringify(DEF.round));
   D.started = false;
   D.damGecmisi = {};
@@ -6463,6 +6499,7 @@ function undoGame(gameId) {
 
   onaySor(mesaj, function() {
     var masa = game.masa || 1;
+    _cekilisIptal(); // geri alınan oyunun ardından başlayan kart çekmeyi iptal et
 
     for (var p in game.payMap) {
       D.ldg[p] = (D.ldg[p] || 0) - game.payMap[p];
@@ -6513,6 +6550,7 @@ function undoLastGame() {
   var lastGame = D.sessGames[D.sessGames.length - 1];
   if (!lastGame) return;
   var masa = _undoMasa || lastGame.masa || 1;
+  _cekilisIptal(); // geri alınan oyunun ardından başlayan kart çekmeyi iptal et
 
   // Piyasayı geri al
   for (var p in lastGame.payMap) {
