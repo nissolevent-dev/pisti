@@ -952,26 +952,35 @@ db.ref('.info/connected').on('value', function(snap) {
 });
 
 function _rotasyonEkraniniCanliYenile() {
-  // Başka bir cihazda yapılan kart çekme ilerlemesini, bu cihazda açık olan
-  // kart çekme ekranına (varsa) canlı yansıtır. Burada tetiklenen render,
-  // _rotasyonKaydet'in tekrar Firebase'e yazıp bir "ping-pong" yaratmasını
-  // önlemek için kayıt baskılanarak yapılır.
+  // Başka bir cihazda başlatılan/ilerleyen bir kart çekme durumu varsa, bu
+  // cihazda da aynı ekranı (henüz açık değilse otomatik açarak) canlı gösterir.
+  // Burada tetiklenen render, _rotasyonKaydet'in tekrar Firebase'e yazıp bir
+  // "ping-pong" yaratmasını önlemek için kayıt baskılanarak yapılır.
+  var durum = D._rotasyonDurumu;
+  var guncelSayi = D.sess && D.sess.players ? D.sess.players.length : 0;
+  if (!durum || !durum.data || durum.sayi !== guncelSayi || D.started) return;
+
+  var ovMap = { '6k': 'ov-6kart', '7k': 'ov-7kart', 'k': 'ov-kart', '4k': 'ov-4kart' };
+  var ovId = ovMap[durum.tip];
+  if (!ovId) return;
+  var ov = document.getElementById(ovId);
+  if (!ov) return;
+
   _suppressRotasyonKaydet = true;
   try {
     _rotasyonDurumunuYukle();
-    var ov6 = document.getElementById('ov-6kart');
-    var ov7 = document.getElementById('ov-7kart');
-    var ovK = document.getElementById('ov-kart');
-    var ov4 = document.getElementById('ov-4kart');
-    if (ov6 && ov6.classList.contains('on')) {
-      if (_6k.asama === 'Y1') { _6kRenderY1(); } else { _6kRender(); }
-    } else if (ov7 && ov7.classList.contains('on')) {
-      if (_7k.asama === 'Y1') { _7kRenderY1(); } else { _7kRender(); }
-    } else if (ovK && ovK.classList.contains('on')) {
-      _kRender();
-    } else if (ov4 && ov4.classList.contains('on')) {
-      _4kRender();
+    if (!ov.classList.contains('on')) {
+      // Başka bir cihaz bu çekilişi zaten başlattı — bu cihazda da otomatik aç
+      ov.classList.add('on');
+      if (durum.tip === '6k') _6kListen();
+      else if (durum.tip === '7k') _7kListen();
+      else if (durum.tip === 'k') _kListen();
+      else if (durum.tip === '4k') _4kListen();
     }
+    if (durum.tip === '6k') { if (_6k.asama === 'Y1') { _6kRenderY1(); } else { _6kRender(); } }
+    else if (durum.tip === '7k') { if (_7k.asama === 'Y1') { _7kRenderY1(); } else { _7kRender(); } }
+    else if (durum.tip === 'k') { _kRender(); }
+    else if (durum.tip === '4k') { _4kRender(); }
   } finally {
     _suppressRotasyonKaydet = false;
   }
