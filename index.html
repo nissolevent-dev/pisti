@@ -405,6 +405,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div class="ovttl" id="6kart-baslik" style="margin-bottom:0">🃏 Kart Çek</div>
       <button class="btn bo bs" onclick="kartCekmeVazgec('ov-6kart')">Vazgeç</button>
     </div>
+    <div id="6kart-tur" style="display:none;font-size:.95rem;font-weight:700;color:var(--g1);text-align:center;margin-bottom:6px"></div>
     <p id="6kart-aciklama" style="font-size:.78rem;color:var(--tx3);margin-bottom:10px"></p>
     <div id="6kart-oyuncular" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px"></div>
     <div id="6kart-kart" style="display:flex;justify-content:center;margin-bottom:14px"></div>
@@ -1749,6 +1750,7 @@ function show6KisiKartCekme() {
   D._rotasyonDurumu = null;
   if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
   _6k.asama = 1;
+  _6k.turOyunNo = 1; // 3 oyunluk turun kaçıncı oyunu kuruluyor
   _6k.deste52 = _6kDeste52();
   _6k.eslesen = {};
   _6k.secilen = null;
@@ -1938,7 +1940,15 @@ function _6kAsamaBit3() {
   setTimeout(function() { _6kMasaKur(); }, 500);
 }
 
+function _6kTurYaz() {
+  var el = document.getElementById('6kart-tur');
+  if (!el) return;
+  if (_6k.turOyunNo) { el.textContent = 'Turun ' + _6k.turOyunNo + '. oyunu'; el.style.display = ''; }
+  else { el.style.display = 'none'; }
+}
+
 function _6kRender() {
+  _6kTurYaz();
   var baslik = document.getElementById('6kart-baslik');
   var aciklama = document.getElementById('6kart-aciklama');
   var oyDiv = document.getElementById('6kart-oyuncular');
@@ -2048,6 +2058,9 @@ function _6kYenidenCekFromGame(teamA, teamB, partnersList) {
     return !(D._6kDisaridaGecmis[p]);
   });
 
+  // Turun kaçıncı oyunu: bu turda dışarı çıkmış her 2 kişi = 1 oynanmış oyun
+  _6k.turOyunNo = Math.min(3, Math.floor((D.sess.players.length - hicKalmamis.length) / 2) + 1);
+
   _6k.deste52 = _6kDeste52();
   _6k.eslesen = {};
   _6k.secilen = null;
@@ -2113,6 +2126,9 @@ function _6kYenidenCek() {
   var hicKalmamis = D.sess.players.filter(function(p) {
     return !(D._6kDisaridaGecmis[p]);
   });
+
+  // Turun kaçıncı oyunu: bu turda dışarı çıkmış her 2 kişi = 1 oynanmış oyun
+  _6k.turOyunNo = Math.min(3, Math.floor((D.sess.players.length - hicKalmamis.length) / 2) + 1);
 
   _6k.deste52 = _6kDeste52();
   _6k.eslesen = {};
@@ -2190,6 +2206,7 @@ function _6kKartTikY1() {
 }
 
 function _6kRenderY1() {
+  _6kTurYaz();
   var baslik = document.getElementById('6kart-baslik');
   var aciklama = document.getElementById('6kart-aciklama');
   var oyDiv = document.getElementById('6kart-oyuncular');
