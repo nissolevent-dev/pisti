@@ -5094,6 +5094,7 @@ function renderStat() {
   var maxLoss = 0, maxLossPlayer = null, maxLossGame = null;
   // HTTB: kaç oyunda en az 1 kez yazıldı, bunların kaçında geride olan taraf kazandı
   var httbGameCount = 0, httbComebackCount = 0, httbRubikondanCikanCount = 0;
+  _httbGeridenListe = []; // "HTTB'de Geriden Kazanan" kartının ayrıntı listesi
 
   for (var i = 0; i < games.length; i++) {
     var g = games[i];
@@ -5136,6 +5137,7 @@ function renderStat() {
         var geridekiTaraf = cumK2 < cumS2 ? 'A' : (cumS2 < cumK2 ? 'B' : null);
         if (geridekiTaraf && g.winner === geridekiTaraf) {
           httbComebackCount++;
+          _httbGeridenListe.push({ g: g, taraf: geridekiTaraf, httbK: cumK2, httbS: cumS2 });
         }
         // Geride olan taraf, oyunun sonunda rubikondan (51 altı) çıkabildi mi?
         if (geridekiTaraf) {
@@ -5239,7 +5241,7 @@ function renderStat() {
     '<div class="stl">HTTB\'de Rubikondan Çıkan</div>' +
     '</div>';
 
-  var card6 = '<div class="stcard">' +
+  var card6 = '<div class="stcard" onclick="showHttbGeriden()" style="cursor:pointer">' +
     '<div class="stv">' + httbComebackCount + ' / ' + httbGameCount + '</div>' +
     '<div class="stl">HTTB\'de Geriden Kazanan</div>' +
     '</div>';
@@ -6853,7 +6855,43 @@ function showGameTurDetay(gameId) {
   document.getElementById('ov-tur-detay').classList.add('on');
 }
 
+var _httbGeridenListe = [];
+
+function showHttbGeriden() {
+  // HTTB yazıldığı anda geride olup oyunu kazanan takımlar, oyun numarasıyla (en yeni üstte)
+  var liste = _httbGeridenListe.slice().sort(function(a, b) { return (b.g.num || 0) - (a.g.num || 0); });
+  document.getElementById('top5-title').textContent = "HTTB'de Geriden Kazananlar";
+  var html = '';
+  liste.forEach(function(x) {
+    var g = x.g;
+    var takim = x.taraf === 'A' ? (g.teamA || []) : (g.teamB || []);
+    var ortak = {};
+    (g.partners || []).forEach(function(p) { ortak[p] = true; });
+    var isimler = takim.map(function(p) {
+      var ad = p.split(' ')[0];
+      return ortak[p] ? '<span style="color:#7c3aed;font-style:italic">' + ad + '</span>' : ad;
+    }).join(', ') || '-';
+    var renk = x.taraf === 'A' ? '#cc0000' : '#111';
+    var httbSkor = x.taraf === 'A' ? (x.httbK + ' – ' + x.httbS) : (x.httbS + ' – ' + x.httbK);
+    var sonSkor = x.taraf === 'A' ? (g.pts[0] + ' – ' + g.pts[1]) : (g.pts[1] + ' – ' + g.pts[0]);
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)">';
+    html += '<span style="font-size:.8rem;font-weight:700;color:var(--g2);min-width:58px">#' + g.num + '. Oyun</span>';
+    html += '<div style="flex:1">';
+    html += '<div style="font-size:.9rem;font-weight:600"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + renk + ';margin-right:6px;vertical-align:middle"></span>' + isimler + '</div>';
+    html += '<div style="font-size:.68rem;color:var(--tx3)">HTTB anında ' + httbSkor + ' → Son ' + sonSkor + (g.date ? ' · ' + g.date : '') + '</div>';
+    html += '</div></div>';
+  });
+  if (!liste.length) html = '<div class="empty">Henüz HTTB\'de geriden kazanan yok</div>';
+  var icerik = document.getElementById('top5-content');
+  icerik.innerHTML = html;
+  icerik.style.maxHeight = '65vh';
+  icerik.style.overflowY = 'auto';
+  document.getElementById('ov-top5').classList.add('on');
+}
+
 function showTop5(key) {
+  var _ic = document.getElementById('top5-content');
+  if (_ic) { _ic.style.maxHeight = ''; _ic.style.overflowY = ''; }
   var d = _top5Data[key];
   if (!d) return;
   document.getElementById('top5-title').textContent = d.title;
