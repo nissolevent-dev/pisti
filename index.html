@@ -692,8 +692,13 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div id="sirali-sira-liste" style="display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;"></div>
     </div>
 
+    <!-- Biten masa bekliyor (8-10 kişi) -->
+    <div id="skor-masa-bitti" style="display:none"></div>
+    <!-- Son kaydedilen oyun özeti (aynı takımlarla devam) -->
+    <div id="skor-son-oyun" style="display:none"></div>
+
     <!-- Takım başlıkları -->
-    <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;margin-bottom:8px;align-items:center">
+    <div id="skor-baslik" style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;margin-bottom:8px;align-items:center">
       <div style="width:28px"></div>
       <div class="skor-k-hdr" style="text-align:center;font-size:1.6rem;font-weight:900;color:#cc0000">K</div>
       <div class="skor-s-hdr" style="text-align:center;font-size:1.6rem;font-weight:900;color:#111">S</div>
@@ -721,7 +726,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
 
     <!-- Tur ekle -->
-    <div style="margin-top:12px;padding:12px;background:var(--bg2);border-radius:9px">
+    <div id="skor-giris" style="margin-top:12px;padding:12px;background:var(--bg2);border-radius:9px">
       <div style="font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--g2);margin-bottom:10px">Yeni Tur</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
         <div>
@@ -747,7 +752,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
 
     <!-- Oyunu Bitir -->
-    <div style="margin-top:10px;display:flex;gap:8px">
+    <div id="skor-bitir-satir" style="margin-top:10px;display:flex;gap:8px">
       <button id="bitir-btn" class="btn bp bfw" style="background:#166534;opacity:0.4;cursor:not-allowed" onclick="bitirOyun()" disabled>✓ Oyunu Bitir ve Kaydet</button>
       <button class="btn bd_btn" onclick="resetSkor()">Sıfırla</button>
     </div>
@@ -6001,9 +6006,104 @@ function getInitials(players) {
   }).join('');
 }
 
+function _masaBekliyorMu(m) {
+  // 8-10 kişi, kart çekme modu açık: bu masa turunu bitirdi, diğer masa hâlâ oynuyor
+  var n = D.sess && D.sess.players ? D.sess.players.length : 0;
+  if (n < 8 || D.siraliMod || D.kartCekmeModuKapaliSayi === n) return false;
+  if (!D.round || !D.round.masa1active || !D.round.masa2active) return false;
+  return typeof _8910MasaBittiMi === 'function' && _8910MasaBittiMi(m);
+}
+
+function _masaninSonOyunu(m) {
+  var sg = D.sessGames || [];
+  for (var i = sg.length - 1; i >= 0; i--) { if (sg[i] && (sg[i].masa || 1) === m) return sg[i]; }
+  return null;
+}
+
+function _ayniTakimlarMi(g, masaData) {
+  if (!g || !masaData) return false;
+  var k = function(a) { return (a || []).slice().sort().join('|'); };
+  var a1 = k(g.teamA), b1 = k(g.teamB), a2 = k(masaData.A), b2 = k(masaData.B);
+  if (!a2 || !b2) return false;
+  return (a1 === a2 && b1 === b2) || (a1 === b2 && b1 === a2);
+}
+
+function _skorDurumGuncelle(masa) {
+  var bittiDiv = document.getElementById('skor-masa-bitti');
+  var sonDiv = document.getElementById('skor-son-oyun');
+  if (!bittiDiv || !sonDiv) return;
+  // Sekme etiketleri: bekleyen masada ✓
+  [1, 2].forEach(function(m) {
+    var b = document.getElementById('skor-masa-btn' + m);
+    if (b) b.textContent = 'Masa ' + m + (_masaBekliyorMu(m) ? ' ✓' : '');
+  });
+  var bekliyor = _masaBekliyorMu(masa);
+  ['dagitici-sec', 'skor-baslik', 'skor-turler', 'skor-toplam', 'skor-giris', 'skor-bitir-satir'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = bekliyor ? 'none' : (id === 'skor-baslik' || id === 'skor-toplam' ? 'grid' : (id === 'skor-bitir-satir' ? 'flex' : ''));
+  });
+  var masaData = masa === 1 ? D.round.masa1 : D.round.masa2;
+  var g = _masaninSonOyunu(masa);
+  var ilk = function(t) { return (t || []).map(function(p) { return p.split(' ')[0]; }).join(', '); };
+
+  if (bekliyor && g) {
+    var diger = masa === 1 ? 2 : 1;
+    var kazananA = g.winner === 'A', kazananB = g.winner === 'B';
+    var pay = Object.keys(g.payMap || {}).sort(function(a, b) { return g.payMap[b] - g.payMap[a]; });
+    var h = '<div style="padding:16px;border:2px solid var(--g1);border-radius:12px;background:var(--wh);text-align:center;margin-bottom:12px">';
+    h += '<div style="font-size:.7rem;font-weight:700;color:var(--g2);text-transform:uppercase;letter-spacing:.1em">Masa ' + masa + ' bitti</div>';
+    h += '<div style="font-size:.8rem;font-weight:700;color:var(--g2);margin-top:2px">#' + g.num + '. Oyun kaydedildi</div>';
+    h += '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin:14px 0 6px">';
+    h += '<div style="color:#cc0000;font-weight:' + (kazananA ? 900 : 600) + ';font-size:.85rem">' + ilk(g.teamA) + (kazananA ? ' 🏆' : '') + '</div>';
+    h += '<div style="font-size:1.6rem;font-weight:900;white-space:nowrap">' + g.pts[0] + ' – ' + g.pts[1] + '</div>';
+    h += '<div style="color:#111;font-weight:' + (kazananB ? 900 : 600) + ';font-size:.85rem">' + ilk(g.teamB) + (kazananB ? ' 🏆' : '') + '</div>';
+    h += '</div>';
+    if (pay.length) {
+      h += '<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:10px 0 4px">';
+      pay.forEach(function(p) {
+        var v = g.payMap[p];
+        h += '<span style="font-size:.75rem;padding:4px 8px;border-radius:7px;background:' + (v > 0 ? 'var(--winbg)' : v < 0 ? 'var(--losebg)' : 'var(--bg2)') + ';color:' + (v > 0 ? 'var(--win)' : v < 0 ? 'var(--lose)' : 'var(--tx2)') + ';font-weight:600">' + p.split(' ')[0] + ' ' + (v > 0 ? '+' : v < 0 ? '−' : '') + 'TL' + Math.abs(v) + '</span>';
+      });
+      h += '</div>';
+    }
+    h += '<div style="font-size:.8rem;color:var(--tx2);margin-top:12px;line-height:1.4">Masa ' + diger + ' bitince kart çekme açılacak.</div>';
+    h += '<div style="display:flex;gap:8px;margin-top:14px">';
+    h += '<button class="btn bo bfw" onclick="setSkorMasa(' + diger + ')">Masa ' + diger + (diger === 2 ? '\'ye' : '\'e') + ' git</button>';
+    h += '<button class="btn bo" style="white-space:nowrap" onclick="undoGame(' + g.id + ')">Geri al</button>';
+    h += '</div></div>';
+    bittiDiv.innerHTML = h;
+    bittiDiv.style.display = '';
+    sonDiv.style.display = 'none';
+    return;
+  }
+  bittiDiv.style.display = 'none';
+  bittiDiv.innerHTML = '';
+
+  // Aynı takımlarla devam ediliyorsa ve yeni oyunda henüz tur yoksa: son oyunun özeti
+  var st = (D.skorTakip && D.skorTakip['m' + masa]) || {};
+  var turYok = !(st.turler && st.turler.length);
+  if (turYok && g && _ayniTakimlarMi(g, masaData)) {
+    var kaz = g.winner === 'A' ? getInitials(g.teamA) : g.winner === 'B' ? getInitials(g.teamB) : null;
+    var s2 = '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--winbg);border:1px solid var(--bd2);margin-bottom:12px">';
+    s2 += '<div style="flex:1;min-width:0">';
+    s2 += '<div style="font-size:.72rem;font-weight:700;color:var(--g2)">✓ #' + g.num + '. Oyun kaydedildi</div>';
+    s2 += '<div style="font-size:.85rem;font-weight:700;margin-top:2px"><span style="color:#cc0000">' + getInitials(g.teamA) + '</span> ' + g.pts[0] + ' – ' + g.pts[1] + ' <span style="color:#111">' + getInitials(g.teamB) + '</span></div>';
+    s2 += '<div style="font-size:.7rem;color:var(--tx3);margin-top:1px">' + (kaz ? kaz + ' kazandı · ' : '') + 'Yeni oyun hazır</div>';
+    s2 += '</div>';
+    s2 += '<button class="btn bo bs" style="white-space:nowrap" onclick="undoGame(' + g.id + ')">Geri al</button>';
+    s2 += '</div>';
+    sonDiv.innerHTML = s2;
+    sonDiv.style.display = '';
+  } else {
+    sonDiv.style.display = 'none';
+    sonDiv.innerHTML = '';
+  }
+}
+
 function renderSkorTakip() {
   if (!D.skorTakip) D.skorTakip = {};
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+  _skorDurumGuncelle(masa);
   // Masa 2 butonu sadece masa2active ise göster
   var btn2 = document.getElementById('skor-masa-btn2');
   if (btn2) btn2.style.display = D.round && D.round.masa2active ? '' : 'none';
@@ -6240,6 +6340,7 @@ function resetSkor() {
 var _lastSavedGame = null; // Geri alma için son kaydedilen oyun
 
 function bitirOyun() {
+  if (_masaBekliyorMu(parseInt(document.getElementById('skor-masa-sel').value) || 1)) { toast('Bu masa bitti, kart çekme bekleniyor'); return; }
   var _bm = parseInt(document.getElementById('skor-masa-sel').value) || 1;
   _dagitici[_bm] = null;
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
@@ -6504,6 +6605,8 @@ function showUndoToast(masa, turler) {
   _undoTurler = turler ? turler.slice() : [];
   // Artık toast gösterme - her oyunda kalıcı geri al butonu var
   toast('Oyun kaydedildi');
+  var _ovs = document.getElementById('ov-skor');
+  if (_ovs && _ovs.classList.contains('on')) renderSkorTakip();
 }
 
 function undoGame(gameId) {
@@ -7195,6 +7298,13 @@ function _kDamYasakliMi(){
   return !sonGrup; // son grup değilse yasak
 }
 
+function _kTekKalanDam(){
+  // Ortak seçiminde kart çekecek tek kişi kaldıysa onu döndür (isme dokunmaya gerek yok)
+  if(_kAsama!==2)return null;
+  var kalan=(_kDamlar||[]).filter(function(p){return !(_kDamKartlar||[]).some(function(d){return d.oyuncu===p;});});
+  return kalan.length===1?kalan[0]:null;
+}
+
 function _kKartTik(idx){
   if(_kAsama===1){
     if(!_kSecilen)return;
@@ -7255,6 +7365,7 @@ function _kKartTik(idx){
       else{setTimeout(function(){_kSonuc();},800);}
     }
   } else if(_kAsama===2){
+    if(!_kDamSecilen)_kDamSecilen=_kTekKalanDam();
     if(!_kDamSecilen)return;
     var k=_kDeste2[idx];
     if(k.acik)return;
@@ -7348,7 +7459,11 @@ function _kRender(){
   } else if(_kAsama===2){
     if(baslik)baslik.textContent='🃏 Ortak Seçimi';
     var secildi=_kDamKartlar.length;
-    if(aciklama_el)aciklama_el.textContent='Ortak seçimi ('+secildi+'/'+_kDamlar.length+'): önce ismine dokun, sonra kartı seç.';
+    var _tek=_kTekKalanDam();
+    if(_tek)_kDamSecilen=_tek; // tek kişi kaldı: otomatik seçili
+    if(aciklama_el)aciklama_el.textContent=_tek
+      ? 'Ortak seçimi: '+_tek.split(' ')[0]+', bir kart seç.'
+      : 'Ortak seçimi ('+secildi+'/'+_kDamlar.length+'): önce ismine dokun, sonra kartı seç.';
     var oyHtml='';
     for(var i=0;i<_kDamlar.length;i++){
       var p=_kDamlar[i];
