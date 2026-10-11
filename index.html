@@ -208,7 +208,8 @@ button,.btn,.chip{touch-action:manipulation}
       <div id="bench-area"></div>
     </div>
     <div class="row sabit-alt" style="position:sticky;bottom:0;z-index:20;background:var(--bg);margin:13px -12px 0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -6px 12px -6px rgba(0,0,0,.12)">
-      <button class="btn bo" onclick="goSAndSave(2)">Geri</button>
+      <button class="btn bo" id="s3-geri" onclick="goSAndSave(2)">Geri</button>
+      <button class="btn bo" id="s3-oyuna-don" style="display:none" onclick="masaDuzeniIptalOyunaDon()">Oyuna dön</button>
       <button class="btn bo" onclick="goSAndSave(2)">Oturuma oyuncu ekle</button>
       <button class="btn bp" onclick="startPlay()">Oynayalim</button>
     </div>
@@ -1279,7 +1280,8 @@ function refreshAllRemote(localScreen) {
       if (ov) ov.classList.remove('on');
     });
     if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
-    if (currentScreen !== 4) goS(4);
+    var masaDuzenliyor = _masaDuzenleniyor && (currentScreen === 3 || currentScreen === 2);
+    if (currentScreen !== 4 && !masaDuzenliyor) goS(4);
     updateMasaLabels();
     renderSessChips();
     renderGameCards();
@@ -1374,6 +1376,8 @@ function goS(n) {
     document.getElementById('s' + i).style.display = (i === n) ? 'block' : 'none';
   }
   D.screen = n;
+  if (n === 4) _masaDuzenleniyor = false;
+  if (n === 3 && typeof _s3ButonlariGuncelle === 'function') _s3ButonlariGuncelle();
 }
 
 function kartCekmeVazgec(ovId) {
@@ -1534,17 +1538,48 @@ function rotasyonaDevamEt() {
   }
 }
 
+// Masa düzeni ekranındaki ortak seçimleri bir TASLAKTA tutulur; mevcut masa düzeni
+// (D.round) "Oynayalım"a basılana kadar değişmez. Böylece "Oyuna dön" ile hiçbir şey
+// değişmeden geri dönülebilir ve diğer cihazlar da boş bir masa görmez.
+var _taslakPartners = null;
+var _masaDuzenleniyor = false;
+function _tp() { if (!_taslakPartners) _taslakPartners = {}; return _taslakPartners; }
+
 function resetRoundAndGoS3() {
-  // Yeni tur kurulumuna gecince onceki partner secimlerini sifirla
-  D.round.partners = {};
-  D.round.masa1 = {A:[], B:[]};
-  D.round.masa2 = {A:[], B:[]};
+  _masaDuzenleniyor = true;
+  _taslakPartners = {};
   // Dropdown'ları temizle
   for (var i = 0; i < SIDS.length; i++) {
     document.getElementById(SIDS[i]).value = '';
   }
-  goSAndSave(3);
+  goS(3);
   buildSeats();
+}
+
+function _oyunDevamEdiyorMu() {
+  return !!(D.started && D.round && (D.round.masa1active || D.round.masa2active) &&
+    D.round.masa1 && D.round.masa1.A && D.round.masa1.A.length);
+}
+
+function _s3ButonlariGuncelle() {
+  var don = document.getElementById('s3-oyuna-don');
+  var geri = document.getElementById('s3-geri');
+  if (!don || !geri) return;
+  var oyunVar = _oyunDevamEdiyorMu();
+  don.style.display = oyunVar ? '' : 'none';
+  geri.style.display = oyunVar ? 'none' : '';
+}
+
+function masaDuzeniIptalOyunaDon() {
+  // Hiçbir şey değiştirmeden oyun ekranına dön
+  _taslakPartners = null;
+  _masaDuzenleniyor = false;
+  goS(4);
+  updateMasaLabels();
+  renderSessChips();
+  renderGameCards();
+  if (D.round && D.round.masa1active) switchMasa(1);
+  else if (D.round && D.round.masa2active) switchMasa(2);
 }
 
 function goSAndSave(n) {
@@ -3542,8 +3577,8 @@ function refreshBench() {
 
   for (var i = 0; i < bench.length; i++) {
     var bp = bench[i];
-    if (!D.round.partners[bp] || typeof D.round.partners[bp] !== 'object') {
-      D.round.partners[bp] = {m1: null, m2: null};
+    if (!_tp()[bp] || typeof _tp()[bp] !== 'object') {
+      _tp()[bp] = {m1: null, m2: null};
     }
   }
 
@@ -3555,7 +3590,7 @@ function refreshBench() {
   html += '</div>';
   for (var i = 0; i < bench.length; i++) {
     var p = bench[i];
-    var v = D.round.partners[p];
+    var v = _tp()[p];
     html += '<div class="prow"><span class="pnm">' + p + '</span>';
     // Her masa icin bagimsiz secim - ayni masada sadece A veya B
     var pv = (v && typeof v === 'object') ? v : {m1: null, m2: null};
@@ -3577,17 +3612,17 @@ function refreshBench() {
 
 function setPart(name, masa, takim) {
   // Her oyuncu icin partners[name] = {m1: null|'A'|'B', m2: null|'A'|'B'}
-  if (!D.round.partners[name] || typeof D.round.partners[name] !== 'object') {
-    D.round.partners[name] = {m1: null, m2: null};
+  if (!_tp()[name] || typeof _tp()[name] !== 'object') {
+    _tp()[name] = {m1: null, m2: null};
   }
-  var cur = D.round.partners[name];
+  var cur = _tp()[name];
   // Toggle: ayni secenege tekrar basilirsa iptal et
   if (cur['m'+masa] === takim) {
     cur['m'+masa] = null;
   } else {
     cur['m'+masa] = takim; // ayni masada sadece bir takim
   }
-  D.round.partners[name] = cur;
+  _tp()[name] = cur;
   refreshBench();
 }
 
@@ -3633,6 +3668,15 @@ function startPlay() {
   D.round.turId = Date.now(); // bu masa düzeninin kimliği (oyunlar roundSnapshot ile saklar)
   D.round.masa2active = t2ok;
 
+  // Taslaktaki ortak seçimleri artık gerçek masa düzenine aktar
+  // (sadece şu an dışarıda olup en az bir masaya ortak seçilenler)
+  D.round.partners = {};
+  bench.forEach(function(bp) {
+    var tv = _tp()[bp];
+    if (tv && (tv.m1 || tv.m2)) D.round.partners[bp] = { m1: tv.m1 || null, m2: tv.m2 || null };
+  });
+  _taslakPartners = null;
+  _masaDuzenleniyor = false;
   // Ortaklari ekle - her ortak secildigi masalara eklenir
   // D.round.partners yeni format: {m1: 'A'|'B'|null, m2: 'A'|'B'|null}
   for (var i = 0; i < bench.length; i++) {
