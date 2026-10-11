@@ -234,6 +234,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <div id="lbl-m1A" style="font-size:.72rem;font-weight:700;color:#cc0000;line-height:1.3;min-height:2.6em;display:flex;align-items:flex-end;padding-bottom:6px">Kırmızı Takım</div>
         <div id="lbl-m1B" style="font-size:.72rem;font-weight:700;color:#111;line-height:1.3;min-height:2.6em;display:flex;align-items:flex-end;padding-bottom:6px">Siyah Takım</div>
       </div>
+      <!-- Skorbord: Skor ekranından girilen turların anlık toplamı -->
+      <div id="sb-m1" onclick="activeMasa=1;showSkorTakip()" style="cursor:pointer"></div>
+      <!-- Eski elle giriş alanı: artık gösterilmiyor (oyun kaydı arka planda bu alanları kullanıyor) -->
+      <div style="display:none">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px">
         <div>
           <label>Puan</label>
@@ -257,6 +261,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <button class="btn bp" id="save-btn-1" onclick="saveGame(1)" disabled style="opacity:.45;cursor:not-allowed">Kaydet</button>
         <button class="btn bo" onclick="clearEntry(1)">Temizle</button>
       </div>
+      </div>
     </div>
 
     <!-- Masa 2 formu -->
@@ -266,6 +271,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <div id="lbl-m2A" style="font-size:.72rem;font-weight:700;color:#cc0000;line-height:1.3;min-height:2.6em;display:flex;align-items:flex-end;padding-bottom:6px">Kırmızı Takım</div>
         <div id="lbl-m2B" style="font-size:.72rem;font-weight:700;color:#111;line-height:1.3;min-height:2.6em;display:flex;align-items:flex-end;padding-bottom:6px">Siyah Takım</div>
       </div>
+      <!-- Skorbord: Skor ekranından girilen turların anlık toplamı -->
+      <div id="sb-m2" onclick="activeMasa=2;showSkorTakip()" style="cursor:pointer"></div>
+      <!-- Eski elle giriş alanı: artık gösterilmiyor (oyun kaydı arka planda bu alanları kullanıyor) -->
+      <div style="display:none">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px">
         <div>
           <label>Puan</label>
@@ -288,6 +297,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div class="row">
         <button class="btn bp" id="save-btn-2" onclick="saveGame(2)" disabled style="opacity:.45;cursor:not-allowed">Kaydet</button>
         <button class="btn bo" onclick="clearEntry(2)">Temizle</button>
+      </div>
       </div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:7px;margin-bottom:9px">
@@ -3721,6 +3731,7 @@ var activeMasa = 1;
 
 function switchMasa(n) {
   activeMasa = n;
+  _skorbordGuncelle();
   document.getElementById('masa1-form').style.display = n === 1 ? 'block' : 'none';
   document.getElementById('masa2-form').style.display = n === 2 ? 'block' : 'none';
   var t1 = document.getElementById('mtab1');
@@ -3895,7 +3906,46 @@ function saveGame(masa, turler) {
 }
 
 // ── GAME CARDS ──
+function _skorbordGuncelle() {
+  [1, 2].forEach(function(m) {
+    var el = document.getElementById('sb-m' + m);
+    if (!el) return;
+    var bitti = typeof _masaBekliyorMu === 'function' && _masaBekliyorMu(m);
+    var h = '';
+    if (bitti) {
+      var g = _masaninSonOyunu(m);
+      if (g) {
+        var kA = g.winner === 'A', kB = g.winner === 'B';
+        h += '<div style="background:var(--bg2);border-radius:10px;padding:14px 10px;text-align:center">';
+        h += '<div style="font-size:.68rem;font-weight:700;color:var(--g2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Oyun bitti · #' + g.num + '. Oyun</div>';
+        h += '<div style="display:grid;grid-template-columns:1fr 1fr;align-items:center">';
+        h += '<div style="font-size:2.4rem;font-weight:900;color:#cc0000">' + g.pts[0] + (kA ? ' 🏆' : '') + '</div>';
+        h += '<div style="font-size:2.4rem;font-weight:900;color:#111">' + g.pts[1] + (kB ? ' 🏆' : '') + '</div>';
+        h += '</div></div>';
+        el.innerHTML = h;
+        return;
+      }
+    }
+    var st = (D.skorTakip && D.skorTakip['m' + m]) || {};
+    var turler = st.turler || [];
+    var tk = 0, ts = 0, tkp = 0, tsp = 0;
+    turler.forEach(function(t) { tk += t.k || 0; ts += t.s || 0; tkp += t.kpi || 0; tsp += t.spi || 0; });
+    var onde = function(a, b) { return turler.length && a > b ? '#e8c96a' : '#fff'; };
+    h += '<div style="background:var(--g1);border-radius:10px;padding:14px 10px 12px;color:#fff">';
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;text-align:center;align-items:end">';
+    h += '<div><div style="font-size:3rem;font-weight:900;line-height:1;color:' + onde(tk, ts) + '">' + tk + '</div>';
+    h += '<div style="font-size:.95rem;font-weight:700;margin-top:6px;opacity:.9">' + tkp + ' pişti</div></div>';
+    h += '<div><div style="font-size:3rem;font-weight:900;line-height:1;color:' + onde(ts, tk) + '">' + ts + '</div>';
+    h += '<div style="font-size:.95rem;font-weight:700;margin-top:6px;opacity:.9">' + tsp + ' pişti</div></div>';
+    h += '</div>';
+    h += '<div style="text-align:center;font-size:.7rem;opacity:.75;margin-top:10px">' + (turler.length ? turler.length + '. tur sonrası · ayrıntı için dokunun' : 'Henüz tur girilmedi · skor girmek için dokunun') + '</div>';
+    h += '</div>';
+    el.innerHTML = h;
+  });
+}
+
 function renderGameCards() {
+  _skorbordGuncelle();
   var el = document.getElementById('game-cards');
   if (!D.sessGames.length) { el.innerHTML = '<div class="empty">Henüz oyun girilmedi</div>'; return; }
 
@@ -6109,6 +6159,7 @@ function renderSkorTakip() {
   if (!D.skorTakip) D.skorTakip = {};
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
   _skorDurumGuncelle(masa);
+  _skorbordGuncelle();
   // Masa 2 butonu sadece masa2active ise göster
   var btn2 = document.getElementById('skor-masa-btn2');
   if (btn2) btn2.style.display = D.round && D.round.masa2active ? '' : 'none';
@@ -6226,7 +6277,10 @@ function addTur() {
   var turPişti = kpi + spi;
   var beklenen1 = turPişti * 10 + 13;
   var beklenen2 = turPişti * 10 + 16;
-  if (turToplam !== beklenen1 && turToplam !== beklenen2) {
+  // Bir takıma tek seferde 101 ve üzeri girildiyse bu, turlar tutulmadan oynanan bir oyunun
+  // sonucudur — puan kuralı kontrolü yapılmaz.
+  var oyunSonucuGirisi = (k >= 101 || s >= 101);
+  if (!oyunSonucuGirisi && turToplam !== beklenen1 && turToplam !== beklenen2) {
     document.getElementById('ov-hata').classList.add('on');
     return;
   }
