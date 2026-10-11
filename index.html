@@ -7981,7 +7981,10 @@ if (isIOS && !localStorage.getItem('pisti_ios')) {
     var ekranDegisti = (typeof D !== 'undefined' && D && D.screen !== kilitEkran);
     window.scrollTo(0, ekranDegisti ? 0 : kilitY);
   }
-  function guncelle() { if (acikPencereVar()) kilitle(); else coz(); }
+  function guncelle() {
+    if (acikPencereVar()) kilitle(); else coz();
+    if (typeof gorunurAlanaSigdir === 'function') gorunurAlanaSigdir();
+  }
   // Tüm pencerelerin açılıp kapanmasını izle (classList 'on')
   var gozcu = new MutationObserver(function(kayitlar) {
     for (var i = 0; i < kayitlar.length; i++) {
@@ -8020,12 +8023,19 @@ if (isIOS && !localStorage.getItem('pisti_ios')) {
   // Klavye açıkken pencereyi klavyenin üstündeki görünür alana sığdır ve dokunulan kutuyu
   // görünür yap. iOS bunu her zaman kendisi yapmıyordu (özellikle pencere yeniden açılınca),
   // kutular klavyenin arkasında kalıyordu.
+  // Klavye gerçekten ekranda mı? (Odak bir kutuda kalsa bile klavye kapanmış olabiliyor —
+  // iPhone'da görünür alanın yüksekliği klavye kadar küçülür, buna bakıyoruz.)
+  function klavyeGorunur() {
+    var vv = window.visualViewport;
+    if (!vv || !klavyeAcik()) return false;
+    return (window.innerHeight - vv.height) > 120;
+  }
   function gorunurAlanaSigdir() {
     var vv = window.visualViewport;
     document.querySelectorAll('.ov').forEach(function(ov) {
       var box = ov.querySelector('.ovbox');
       if (box && box.dataset.mhOrj === undefined) box.dataset.mhOrj = box.style.maxHeight || '';
-      if (vv && ov.classList.contains('on') && klavyeAcik() && ov.contains(document.activeElement)) {
+      if (vv && ov.classList.contains('on') && klavyeGorunur() && ov.contains(document.activeElement)) {
         ov.style.top = vv.offsetTop + 'px';
         ov.style.bottom = 'auto';
         ov.style.height = vv.height + 'px';
@@ -8033,7 +8043,8 @@ if (isIOS && !localStorage.getItem('pisti_ios')) {
         if (box) box.style.maxHeight = Math.max(200, vv.height - 8) + 'px';
         var sb = ov.querySelector('#skor-bitir-satir');
         if (sb) { sb.style.visibility = 'hidden'; sb.style.position = 'absolute'; }
-      } else if (ov.style.height) {
+      } else if (ov.style.height || ov.style.top) {
+        // Klavye yok / pencere kapalı: her zaman normal boyuta dön (eski ayar takılı kalmasın)
         ov.style.top = ''; ov.style.bottom = ''; ov.style.height = ''; ov.style.alignItems = '';
         if (box) box.style.maxHeight = box.dataset.mhOrj;
         var sb2 = ov.querySelector('#skor-bitir-satir');
@@ -8043,7 +8054,7 @@ if (isIOS && !localStorage.getItem('pisti_ios')) {
   }
   function kutuyuGoster() {
     var el = document.activeElement;
-    if (!klavyeAcik() || !el.closest) return;
+    if (!klavyeGorunur() || !el.closest) return;
     var box = el.closest('.ovbox');
     if (!box) return;
     // Skor girişinde tüm "Yeni Tur" bloğu (4 kutu + Tur Ekle) görünsün; sığmazsa kutunun kendisi
@@ -8064,6 +8075,8 @@ if (isIOS && !localStorage.getItem('pisti_ios')) {
     // Klavye açılma animasyonu sürerken birkaç kez dene
     [50, 300, 600].forEach(function(ms) { setTimeout(klavyeIcinAyarla, ms); });
   });
+  // Her dokunuşta takılı kalmış bir boyut varsa düzelt (güvenlik ağı)
+  document.addEventListener('touchstart', function() { gorunurAlanaSigdir(); }, { capture: true, passive: true });
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', function() { setTimeout(klavyeIcinAyarla, 30); });
     window.visualViewport.addEventListener('scroll', function() { gorunurAlanaSigdir(); });
