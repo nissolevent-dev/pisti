@@ -7994,9 +7994,17 @@ if (isIOS && !localStorage.getItem('pisti_ios')) {
   });
   guncelle();
 
-  // Klavye kapandığında iOS'u konumları yeniden hesaplamaya zorla
+  // Klavye kapandığında iOS'u konumları yeniden hesaplamaya zorla.
+  // DİKKAT: Bir kutudan diğerine geçerken de "focusout" olur ama klavye açık kalır —
+  // o anda konuma dokunmak iOS'un kutuyu klavyenin üstüne taşımasını bozuyordu.
+  // Bu yüzden sadece hiçbir giriş kutusu odakta değilse (klavye gerçekten kapandıysa) çalışır.
+  function klavyeAcik() {
+    var a = document.activeElement;
+    return !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName));
+  }
   function durt() {
     setTimeout(function() {
+      if (klavyeAcik()) return; // başka bir kutuya geçildi, klavye hâlâ açık
       if (kilitli) {
         window.scrollTo(0, 0);
       } else {
@@ -8006,7 +8014,7 @@ if (isIOS && !localStorage.getItem('pisti_ios')) {
       document.querySelectorAll('.ov.on .ovbox').forEach(function(b) {
         var y = b.scrollTop; b.scrollTop = y + 1; b.scrollTop = y;
       });
-    }, 60);
+    }, 250);
   }
   document.addEventListener('focusout', function(e) {
     var t = e.target;
