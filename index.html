@@ -111,9 +111,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .sec:first-child{margin-top:0}
 .empty{text-align:center;padding:26px;color:var(--tx3);font-size:.82rem}
 .hint{background:var(--g1);color:#fff;border-radius:10px;padding:12px 13px;margin-bottom:12px;font-size:.78rem;line-height:1.5}
-.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;justify-content:center}
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;justify-content:center;overscroll-behavior:contain;touch-action:manipulation}
 .ov.on{display:flex}
-.ovbox{background:var(--wh);border-radius:16px;padding:20px;width:100%;max-width:600px}
+.ovbox{background:var(--wh);border-radius:16px;padding:20px;width:100%;max-width:600px;max-height:92vh;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+body.ov-kilit{position:fixed;left:0;right:0;width:100%;overflow:hidden}
+button,.btn,.chip{touch-action:manipulation}
 .ovttl{font-size:.9rem;font-weight:700;color:var(--g1);margin-bottom:13px}
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--g1);color:#fff;padding:12px 22px;border-radius:10px;font-size:.85rem;font-weight:500;transition:transform .28s;z-index:300;white-space:nowrap}
 #toast.on{transform:translateX(-50%) translateY(0)}
@@ -7954,6 +7956,71 @@ if (isIOS && !localStorage.getItem('pisti_ios')) {
   };
 }
 
+
+// ══ iOS Safari dokunma kayması düzeltmesi ══
+// Açılır pencere açıkken arka sayfa kayabiliyor ya da klavye kapandıktan sonra iOS
+// görünüm alanını güncellemiyordu: pencere doğru yerde görünse de dokunuşlar eski
+// konuma gidiyor, butonlar "donmuş" gibi kalıyordu (ekranı biraz kaydırınca düzeliyordu).
+(function() {
+  var kilitY = 0, kilitli = false, kilitEkran = null;
+  function acikPencereVar() { return !!document.querySelector('.ov.on'); }
+  function kilitle() {
+    if (kilitli) return;
+    kilitY = window.pageYOffset || document.documentElement.scrollTop || 0;
+    kilitEkran = (typeof D !== 'undefined' && D) ? D.screen : null;
+    document.body.style.top = (-kilitY) + 'px';
+    document.body.classList.add('ov-kilit');
+    kilitli = true;
+  }
+  function coz() {
+    if (!kilitli) return;
+    document.body.classList.remove('ov-kilit');
+    document.body.style.top = '';
+    kilitli = false;
+    // Pencere açıkken başka ekrana geçildiyse en üste, değilse eski konuma dön
+    var ekranDegisti = (typeof D !== 'undefined' && D && D.screen !== kilitEkran);
+    window.scrollTo(0, ekranDegisti ? 0 : kilitY);
+  }
+  function guncelle() { if (acikPencereVar()) kilitle(); else coz(); }
+  // Tüm pencerelerin açılıp kapanmasını izle (classList 'on')
+  var gozcu = new MutationObserver(function(kayitlar) {
+    for (var i = 0; i < kayitlar.length; i++) {
+      var t = kayitlar[i].target;
+      if (t.classList && t.classList.contains('ov')) { guncelle(); return; }
+    }
+  });
+  document.querySelectorAll('.ov').forEach(function(ov) {
+    gozcu.observe(ov, { attributes: true, attributeFilter: ['class'] });
+  });
+  guncelle();
+
+  // Klavye kapandığında iOS'u konumları yeniden hesaplamaya zorla
+  function durt() {
+    setTimeout(function() {
+      if (kilitli) {
+        window.scrollTo(0, 0);
+      } else {
+        window.scrollTo(window.pageXOffset, window.pageYOffset);
+      }
+      document.body.getBoundingClientRect();
+      document.querySelectorAll('.ov.on .ovbox').forEach(function(b) {
+        var y = b.scrollTop; b.scrollTop = y + 1; b.scrollTop = y;
+      });
+    }, 60);
+  }
+  document.addEventListener('focusout', function(e) {
+    var t = e.target;
+    if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) durt();
+  });
+  if (window.visualViewport) {
+    var sonYukseklik = window.visualViewport.height;
+    window.visualViewport.addEventListener('resize', function() {
+      var h = window.visualViewport.height;
+      if (h > sonYukseklik + 80) durt(); // klavye kapandı
+      sonYukseklik = h;
+    });
+  }
+})();
 </script>
 </body>
 </html>
