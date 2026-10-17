@@ -2721,8 +2721,10 @@ function _7kOyunKisiSayisi(g) {
 }
 
 function _7kUstusteOturanlar() {
-  // Oturumun başından beri herhangi 2 ARDIŞIK 7-kişilik oyunda masada oturan
-  // herkesi döndürür — leaderboard'daki "x2" rozetiyle birebir aynı hesap.
+  // İÇİNDE BULUNULAN 7-kişilik turda, herhangi 2 ARDIŞIK 7-kişilik oyunda masada
+  // oturan herkesi döndürür — leaderboard'daki "x2" rozetiyle birebir aynı hesap.
+  // O anki 7 kişinin hepsi x2 olunca tur tamamlanmış sayılır ve sayım sıfırlanır
+  // (yeni tur, turu kapatan oyundan itibaren başlar).
   // Aradaki format 6/8/9/10 kişiye değiştiyse o çift "ardışık" sayılmaz.
   var result = {};
   if (!D.sessGames || D.sessGames.length < 2) return result;
@@ -2732,7 +2734,23 @@ function _7kUstusteOturanlar() {
     var o1 = _7kGercekOturanlar(gA);
     var o2 = _7kGercekOturanlar(gB);
     for (var p in o1) { if (o2[p]) result[p] = true; }
+    var herkes = (gB.teamA || []).concat(gB.teamB || []);
+    var tamam = herkes.length === 7 && herkes.every(function(x) { return result[x]; });
+    if (tamam) result = {};
   }
+  return result;
+}
+
+function _7kSonIkiOyundaOturanlar() {
+  // Son 2 oyunun ikisi de 7 kişilikse, ikisinde de masada oturanlar.
+  // (Tur yeni sıfırlanmış olsa bile kimse 3 oyun üst üste oturmasın diye.)
+  var result = {};
+  var n = D.sessGames ? D.sessGames.length : 0;
+  if (n < 2) return result;
+  var gA = D.sessGames[n - 2], gB = D.sessGames[n - 1];
+  if (_7kOyunKisiSayisi(gA) !== 7 || _7kOyunKisiSayisi(gB) !== 7) return result;
+  var o1 = _7kGercekOturanlar(gA), o2 = _7kGercekOturanlar(gB);
+  for (var p in o1) { if (o2[p]) result[p] = true; }
   return result;
 }
 
@@ -2777,6 +2795,8 @@ function _7kYenidenCekFromGame(teamA, teamB, partnersList) {
   // Üst üste 2 oyun (bu oturumdaki son 2 oyun) masada oturanlar bir sonraki oyunda
   // kart çekmez, otomatik dışarıda olur ve ortaklık (renk) kartı çeker.
   var ustuste = _7kUstusteOturanlar();
+  var sonIki = _7kSonIkiOyundaOturanlar();
+  for (var sk in sonIki) ustuste[sk] = true;
   var zorunluDisarida = oncekiMasada4.filter(function(p) { return ustuste[p]; });
   var cekecekler = oncekiMasada4.filter(function(p) { return !ustuste[p]; });
   // Güvenlik: normalde en fazla 1 kişi üst üste olabilir; hepsi zorunlu çıkarsa
