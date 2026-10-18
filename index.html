@@ -6381,19 +6381,20 @@ function secDagitici(idx) {
 function getInitials(players) {
   if (!players || !players.length) return '?';
   // Tüm masadaki oyuncuları bir arada değerlendirip çakışanları bul
-  var allPlayers = [];
-  if (D.round && D.round.masa1) allPlayers = allPlayers.concat(D.round.masa1.A||[], D.round.masa1.B||[]);
-  if (D.round && D.round.masa2) allPlayers = allPlayers.concat(D.round.masa2.A||[], D.round.masa2.B||[]);
-  // Hangi baş harfler birden fazla kişide var?
+  // Sadece AKTİF masalar; her kişi bir kez sayılır (iki masaya ortak olan dam iki kez sayılmasın)
+  var tekil = {};
+  var ekle = function(l) { (l || []).forEach(function(p) { if (p) tekil[p.trim()] = true; }); };
+  if (D.round && D.round.masa1 && D.round.masa1active !== false) { ekle(D.round.masa1.A); ekle(D.round.masa1.B); }
+  if (D.round && D.round.masa2 && D.round.masa2active) { ekle(D.round.masa2.A); ekle(D.round.masa2.B); }
+  players.forEach(function(p) { if (p) tekil[p.trim()] = true; });
+  var harf = function(n) { return (n[0] || '').toLocaleUpperCase('tr'); };
+  // Hangi baş harfler birden fazla (farklı) kişide var?
   var firstCharCount = {};
-  for (var i = 0; i < allPlayers.length; i++) {
-    var c = allPlayers[i].trim()[0];
-    firstCharCount[c] = (firstCharCount[c] || 0) + 1;
-  }
+  Object.keys(tekil).forEach(function(n) { var c = harf(n); firstCharCount[c] = (firstCharCount[c] || 0) + 1; });
   return players.map(function(p) {
     var name = p.trim();
     // Baş harf çakışıyorsa ilk 2 harf kullan
-    if (firstCharCount[name[0]] > 1) return name.slice(0, 2);
+    if (firstCharCount[harf(name)] > 1) return name.slice(0, 2);
     return name[0];
   }).join('');
 }
