@@ -114,6 +114,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;justify-content:center;overscroll-behavior:contain;touch-action:manipulation}
 .ov.on{display:flex}
 .ovbox{background:var(--wh);border-radius:16px;padding:20px;width:100%;max-width:600px;max-height:92vh;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#ov-skor.ov-ortada{align-items:center}
 body.ov-kilit{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 button,.btn,.chip{touch-action:manipulation}
 .ovttl{font-size:.9rem;font-weight:700;color:var(--g1);margin-bottom:13px}
@@ -6445,6 +6446,9 @@ function _skorDurumGuncelle(masa) {
     var el = document.getElementById(id);
     if (el) el.style.display = bitti ? 'none' : (id === 'skor-baslik' || id === 'skor-toplam' ? 'grid' : (id === 'skor-bitir-satir' ? 'flex' : ''));
   });
+  // Bitmiş masa görünümünde pencere ekranın ortasında; skor girişinde (klavye için) altta
+  var ovSkor = document.getElementById('ov-skor');
+  if (ovSkor) ovSkor.classList.toggle('ov-ortada', bitti);
   if (!bitti) { bittiDiv.style.display = 'none'; bittiDiv.innerHTML = ''; return; }
 
   var ilk = function(t) { return (t || []).map(function(p) { return p.split(' ')[0]; }).join(', '); };
