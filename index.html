@@ -653,7 +653,7 @@ button,.btn,.chip{touch-action:manipulation}
   </div>
 </div>
 
-<div class="ov" id="ov-tur-detay">
+<div class="ov" id="ov-tur-detay" style="align-items:center">
   <div class="ovbox" style="max-width:400px;max-height:85vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div class="ovttl" id="tur-detay-title" style="margin-bottom:0">Tur Detayları</div>
@@ -2599,7 +2599,10 @@ function _yeniOyuncuOnceligi(koltuk, yeniSartsiz, fazSay) {
 
 function _onUygula(h) {
   // 6/7 kişilik çekilişin 1. aşamasını önceliğe göre hazırlar
-  var on = _yeniOyuncuOnceligi(4);
+  // Oturumda daha önce oyun oynandıysa her yeni masa kurulumunda (yeni oyuncu eklenince
+  // ya da 9→6, 7→6, 10→7 gibi sayı değişince) toplam dışarıda kalma sayısı dikkate alınır.
+  var on = _yeniOyuncuOnceligi(4, true);
+  if (on && !on.masa.length && !on.disari.length) on = null; // herkes eşit: normal çekiliş
   h._oncelik = on;
   if (!on) return;
   h._kilitliMasa = on.masa.slice();
@@ -2624,7 +2627,7 @@ function _onAciklama(h) {
   var on = h._oncelik;
   if (!on || !h._aktifCekenler) return null;
   var ad = function(l) { return l.map(function(p) { return p.split(' ')[0]; }).join(', '); };
-  var t = 'Yeni gelenler ve en çok dışarıda kalanlar kart çekmeden masada.';
+  var t = (on.yeni && on.yeni.length ? 'Yeni gelenler ve en çok' : 'En çok') + ' dışarıda kalanlar kart çekmeden masada, daha az kalanlar dışarıda.';
   if (h._aktifCekenler.length) t += ' Eşitlik var: ' + ad(h._aktifCekenler) + ' kart çeker (önce ismine, sonra karta dokun).';
   else t += ' Kart çekmeye gerek yok, Tamam\'a basın.';
   return t;
