@@ -2476,8 +2476,8 @@ var _7k = {
 // Oturumda daha önce oyun oynanmışsa ve hiç oynamamış (yeni eklenen) oyuncu varsa:
 // yeni oyuncular ve o ana kadar EN ÇOK dışarıda kalanlar kart çekmeden masaya oturur,
 // daha az dışarıda kalanlar otomatik dışarıda kalır; sınırdaki eşitler kart çeker.
-function _oturumDisaridaSayilari() {
-  var games = D.sessGames || [];
+function _oturumDisaridaSayilari(oyunlar) {
+  var games = oyunlar || D.sessGames || [];
   var turlar = {}, sira = [];
   games.forEach(function(g, i) {
     var rs = g.roundSnapshot || {};
@@ -2500,14 +2500,36 @@ function _oturumDisaridaSayilari() {
   return { say: say, gorulen: gorulen };
 }
 
-function _yeniOyuncuOnceligi(koltuk, yeniSartsiz) {
+function _ikiMasaFazSayilari() {
+  // Oturumun sonundaki kesintisiz 8-10 kişilik (iki masalı) oyunlarda kim kaç kez dışarıda kaldı
+  var games = D.sessGames || [], faz = [];
+  for (var i = games.length - 1; i >= 0; i--) {
+    var rs = games[i].roundSnapshot || {};
+    if (!(rs.masa1active && rs.masa2active)) break;
+    faz.unshift(games[i]);
+  }
+  return faz.length ? _oturumDisaridaSayilari(faz).say : {};
+}
+
+function _yeniOyuncuOnceligi(koltuk, yeniSartsiz, fazSay) {
   if (!D.sessGames || !D.sessGames.length) return null;
   var players = (D.sess && D.sess.players ? D.sess.players : []).slice();
   if (players.length <= koltuk) return null;
   var r = _oturumDisaridaSayilari();
   var yeni = players.filter(function(p) { return !r.gorulen[p]; });
   if (!yeni.length && !yeniSartsiz) return null;
-  var puan = function(p) { return r.gorulen[p] ? (r.say[p] || 0) : 1e9; };
+  // fazSay verilmişse (9-10 kişi): bu fazda/turda dışarıda kalmış olan, diğerleri de
+  // birer kez kalana kadar tekrar dışarı çıkmaz — önce faz sayısı, sonra toplam sayı.
+  var fazMin = 0;
+  if (fazSay) {
+    var eskiler = players.filter(function(p) { return r.gorulen[p]; });
+    fazMin = eskiler.length ? Math.min.apply(null, eskiler.map(function(p) { return fazSay[p] || 0; })) : 0;
+  }
+  var puan = function(p) {
+    if (!r.gorulen[p]) return 1e9;
+    var t = r.say[p] || 0;
+    return fazSay ? ((fazSay[p] || 0) - fazMin) * 1000 + t : t;
+  };
   var degerler = [];
   players.forEach(function(p) { var v = puan(p); if (degerler.indexOf(v) < 0) degerler.push(v); });
   degerler.sort(function(a, b) { return b - a; });
@@ -7588,7 +7610,7 @@ function showKartCekme(){
   // (dışarıda kalır), sınırdaki eşitler serbest çeker.
   // Sonraki ellerde de geçerli: dam geçmişi yerine oturumdaki TOPLAM dışarıda kalma
   // sayısı kullanılır (ör. 7 kişiyken dışarıdan ortak olmak da sayılır).
-  var on = (n>8) ? _yeniOyuncuOnceligi(8, true) : null;
+  var on = (n>8) ? _yeniOyuncuOnceligi(8, true, _ikiMasaFazSayilari()) : null;
   if(on && !on.masa.length && !on.disari.length) on = null; // herkes eşit: normal serbest çekiliş
   if(on){
     var damIdx=[];
@@ -7767,7 +7789,7 @@ function _kRender(){
       var grupO=_kGruplar[_kGrupIdx];
       var adlar=function(l){return l.map(function(x){return x.split(' ')[0];}).join(', ');};
       var damliO=(_kDamlar||[]).filter(function(x){return _kEslesen[x]&&_kEslesen[x].tip==='dam';});
-      aciklama=damliO.length?(adlar(damliO)+' en az dışarıda kaldığı için otomatik dışarıda (dam) — kart çekmez. '):'';
+      aciklama=damliO.length?(adlar(damliO)+' dışarıda kalma sırası geldiği için otomatik dışarıda (dam) — kart çekmez. '):'';
       if(grupO&&grupO.oncelik==='masa'&&_kGruplar.length>1) aciklama+=(grupO.yeniVar?'Yeni gelenler ve en çok':'En çok')+' dışarıda kalanlar önce çeker (dam çekemezler): ismine dokun, sonra bir kart seç.';
       else if(grupO&&grupO.oncelik==='esit') aciklama+='Eşitlik: '+adlar(grupO.oyuncular)+' kart çeker — ismine dokun, sonra bir kart seç.';
       else aciklama+='Diğer oyuncular: önce ismine dokun, sonra bir kart seç.';
