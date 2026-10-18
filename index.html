@@ -1679,6 +1679,13 @@ function toS3() {
   D.sess.mPuan = parseFloat(document.getElementById('m-puan').value) || 0;
   D.sess.mPişti = parseFloat(document.getElementById('m-pişti').value) || 0;
   D.sess.mKaz = parseFloat(document.getElementById('m-kaz').value) || 0;
+  // Sıralı mod sadece kendi oyuncu sayısında geçerli: sayı değiştiyse kalıntıyı temizle
+  // (aksi halde "Oyun sırası" görünmeye devam ediyor, 8-10 kişide kart çekme açılmıyordu)
+  if (D.sess.players.length !== 5 && D.siraliMod) {
+    D.siraliMod = false; D.siraliSira = []; D.siraliOyunIdx = 0; D.siraliElIdx = 0;
+    _siraliSira = []; _siraliOyunIdx = 0;
+  }
+  if (D.sess.players.length !== 4 && D.siraliMod4) D.siraliMod4 = false;
   saveD();
   // 4 veya 5 oyuncu seçiliyse oyun modu sor (Normal/Sıralı) — değişmedi
   if (D.sess.players.length === 5 || D.sess.players.length === 4) {
@@ -2450,13 +2457,13 @@ function _oturumDisaridaSayilari() {
   return { say: say, gorulen: gorulen };
 }
 
-function _yeniOyuncuOnceligi(koltuk) {
+function _yeniOyuncuOnceligi(koltuk, yeniSartsiz) {
   if (!D.sessGames || !D.sessGames.length) return null;
   var players = (D.sess && D.sess.players ? D.sess.players : []).slice();
   if (players.length <= koltuk) return null;
   var r = _oturumDisaridaSayilari();
   var yeni = players.filter(function(p) { return !r.gorulen[p]; });
-  if (!yeni.length) return null;
+  if (!yeni.length && !yeniSartsiz) return null;
   var puan = function(p) { return r.gorulen[p] ? (r.say[p] || 0) : 1e9; };
   var degerler = [];
   players.forEach(function(p) { var v = puan(p); if (degerler.indexOf(v) < 0) degerler.push(v); });
@@ -4056,7 +4063,7 @@ function saveGame(masa, turler) {
 
   // Sıralı modda ve masa ekranından kayıt yapılıyorsa sonraki oyuna geç
   // (!turler = masa ekranından çağrıldı, bitirOyun'dan değil)
-  if (D.siraliMod && !turler) {
+  if (D.siraliMod && !turler && D.sess && D.sess.players && D.sess.players.length === 5) {
     if ((!_siraliSira || _siraliSira.length === 0) && D.siraliSira && D.siraliSira.length) {
       _siraliSira = D.siraliSira.slice();
     }
@@ -6281,7 +6288,7 @@ function _skorDurumGuncelle(masa) {
 
   var mesaj, buton;
   if (digerOynuyor) {
-    mesaj = 'Masa ' + diger + ' bitince ' + (n >= 8 && kartModu && !D.siraliMod ? 'kart çekme açılacak.' : 'yeni masa düzeni kurulabilir.');
+    mesaj = 'Masa ' + diger + ' bitince ' + (n >= 8 && kartModu ? 'kart çekme açılacak.' : 'yeni masa düzeni kurulabilir.');
     buton = '<button class="btn bo bfw" onclick="setSkorMasa(' + diger + ')">Masa ' + diger + ek(diger) + ' git</button>';
   } else if (_rotasyonBekliyorMu()) {
     mesaj = 'Yeni ortaklık için kart çekilecek.';
@@ -6783,7 +6790,7 @@ function _bitirOyunDevam(masa, savedTurler) {
         return;
       }
     }
-    if (!D.siraliMod && playerCount >= 8) {
+    if (playerCount >= 8) {
       // "Masa bitti" bilgisi sadece bu cihazın hafızasında tutuluyordu; ikinci bir cihaz
       // açıkken gelen her güncelleme onu siliyordu ve diğer masayı bitiren cihaz da hiç
       // görmüyordu. Artık Firebase'e kaydedilmiş oyunlardan (sessGames) hesaplanıyor.
@@ -6837,7 +6844,7 @@ function undoGame(gameId) {
   }
   if (!game) { toast('Oyun bulunamadı'); return; }
 
-  var mesaj = D.siraliMod
+  var mesaj = (D.siraliMod && D.sess && D.sess.players && D.sess.players.length === 5)
     ? 'Bu oyunu geri alıp önceki oyunun ortaklarına dönmek istiyor musunuz?'
     : 'Bu oyunu geri alıp skor ekranına dönmek istiyor musunuz?';
 
@@ -6857,7 +6864,7 @@ function undoGame(gameId) {
     }
 
     // Sıralı modda: önceki oyuna dön
-    if (D.siraliMod && _siraliOyunIdx > 0) {
+    if (D.siraliMod && _siraliOyunIdx > 0 && D.sess && D.sess.players && D.sess.players.length === 5) {
       _siraliOyunIdx--;
       var rot = ROTASYON[_siraliOyunIdx].r;
       var k1 = _siraliSira[rot[0]], k2 = _siraliSira[rot[1]];
@@ -7482,7 +7489,10 @@ function showKartCekme(){
   // Oturuma sonradan oyuncu eklendiyse (9-10 kişi): yeni gelenler ve en çok dışarıda
   // kalanlar dam çekemez (kesin masada), daha az dışarıda kalanlar doğrudan dam olur
   // (dışarıda kalır), sınırdaki eşitler serbest çeker.
-  var on = (n>8) ? _yeniOyuncuOnceligi(8) : null;
+  // Sonraki ellerde de geçerli: dam geçmişi yerine oturumdaki TOPLAM dışarıda kalma
+  // sayısı kullanılır (ör. 7 kişiyken dışarıdan ortak olmak da sayılır).
+  var on = (n>8) ? _yeniOyuncuOnceligi(8, true) : null;
+  if(on && !on.masa.length && !on.disari.length) on = null; // herkes eşit: normal serbest çekiliş
   if(on){
     var damIdx=[];
     for(var di2=0;di2<_kDeste1.length;di2++){ if(_kDeste1[di2].tip==='dam') damIdx.push(di2); }
@@ -7493,7 +7503,7 @@ function showKartCekme(){
       _kDamlar.push(p);
     });
     _kGruplar=[];
-    if(on.masa.length) _kGruplar.push({sayi:1,oyuncular:on.masa.slice(),bitti:[],oncelik:'masa'});
+    if(on.masa.length) _kGruplar.push({sayi:1,oyuncular:on.masa.slice(),bitti:[],oncelik:'masa',yeniVar:on.yeni.length>0});
     if(on.cekecek.length) _kGruplar.push({sayi:0,oyuncular:on.cekecek.slice(),bitti:[],oncelik:'esit'});
     _kGrupIdx=0; _kGrupSiradaki=0;
     _kDamYasakli=_kGruplar.length>1;
@@ -7661,7 +7671,7 @@ function _kRender(){
       var adlar=function(l){return l.map(function(x){return x.split(' ')[0];}).join(', ');};
       var damliO=(_kDamlar||[]).filter(function(x){return _kEslesen[x]&&_kEslesen[x].tip==='dam';});
       aciklama=damliO.length?('Dışarıda: '+adlar(damliO)+'. '):'';
-      if(grupO&&grupO.oncelik==='masa'&&_kGruplar.length>1) aciklama+='Yeni gelenler ve en çok dışarıda kalanlar önce çeker (dam çekemezler).';
+      if(grupO&&grupO.oncelik==='masa'&&_kGruplar.length>1) aciklama+=(grupO.yeniVar?'Yeni gelenler ve en çok':'En çok')+' dışarıda kalanlar önce çeker (dam çekemezler).';
       else if(grupO&&grupO.oncelik==='esit') aciklama+='Eşitlik: '+adlar(grupO.oyuncular)+' kart çeker.';
       else aciklama+='Önce ismine dokun, sonra bir kart seç.';
     } else if(_kGruplar && _kGruplar.length>1){
@@ -7827,7 +7837,7 @@ function renderSiraliSira() {
   var liste = document.getElementById('sirali-sira-liste');
   if (!div || !liste) return;
   var sira = (D.siraliSira && D.siraliSira.length) ? D.siraliSira : (_siraliSira||[]);
-  if (!D.siraliMod || sira.length === 0) { div.style.display='none'; return; }
+  if (!D.siraliMod || sira.length === 0 || !D.sess || !D.sess.players || D.sess.players.length !== 5) { div.style.display='none'; return; }
   div.style.display = 'block';
 
   // Mevcut elde takım bilgisini al
