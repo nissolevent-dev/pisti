@@ -302,11 +302,15 @@ button,.btn,.chip{touch-action:manipulation}
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:7px;margin-bottom:9px">
       <span style="font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--tx3)">Bu Oturum</span>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn bo bs" onclick="resetRoundAndGoS3()">Masayı Değiştir</button>
-        <button class="btn bo bs" onclick="showDisaridaListesi()">Dışarıda Listesi</button>
-        <button class="btn bp bs" onclick="closeSession()">Oturumu Kapat</button>
-        <button class="btn bd_btn bs" onclick="newSession()">Yeni Oturum</button>
+      <div style="width:100%">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+          <button class="btn bo bs" style="padding-left:4px;padding-right:4px;white-space:nowrap;font-size:.78rem" onclick="resetRoundAndGoS3()">Masayı Değiştir</button>
+          <button class="btn bo bs" style="padding-left:4px;padding-right:4px;white-space:nowrap;font-size:.78rem" onclick="showDisaridaListesi()">Dışarıda Listesi</button>
+          <button class="btn bd_btn bs" style="padding-left:4px;padding-right:4px;white-space:nowrap;font-size:.78rem" onclick="newSession()">Yeni Oturum</button>
+        </div>
+        <div style="display:flex;justify-content:center;margin-top:6px">
+          <button class="btn bp bs" style="white-space:nowrap" onclick="closeSession()">Oturumu Kapat</button>
+        </div>
       </div>
     </div>
     <div id="game-cards"><div class="empty">Henüz oyun girilmedi</div></div>
@@ -629,7 +633,7 @@ button,.btn,.chip{touch-action:manipulation}
 </div>
 
 <!-- Top 5 Overlay -->
-<div class="ov" id="ov-disarida">
+<div class="ov" id="ov-disarida" style="align-items:center">
   <div class="ovbox" style="max-width:400px;max-height:85vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div class="ovttl" style="margin-bottom:0">Dışarıda Listesi</div>
