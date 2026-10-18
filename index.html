@@ -2566,6 +2566,23 @@ function _ikiMasaFazSayilari() {
   return faz.length ? _oturumDisaridaSayilari(faz).say : {};
 }
 
+function _sonElDisaridakiler() {
+  // Son oynanan elde dışarıda kalanlar (iki masalı turda iki oyun birlikte)
+  var games = D.sessGames || [];
+  if (!games.length) return {};
+  var son = games[games.length - 1], rs = son.roundSnapshot || {};
+  var el = (rs.turId && rs.masa1active && rs.masa2active)
+    ? games.filter(function(g) { var r = g.roundSnapshot || {}; return r.turId === rs.turId; })
+    : [son];
+  var katilan = {}, oturan = {}, sonuc = {};
+  el.forEach(function(g) {
+    (g.teamA || []).concat(g.teamB || []).concat(g.partners || []).forEach(function(p) { katilan[p] = true; });
+    var o = _7kGercekOturanlar(g); for (var p in o) oturan[p] = true;
+  });
+  for (var p in katilan) if (!oturan[p]) sonuc[p] = true;
+  return sonuc;
+}
+
 function _yeniOyuncuOnceligi(koltuk, yeniSartsiz, fazSay) {
   if (!D.sessGames || !D.sessGames.length) return null;
   var players = (D.sess && D.sess.players ? D.sess.players : []).slice();
@@ -2580,8 +2597,11 @@ function _yeniOyuncuOnceligi(koltuk, yeniSartsiz, fazSay) {
     var eskiler = players.filter(function(p) { return r.gorulen[p]; });
     fazMin = eskiler.length ? Math.min.apply(null, eskiler.map(function(p) { return fazSay[p] || 0; })) : 0;
   }
+  // Son elde dışarıda kalanlar (oyuncu sayısı değişse bile) yeni gelenler gibi önce oturur
+  var sonDis = _sonElDisaridakiler();
+  var sonDisariVar = players.filter(function(p) { return sonDis[p]; });
   var puan = function(p) {
-    if (!r.gorulen[p]) return 1e9;
+    if (!r.gorulen[p] || sonDis[p]) return 1e9;
     var t = r.say[p] || 0;
     return fazSay ? ((fazSay[p] || 0) - fazMin) * 1000 + t : t;
   };
@@ -2595,7 +2615,7 @@ function _yeniOyuncuOnceligi(koltuk, yeniSartsiz, fazSay) {
     if (grup.length <= kalan) { masa = masa.concat(grup); kalan -= grup.length; if (kalan === 0) doldu = true; }
     else { cekecek = grup; doldu = true; }
   });
-  return { yeni: yeni, masa: masa, disari: disari, cekecek: cekecek, kalan: cekecek.length ? kalan : 0 };
+  return { yeni: yeni, sonDisari: sonDisariVar, masa: masa, disari: disari, cekecek: cekecek, kalan: cekecek.length ? kalan : 0 };
 }
 
 function _onUygula(h) {
@@ -2628,7 +2648,11 @@ function _onAciklama(h) {
   var on = h._oncelik;
   if (!on || !h._aktifCekenler) return null;
   var ad = function(l) { return l.map(function(p) { return p.split(' ')[0]; }).join(', '); };
-  var t = (on.yeni && on.yeni.length ? 'Yeni gelenler ve en çok' : 'En çok') + ' dışarıda kalanlar kart çekmeden masada, daha az kalanlar dışarıda.';
+  var onc = [];
+  if (on.yeni && on.yeni.length) onc.push('yeni gelenler');
+  if (on.sonDisari && on.sonDisari.length) onc.push('son elde dışarıda kalanlar');
+  var t = (onc.length ? (onc.join(', ') + ' ve en çok') : 'En çok') + ' dışarıda kalanlar kart çekmeden masada, daha az kalanlar dışarıda.';
+  t = t.charAt(0).toLocaleUpperCase('tr') + t.slice(1);
   if (h._aktifCekenler.length) t += ' Eşitlik var: ' + ad(h._aktifCekenler) + ' kart çeker (önce ismine, sonra karta dokun).';
   else t += ' Kart çekmeye gerek yok, Tamam\'a basın.';
   return t;
@@ -7684,7 +7708,7 @@ function showKartCekme(){
       _kDamlar.push(p);
     });
     _kGruplar=[];
-    if(on.masa.length) _kGruplar.push({sayi:1,oyuncular:on.masa.slice(),bitti:[],oncelik:'masa',yeniVar:on.yeni.length>0});
+    if(on.masa.length) _kGruplar.push({sayi:1,oyuncular:on.masa.slice(),bitti:[],oncelik:'masa',yeniVar:on.yeni.length>0||(on.sonDisari||[]).length>0});
     if(on.cekecek.length) _kGruplar.push({sayi:0,oyuncular:on.cekecek.slice(),bitti:[],oncelik:'esit'});
     _kGrupIdx=0; _kGrupSiradaki=0;
     _kDamYasakli=_kGruplar.length>1;
@@ -7852,7 +7876,7 @@ function _kRender(){
       var adlar=function(l){return l.map(function(x){return x.split(' ')[0];}).join(', ');};
       var damliO=(_kDamlar||[]).filter(function(x){return _kEslesen[x]&&_kEslesen[x].tip==='dam';});
       aciklama=damliO.length?(adlar(damliO)+' dışarıda kalma sırası geldiği için otomatik dışarıda (dam) — kart çekmez. '):'';
-      if(grupO&&grupO.oncelik==='masa'&&_kGruplar.length>1) aciklama+=(grupO.yeniVar?'Yeni gelenler ve en çok':'En çok')+' dışarıda kalanlar önce çeker (dam çekemezler): ismine dokun, sonra bir kart seç.';
+      if(grupO&&grupO.oncelik==='masa'&&_kGruplar.length>1) aciklama+=(grupO.yeniVar?'Yeni gelenler / son elde dışarıda kalanlar ve en çok':'En çok')+' dışarıda kalanlar önce çeker (dam çekemezler): ismine dokun, sonra bir kart seç.';
       else if(grupO&&grupO.oncelik==='esit') aciklama+='Eşitlik: '+adlar(grupO.oyuncular)+' kart çeker — ismine dokun, sonra bir kart seç.';
       else aciklama+='Diğer oyuncular: önce ismine dokun, sonra bir kart seç.';
     } else if(_kGruplar && _kGruplar.length>1){
