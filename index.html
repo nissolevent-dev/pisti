@@ -5889,6 +5889,37 @@ function renderStat() {
     '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + minPartNames + '</div>' +
     '</div>';
 
+  // Dışarıdan (ortak/dam olarak) kazanılan-kaybedilen toplamlar
+  var disStats = {};
+  for (var i = 0; i < sortedGames.length; i++) {
+    var g = sortedGames[i];
+    var ortaklar = (g.partners && g.partners.length) ? g.partners
+      : (g.roundSnapshot && g.roundSnapshot.partners ? Object.keys(g.roundSnapshot.partners) : []);
+    var oyundakiler = (g.teamA || []).concat(g.teamB || []);
+    ortaklar.forEach(function(p) {
+      if (oyundakiler.indexOf(p) < 0 || !g.payMap) return;
+      if (!disStats[p]) disStats[p] = { earn: 0, games: 0 };
+      disStats[p].earn += (g.payMap[p] || 0);
+      disStats[p].games++;
+    });
+  }
+  var disArr = Object.keys(disStats).map(function(p) {
+    var e = disStats[p].earn;
+    return { name: p.split(' ')[0], val: (e >= 0 ? '+' : '-') + 'TL' + Math.abs(e), valNum: e, sub: disStats[p].games + ' oyun dışarıdan', color: e >= 0 ? 'var(--win)' : 'var(--lose)' };
+  });
+  var disKazArr = disArr.filter(function(x) { return x.valNum > 0; }).sort(function(a, b) { return b.valNum - a.valNum; });
+  var disKayArr = disArr.filter(function(x) { return x.valNum < 0; }).sort(function(a, b) { return a.valNum - b.valNum; });
+  var card13 = '<div class="stcard" onclick="showTop5(\'disKaz\')" style="cursor:pointer">' +
+    '<div class="stv" style="font-size:1.1rem">' + (disKazArr.length ? disKazArr[0].val : '-') + '</div>' +
+    '<div class="stl">Dışarıdan En Çok Kazanan</div>' +
+    '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + (disKazArr.length ? disKazArr[0].name + ' · ' + disKazArr[0].sub : '') + '</div>' +
+    '</div>';
+  var card14 = '<div class="stcard" onclick="showTop5(\'disKay\')" style="cursor:pointer">' +
+    '<div class="stv" style="font-size:1.1rem;color:var(--lose)">' + (disKayArr.length ? disKayArr[0].val : '-') + '</div>' +
+    '<div class="stl">Dışarıdan En Çok Kaybeden</div>' +
+    '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + (disKayArr.length ? disKayArr[0].name + ' · ' + disKayArr[0].sub : '') + '</div>' +
+    '</div>';
+
   // Top5 verileri hazırla
   // En düşük puan top5
   var minPtsArr = [];
@@ -6030,7 +6061,9 @@ function renderStat() {
     sessLoss: {title:'Oturumda En Çok Kaybedilen — Top 5', items: sessLossArr},
     partEarn: {title:'En Karlı Ortak İkilisi — Top 5', items: partEarnArr},
     partWR: {title:'En İyi Kazanma Oranlı İkili — Top 5', items: partWRArr},
-    partLoss: {title:'En Zararlı Ortak İkilisi — Top 5', items: partEarnArr.slice().reverse()}
+    partLoss: {title:'En Zararlı Ortak İkilisi — Top 5', items: partEarnArr.slice().reverse()},
+    disKaz: {title:'Dışarıdan En Çok Kazanan — Top 5', items: disKazArr},
+    disKay: {title:'Dışarıdan En Çok Kaybeden — Top 5', items: disKayArr}
   };
 
   var grid3El = document.getElementById('st-summary3');
@@ -6040,7 +6073,7 @@ function renderStat() {
     grid3El.className = 'stgrid';
     grid2El.parentNode.insertBefore(grid3El, grid2El.nextSibling);
   }
-  grid3El.innerHTML = card9 + card10 + card11 + card12;
+  grid3El.innerHTML = card9 + card10 + card11 + card12 + card13 + card14;
 
   // ── Aylık trend ──
   var monthlyData = {};
