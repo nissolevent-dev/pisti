@@ -304,6 +304,7 @@ button,.btn,.chip{touch-action:manipulation}
       <span style="font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--tx3)">Bu Oturum</span>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn bo bs" onclick="resetRoundAndGoS3()">Masayı Değiştir</button>
+        <button class="btn bo bs" onclick="showDisaridaListesi()">Dışarıda Listesi</button>
         <button class="btn bp bs" onclick="closeSession()">Oturumu Kapat</button>
         <button class="btn bd_btn bs" onclick="newSession()">Yeni Oturum</button>
       </div>
@@ -628,6 +629,16 @@ button,.btn,.chip{touch-action:manipulation}
 </div>
 
 <!-- Top 5 Overlay -->
+<div class="ov" id="ov-disarida">
+  <div class="ovbox" style="max-width:400px;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="ovttl" style="margin-bottom:0">Dışarıda Listesi</div>
+      <button class="btn bo bs" onclick="closeOv('ov-disarida')">Kapat</button>
+    </div>
+    <div id="disarida-content"></div>
+  </div>
+</div>
+
 <div class="ov" id="ov-top5">
   <div class="ovbox" style="max-width:400px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
@@ -2498,6 +2509,45 @@ function _oturumDisaridaSayilari(oyunlar) {
     }
   });
   return { say: say, gorulen: gorulen };
+}
+
+function showDisaridaListesi() {
+  var players = (D.sess && D.sess.players ? D.sess.players : []).slice();
+  var r = _oturumDisaridaSayilari();
+  var games = D.sessGames || [];
+  // Oynanan el sayısı (iki masalı turlar tek el sayılır)
+  var elSay = {}, gorulenTur = {};
+  games.forEach(function(g, i) {
+    var rs = g.roundSnapshot || {};
+    var id = (rs.turId && rs.masa1active && rs.masa2active) ? 't' + rs.turId : 'g' + i;
+    if (!gorulenTur[id]) gorulenTur[id] = {};
+    (g.teamA || []).concat(g.teamB || []).forEach(function(p) { gorulenTur[id][p] = true; });
+  });
+  var toplamEl = Object.keys(gorulenTur).length;
+  Object.keys(gorulenTur).forEach(function(id) { for (var p in gorulenTur[id]) elSay[p] = (elSay[p] || 0) + 1; });
+  var simdi = (D.round && D.round.partners) ? D.round.partners : {};
+  var liste = players.map(function(p) { return { p: p, n: r.say[p] || 0, el: elSay[p] || 0 }; });
+  liste.sort(function(a, b) { return b.n - a.n || a.el - b.el || a.p.localeCompare(b.p, 'tr'); });
+  var maks = liste.reduce(function(m, x) { return Math.max(m, x.n); }, 0) || 1;
+  var h = '';
+  if (!toplamEl) {
+    h = '<div class="empty">Bu oturumda henüz oyun oynanmadı</div>';
+  } else {
+    h += '<div style="font-size:.75rem;color:var(--tx3);margin-bottom:10px">Bu oturumda oynanan ' + toplamEl + ' elde kimin kaç kez dışarıda kaldığı (dışarıdan ortak / dam). 8-10 kişide iki masanın aynı eli tek el sayılır.</div>';
+    liste.forEach(function(x) {
+      var yeni = !r.gorulen[x.p];
+      var w = Math.round(x.n / maks * 100);
+      h += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)">';
+      h += '<div style="flex:0 0 38%;font-weight:600;font-size:.88rem">' + x.p +
+           (simdi[x.p] ? ' <span style="font-size:.62rem;font-weight:700;color:#7c3aed;background:#ede9fe;border-radius:4px;padding:1px 5px;white-space:nowrap;display:inline-block">şu an dışarıda</span>' : '') +
+           (yeni ? ' <span style="font-size:.62rem;font-weight:700;color:var(--g2);background:var(--bg2);border-radius:4px;padding:1px 5px;white-space:nowrap;display:inline-block">yeni</span>' : '') + '</div>';
+      h += '<div style="flex:1;height:10px;background:var(--bg2);border-radius:5px;overflow:hidden"><div style="width:' + w + '%;height:100%;background:var(--g2)"></div></div>';
+      h += '<div style="flex:0 0 auto;text-align:right;font-size:.85rem;font-weight:800;min-width:52px">' + x.n + ' kez</div>';
+      h += '</div>';
+    });
+  }
+  document.getElementById('disarida-content').innerHTML = h;
+  document.getElementById('ov-disarida').classList.add('on');
 }
 
 function _ikiMasaFazSayilari() {
