@@ -7412,6 +7412,13 @@ function _kFindTap(e, prevent){
       if(kp!==null){if(prevent)e.preventDefault();_kOyuncuTik(parseInt(kp));return;}
       var kk=t.getAttribute('data-kk');
       if(kk!==null){if(prevent)e.preventDefault();_kKartTik(parseInt(kk));return;}
+      var kb=t.getAttribute('data-kbilgi');
+      if(kb!==null){
+        if(prevent)e.preventDefault();
+        var bp=D.sess.players[parseInt(kb)], be=bp&&_kEslesen[bp];
+        if(be) toast(bp.split(' ')[0]+(be.tip==='dam'?' dışarıda — kart çekmez. Diğer oyuncular çeksin.':' kartını çekti.'));
+        return;
+      }
     }
     t=t.parentNode;
   }
@@ -7670,10 +7677,10 @@ function _kRender(){
       var grupO=_kGruplar[_kGrupIdx];
       var adlar=function(l){return l.map(function(x){return x.split(' ')[0];}).join(', ');};
       var damliO=(_kDamlar||[]).filter(function(x){return _kEslesen[x]&&_kEslesen[x].tip==='dam';});
-      aciklama=damliO.length?('Dışarıda: '+adlar(damliO)+'. '):'';
-      if(grupO&&grupO.oncelik==='masa'&&_kGruplar.length>1) aciklama+=(grupO.yeniVar?'Yeni gelenler ve en çok':'En çok')+' dışarıda kalanlar önce çeker (dam çekemezler).';
-      else if(grupO&&grupO.oncelik==='esit') aciklama+='Eşitlik: '+adlar(grupO.oyuncular)+' kart çeker.';
-      else aciklama+='Önce ismine dokun, sonra bir kart seç.';
+      aciklama=damliO.length?(adlar(damliO)+' en az dışarıda kaldığı için otomatik dışarıda (dam) — kart çekmez. '):'';
+      if(grupO&&grupO.oncelik==='masa'&&_kGruplar.length>1) aciklama+=(grupO.yeniVar?'Yeni gelenler ve en çok':'En çok')+' dışarıda kalanlar önce çeker (dam çekemezler): ismine dokun, sonra bir kart seç.';
+      else if(grupO&&grupO.oncelik==='esit') aciklama+='Eşitlik: '+adlar(grupO.oyuncular)+' kart çeker — ismine dokun, sonra bir kart seç.';
+      else aciklama+='Diğer oyuncular: önce ismine dokun, sonra bir kart seç.';
     } else if(_kGruplar && _kGruplar.length>1){
       var grup=_kGruplar[_kGrupIdx];
       var sonGrup=(_kGrupIdx===_kGruplar.length-1);
@@ -7691,12 +7698,13 @@ function _kRender(){
       var esl=_kEslesen[p];
       var sel=_kSecilen===p;
       var aktif=_kOyuncuAktifMi(p)&&!esl;
-      var lbl=p.split(' ')[0]+(esl?' '+(esl.tip==='as'?'A':esl.tip==='kral'?'K':'Q')+esl.sembol:'');
-      var bg=esl?'var(--g1)':sel?'var(--g2)':'var(--bg2)';
-      var col=(esl||sel)?'#fff':'var(--tx1)';
+      var dmO=esl&&esl.tip==='dam';
+      var lbl=p.split(' ')[0]+(esl?' '+(esl.tip==='as'?'A':esl.tip==='kral'?'K':'Q')+esl.sembol:'')+(dmO?'<br><span style="font-size:.68rem;font-weight:700;">Dışarıda</span>':'');
+      var bg=dmO?'var(--bg2)':esl?'var(--g1)':sel?'var(--g2)':'var(--bg2)';
+      var col=dmO?'var(--tx3)':(esl||sel)?'#fff':'var(--tx1)';
       var brd=sel?'var(--g2)':'var(--bd2)';
       var op=(!esl&&!aktif)?'0.35':'1';
-      oyHtml+='<div '+(aktif&&!esl?'data-kp="'+i+'"':'')+' style="padding:10px 14px;border:2px solid '+brd+';background:'+bg+';color:'+col+';border-radius:8px;cursor:'+(aktif?'pointer':'default')+';font-family:inherit;font-size:.82rem;font-weight:600;display:inline-block;margin:3px;user-select:none;-webkit-user-select:none;opacity:'+op+';">'+lbl+'</div>';
+      oyHtml+='<div '+(aktif&&!esl?'data-kp="'+i+'"':esl?'data-kbilgi="'+i+'"':'')+' style="padding:10px 14px;border:2px solid '+brd+';background:'+bg+';color:'+col+';border-radius:8px;cursor:'+(aktif?'pointer':'default')+';font-family:inherit;font-size:.82rem;font-weight:600;display:inline-block;margin:3px;user-select:none;-webkit-user-select:none;opacity:'+op+';">'+lbl+'</div>';
     }
     if(oyDiv)oyDiv.innerHTML=oyHtml;
     var kartHtml='';
@@ -8182,6 +8190,14 @@ if (isIOS && !localStorage.getItem('pisti_ios')) {
   function guncelle() {
     if (acikPencereVar()) kilitle(); else coz();
     if (typeof gorunurAlanaSigdir === 'function') gorunurAlanaSigdir();
+    // Yeni açılan pencerede iOS'un dokunma konumlarını yeniden hesaplamasını sağla
+    // (aksi halde bazen ekran kaydırılana kadar dokunuşlar algılanmıyordu)
+    setTimeout(function() {
+      document.body.getBoundingClientRect();
+      document.querySelectorAll('.ov.on .ovbox').forEach(function(bx) {
+        var y = bx.scrollTop; bx.scrollTop = y + 1; bx.scrollTop = y;
+      });
+    }, 60);
   }
   // Tüm pencerelerin açılıp kapanmasını izle (classList 'on')
   var gozcu = new MutationObserver(function(kayitlar) {
