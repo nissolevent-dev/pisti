@@ -1132,6 +1132,8 @@ REF.on('value', function(snap) {
   if (!D.skorTakip) D.skorTakip = {};
   if (!D.dagitici) D.dagitici = {};
   if (!D.closedSess) D.closedSess = [];
+  _oyunOrtaklariniDuzelt(D.allGames);
+  _oyunOrtaklariniDuzelt(D.sessGames);
 
   // Dagitici seçimini senkronize et
   if (val && val.dagitici) {
@@ -2495,13 +2497,59 @@ var _7k = {
 // Oturumda daha önce oyun oynanmışsa ve hiç oynamamış (yeni eklenen) oyuncu varsa:
 // yeni oyuncular ve o ana kadar EN ÇOK dışarıda kalanlar kart çekmeden masaya oturur,
 // daha az dışarıda kalanlar otomatik dışarıda kalır; sınırdaki eşitler kart çeker.
+function _oyunOrtaklariniDuzelt(games) {
+  // Masa düzeninden kalan geçersiz "ortak" kayıtlarını temizler. Bir kişi ortak olarak
+  // işaretliyse (ör. m1:'B') o masada o takımda olmalı; değilse aslında masada oturmuştur
+  // (eski düzenden kalmış kayıt). Ayrıca boş (null) ortak isimleri atılır.
+  (games || []).forEach(function(g) {
+    if (!g) return;
+    var rs = g.roundSnapshot;
+    if (rs && rs.partners) {
+      Object.keys(rs.partners).forEach(function(p) {
+        var v = rs.partners[p] || {}, gecerli = !!(v.m1 || v.m2);
+        ['m1', 'm2'].forEach(function(k) {
+          if (!v[k]) return;
+          var masa = rs[k === 'm1' ? 'masa1' : 'masa2'];
+          if (masa && (masa[v[k]] || []).indexOf(p) < 0) gecerli = false;
+        });
+        if (!gecerli) delete rs.partners[p];
+      });
+    }
+    if (g.partners) {
+      g.partners = g.partners.filter(function(p) {
+        if (!p) return false;
+        if (rs && rs.partners && (rs.masa1 || rs.masa2)) return !!rs.partners[p];
+        return true;
+      });
+    }
+  });
+}
+
+function _elAnahtarlari(games) {
+  // Her oyun için "el" anahtarı. İki masalı turda (8-10 kişi) aynı düzenin (turId) FARKLI
+  // masalardaki oyunları aynı eldir; aynı düzen aynı masada tekrar oynandıysa (ör. düzen
+  // değiştirilmeden yeni oturuma geçildiyse) bu yeni bir el sayılır.
+  var gruplar = {}, sayac = 0;
+  return games.map(function(g, i) {
+    var rs = (g && g.roundSnapshot) || {};
+    if (!(rs.turId && rs.masa1active && rs.masa2active)) return 'g' + (g && g.id != null ? g.id : 'i' + i);
+    var m = (g.masa || 1), liste = gruplar[rs.turId] || (gruplar[rs.turId] = []);
+    for (var k = 0; k < liste.length; k++) {
+      if (!liste[k].masalar[m]) { liste[k].masalar[m] = true; return liste[k].id; }
+    }
+    var yeni = { id: 't' + rs.turId + '_' + (sayac++), masalar: {} };
+    yeni.masalar[m] = true; liste.push(yeni);
+    return yeni.id;
+  });
+}
+
 function _oturumDisaridaSayilari(oyunlar) {
   var games = oyunlar || D.sessGames || [];
   var turlar = {}, sira = [];
+  var anahtar = _elAnahtarlari(games);
   games.forEach(function(g, i) {
-    var rs = g.roundSnapshot || {};
-    // İki masalı turlarda (8-10 kişi) aynı turun iki oyunu birlikte değerlendirilir
-    var id = (rs.turId && rs.masa1active && rs.masa2active) ? 't' + rs.turId : 'g' + i;
+    // İki masalı turlarda (8-10 kişi) aynı elin iki oyunu birlikte değerlendirilir
+    var id = anahtar[i];
     if (!turlar[id]) { turlar[id] = { katilan: {}, oturan: {} }; sira.push(id); }
     var t = turlar[id];
     (g.teamA || []).concat(g.teamB || []).concat(g.partners || []).forEach(function(p) { t.katilan[p] = true; });
@@ -2525,9 +2573,9 @@ function showDisaridaListesi() {
   var games = D.sessGames || [];
   // Oynanan el sayısı (iki masalı turlar tek el sayılır)
   var elSay = {}, gorulenTur = {};
+  var anahtarL = _elAnahtarlari(games);
   games.forEach(function(g, i) {
-    var rs = g.roundSnapshot || {};
-    var id = (rs.turId && rs.masa1active && rs.masa2active) ? 't' + rs.turId : 'g' + i;
+    var id = anahtarL[i];
     if (!gorulenTur[id]) gorulenTur[id] = {};
     (g.teamA || []).concat(g.teamB || []).forEach(function(p) { gorulenTur[id][p] = true; });
   });
@@ -4249,6 +4297,7 @@ function saveGame(masa, turler) {
     date: new Date().toLocaleDateString('tr-TR')
   };
 
+  _oyunOrtaklariniDuzelt([g]);
   D.allGames.push(g);
   D.sessGames.push(g);
   // Sıralı mod için idx'i push'tan hemen sonra al
@@ -5894,14 +5943,14 @@ function renderStat() {
 
   // Dışarıdan (ortak/dam olarak) kazanılan-kaybedilen toplamlar
   var disStats = {};
+  var disAnahtar = _elAnahtarlari(sortedGames);
   for (var i = 0; i < sortedGames.length; i++) {
     var g = sortedGames[i];
     var ortaklar = (g.partners && g.partners.length) ? g.partners
       : (g.roundSnapshot && g.roundSnapshot.partners ? Object.keys(g.roundSnapshot.partners) : []);
     var oyundakiler = (g.teamA || []).concat(g.teamB || []);
     // 8-10 kişide iki masanın aynı eli tek el sayılır (dam iki masaya ortak olsa da 1 el)
-    var rsD = g.roundSnapshot || {};
-    var elKey = (rsD.turId && rsD.masa1active && rsD.masa2active) ? 't' + rsD.turId : 'g' + (g.id != null ? g.id : i);
+    var elKey = disAnahtar[i];
     ortaklar.forEach(function(p) {
       if (oyundakiler.indexOf(p) < 0 || !g.payMap) return;
       if (!disStats[p]) disStats[p] = { earn: 0, games: 0, eller: {} };
