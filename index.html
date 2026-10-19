@@ -5909,6 +5909,15 @@ function renderStat() {
   });
   var disKazArr = disArr.filter(function(x) { return x.valNum > 0; }).sort(function(a, b) { return b.valNum - a.valNum; });
   var disKayArr = disArr.filter(function(x) { return x.valNum < 0; }).sort(function(a, b) { return a.valNum - b.valNum; });
+  // Dışarıda kalma: oturum bazında (kapalı oturumlar + açık oturum)
+  _disaridaIst = _disaridaIstatistikHesapla();
+  var dIlk = _disaridaIst[0];
+  var card15 = '<div class="stcard" onclick="showDisaridaIstatistik()" style="cursor:pointer;grid-column:1/-1">' +
+    '<div class="stv" style="font-size:1.3rem">' + (dIlk ? dIlk.toplam + ' kez' : '-') + '</div>' +
+    '<div class="stl">En Çok Dışarıda Kalan</div>' +
+    '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + (dIlk ? dIlk.p.split(' ')[0] + ' · ' + dIlk.oturum + ' oturum · ort. ' + _ortYaz(dIlk.ort) : 'Henüz veri yok') + '</div>' +
+    '</div>';
+
   var card13 = '<div class="stcard" onclick="showTop5(\'disKaz\')" style="cursor:pointer">' +
     '<div class="stv" style="font-size:1.1rem">' + (disKazArr.length ? disKazArr[0].val : '-') + '</div>' +
     '<div class="stl">Dışarıdan En Çok Kazanan</div>' +
@@ -6073,7 +6082,7 @@ function renderStat() {
     grid3El.className = 'stgrid';
     grid2El.parentNode.insertBefore(grid3El, grid2El.nextSibling);
   }
-  grid3El.innerHTML = card9 + card10 + card11 + card12 + card13 + card14;
+  grid3El.innerHTML = card9 + card10 + card11 + card12 + card13 + card14 + card15;
 
   // ── Aylık trend ──
   var monthlyData = {};
@@ -7449,6 +7458,59 @@ function showHttbGeriden() {
   icerik.innerHTML = html;
   icerik.style.maxHeight = '65vh';
   icerik.style.overflowY = 'auto';
+  document.getElementById('ov-top5').classList.add('on');
+}
+
+var _disaridaIst = [];
+
+function _ortYaz(x) { return (Math.round(x * 10) / 10).toString().replace('.', ','); }
+
+function _disaridaIstatistikHesapla() {
+  var byId = {};
+  (D.allGames || []).forEach(function(g) { if (g && g.id != null) byId[g.id] = g; });
+  var oturumlar = [];
+  (D.closedSess || []).forEach(function(cs) {
+    if (cs.manual || !cs.sessGameIds || !cs.sessGameIds.length) return;
+    var gs = cs.sessGameIds.map(function(id) { return byId[id]; }).filter(Boolean);
+    if (gs.length) oturumlar.push(gs);
+  });
+  if (D.sessGames && D.sessGames.length) oturumlar.push(D.sessGames);
+  var st = {};
+  oturumlar.forEach(function(gs) {
+    var r = _oturumDisaridaSayilari(gs);
+    for (var p in r.gorulen) {
+      if (!p || p === 'undefined') continue;
+      if (!st[p]) st[p] = { p: p, oturum: 0, toplam: 0 };
+      st[p].oturum++;
+      st[p].toplam += (r.say[p] || 0);
+    }
+  });
+  var liste = Object.keys(st).map(function(k) { var x = st[k]; x.ort = x.oturum ? x.toplam / x.oturum : 0; return x; });
+  liste.sort(function(a, b) { return b.toplam - a.toplam || b.ort - a.ort || a.p.localeCompare(b.p, 'tr'); });
+  return liste;
+}
+
+function showDisaridaIstatistik() {
+  var _ic = document.getElementById('top5-content');
+  if (_ic) { _ic.style.maxHeight = '65vh'; _ic.style.overflowY = 'auto'; }
+  document.getElementById('top5-title').textContent = 'Dışarıda Kalma';
+  var l = _disaridaIst || [];
+  var h = '';
+  if (!l.length) h = '<div class="empty">Veri yok</div>';
+  else {
+    h += '<div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px">Dışarıdan ortak / dam olarak oynanan eller. 8-10 kişide iki masanın aynı eli tek el sayılır. Elle girilen oturumlar dahil değil.</div>';
+    h += '<div style="display:grid;grid-template-columns:28px 1fr 56px 56px 52px;gap:6px;padding:6px 0;border-bottom:2px solid var(--bd2);font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3)">' +
+         '<span></span><span>Oyuncu</span><span style="text-align:center">Oturum</span><span style="text-align:center">Toplam</span><span style="text-align:center">Ort.</span></div>';
+    l.forEach(function(x, i) {
+      h += '<div style="display:grid;grid-template-columns:28px 1fr 56px 56px 52px;gap:6px;align-items:center;padding:9px 0;border-bottom:1px solid var(--bd)">' +
+           '<span style="font-size:.78rem;color:var(--tx3);text-align:center">' + (i + 1) + '</span>' +
+           '<span style="font-size:.88rem;font-weight:600">' + x.p + '</span>' +
+           '<span style="text-align:center;font-size:.88rem">' + x.oturum + '</span>' +
+           '<span style="text-align:center;font-size:.95rem;font-weight:800">' + x.toplam + '</span>' +
+           '<span style="text-align:center;font-size:.88rem;color:var(--g2);font-weight:700">' + _ortYaz(x.ort) + '</span></div>';
+    });
+  }
+  document.getElementById('top5-content').innerHTML = h;
   document.getElementById('ov-top5').classList.add('on');
 }
 
