@@ -5911,11 +5911,11 @@ function renderStat() {
   var disKayArr = disArr.filter(function(x) { return x.valNum < 0; }).sort(function(a, b) { return a.valNum - b.valNum; });
   // Dışarıda kalma: oturum bazında (kapalı oturumlar + açık oturum)
   _disaridaIst = _disaridaIstatistikHesapla();
-  var dIlk = _disaridaIst[0];
+  var dIlk = _disaridaIst[0]; // ortalaması en yüksek olan
   var card15 = '<div class="stcard" onclick="showDisaridaIstatistik()" style="cursor:pointer;grid-column:1/-1">' +
-    '<div class="stv" style="font-size:1.3rem">' + (dIlk ? dIlk.toplam + ' kez' : '-') + '</div>' +
+    '<div class="stv" style="font-size:1.3rem">' + (dIlk ? 'ort. ' + _ortYaz(dIlk.ort) : '-') + '</div>' +
     '<div class="stl">En Çok Dışarıda Kalan</div>' +
-    '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + (dIlk ? dIlk.p.split(' ')[0] + ' · ' + dIlk.oturum + ' oturum · ort. ' + _ortYaz(dIlk.ort) : 'Henüz veri yok') + '</div>' +
+    '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + (dIlk ? dIlk.p.split(' ')[0] + ' · ' + dIlk.oturum + ' oturumda toplam ' + dIlk.toplam + ' kez' : 'Henüz veri yok') + '</div>' +
     '</div>';
 
   var card13 = '<div class="stcard" onclick="showTop5(\'disKaz\')" style="cursor:pointer">' +
@@ -7486,7 +7486,8 @@ function _disaridaIstatistikHesapla() {
     }
   });
   var liste = Object.keys(st).map(function(k) { var x = st[k]; x.ort = x.oturum ? x.toplam / x.oturum : 0; return x; });
-  liste.sort(function(a, b) { return b.toplam - a.toplam || b.ort - a.ort || a.p.localeCompare(b.p, 'tr'); });
+  // Liste ortalama dışarıda kalma sayısına göre sıralı (eşitlikte toplam)
+  liste.sort(function(a, b) { return b.ort - a.ort || b.toplam - a.toplam || a.p.localeCompare(b.p, 'tr'); });
   return liste;
 }
 
