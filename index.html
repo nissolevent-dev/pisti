@@ -5899,16 +5899,19 @@ function renderStat() {
     var ortaklar = (g.partners && g.partners.length) ? g.partners
       : (g.roundSnapshot && g.roundSnapshot.partners ? Object.keys(g.roundSnapshot.partners) : []);
     var oyundakiler = (g.teamA || []).concat(g.teamB || []);
+    // 8-10 kişide iki masanın aynı eli tek el sayılır (dam iki masaya ortak olsa da 1 el)
+    var rsD = g.roundSnapshot || {};
+    var elKey = (rsD.turId && rsD.masa1active && rsD.masa2active) ? 't' + rsD.turId : 'g' + (g.id != null ? g.id : i);
     ortaklar.forEach(function(p) {
       if (oyundakiler.indexOf(p) < 0 || !g.payMap) return;
-      if (!disStats[p]) disStats[p] = { earn: 0, games: 0 };
+      if (!disStats[p]) disStats[p] = { earn: 0, games: 0, eller: {} };
       disStats[p].earn += (g.payMap[p] || 0);
-      disStats[p].games++;
+      if (!disStats[p].eller[elKey]) { disStats[p].eller[elKey] = true; disStats[p].games++; }
     });
   }
   var disArr = Object.keys(disStats).map(function(p) {
     var e = disStats[p].earn;
-    return { name: p.split(' ')[0], val: (e >= 0 ? '+' : '-') + 'TL' + Math.abs(e), valNum: e, sub: disStats[p].games + ' oyun dışarıdan', color: e >= 0 ? 'var(--win)' : 'var(--lose)' };
+    return { name: p.split(' ')[0], val: (e >= 0 ? '+' : '-') + 'TL' + Math.abs(e), valNum: e, sub: disStats[p].games + ' el dışarıda', color: e >= 0 ? 'var(--win)' : 'var(--lose)' };
   });
   var disKazArr = disArr.filter(function(x) { return x.valNum > 0; }).sort(function(a, b) { return b.valNum - a.valNum; });
   var disKayArr = disArr.filter(function(x) { return x.valNum < 0; }).sort(function(a, b) { return a.valNum - b.valNum; });
