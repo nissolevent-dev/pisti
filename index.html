@@ -5973,6 +5973,25 @@ function renderStat() {
     '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + (dIlk ? dIlk.p.split(' ')[0] + ' · ' + dIlk.oturum + ' oturumda toplam ' + dIlk.toplam + ' kez' : 'Henüz veri yok') + '</div>' +
     '</div>';
 
+  // Kazanma oranı, masada/dışarıdan rubikon, en büyük geri dönüş
+  _ekIst = _ekIstatistikHesapla(sortedGames);
+  var kIlk = _ekIst.oran[0], rIlk = _ekIst.rub[0], gIlk = _ekIst.geri[0];
+  var card16 = '<div class="stcard" onclick="showKazanmaOrani()" style="cursor:pointer">' +
+    '<div class="stv" style="font-size:1.3rem">' + (kIlk ? '%' + _ortYaz(kIlk.toplamOran) : '-') + '</div>' +
+    '<div class="stl">En Yüksek Kazanma Oranı</div>' +
+    '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + (kIlk ? kIlk.p.split(' ')[0] + ' · ' + kIlk.toplamW + '/' + kIlk.toplamN + ' oyun' : 'Henüz veri yok') + '</div>' +
+    '</div>';
+  var card17 = '<div class="stcard" onclick="showRubikonDagilim()" style="cursor:pointer">' +
+    '<div class="stv" style="font-size:1.3rem">' + (rIlk ? (rIlk.mY + rIlk.dY) : '-') + '</div>' +
+    '<div class="stl">Rubikon: Masada / Dışarıdan</div>' +
+    '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + (rIlk ? rIlk.p.split(' ')[0] + ' · en çok yapan' : 'Henüz veri yok') + '</div>' +
+    '</div>';
+  var card18 = '<div class="stcard" onclick="showGeriDonusler()" style="cursor:pointer;grid-column:1/-1">' +
+    '<div class="stv" style="font-size:1.3rem">' + (gIlk ? gIlk.fark + ' puan' : '-') + '</div>' +
+    '<div class="stl">En Büyük Geri Dönüş</div>' +
+    '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + (gIlk ? _kisaAdlar(gIlk.kazanan) + ' · ' + gIlk.araSkor + ' gerideyken ' + gIlk.final : 'Tur tur girilmiş oyun yok') + '</div>' +
+    '</div>';
+
   var card13 = '<div class="stcard" onclick="showTop5(\'disKaz\')" style="cursor:pointer">' +
     '<div class="stv" style="font-size:1.1rem">' + (disKazArr.length ? disKazArr[0].val : '-') + '</div>' +
     '<div class="stl">Dışarıdan En Çok Kazanan</div>' +
@@ -6137,7 +6156,7 @@ function renderStat() {
     grid3El.className = 'stgrid';
     grid2El.parentNode.insertBefore(grid3El, grid2El.nextSibling);
   }
-  grid3El.innerHTML = card9 + card10 + card11 + card12 + card13 + card14 + card15;
+  grid3El.innerHTML = card9 + card10 + card11 + card12 + card13 + card14 + card15 + card16 + card17 + card18;
 
   // ── Aylık trend ──
   var monthlyData = {};
@@ -7517,6 +7536,138 @@ function showHttbGeriden() {
 }
 
 var _disaridaIst = [];
+var _ekIst = { oran: [], rub: [], geri: [] };
+var _EK_MIN_OYUN = 30; // ara sıra katılanlar listelenmez
+
+function _kisaAdlar(l) { return (l || []).map(function(p) { return p.split(' ')[0]; }).join(', '); }
+
+function _ekIstatistikHesapla(games) {
+  var st = {};
+  var geri = [];
+  (games || []).forEach(function(g) {
+    if (!g || (g.winner !== 'A' && g.winner !== 'B')) return;
+    var ortak = {};
+    (g.partners || []).forEach(function(p) { if (p) ortak[p] = true; });
+    var rub = !!g.rubikon;
+    [['A', g.teamA || []], ['B', g.teamB || []]].forEach(function(t) {
+      var kazandi = g.winner === t[0];
+      t[1].forEach(function(p) {
+        if (!p) return;
+        var x = st[p] || (st[p] = { p: p, mN: 0, mW: 0, dN: 0, dW: 0, mY: 0, mO: 0, dY: 0, dO: 0 });
+        var d = !!ortak[p];
+        if (d) { x.dN++; if (kazandi) x.dW++; } else { x.mN++; if (kazandi) x.mW++; }
+        if (rub) {
+          if (kazandi) { if (d) x.dY++; else x.mY++; }
+          else { if (d) x.dO++; else x.mO++; }
+        }
+      });
+    });
+    // Geri dönüş: sadece tur tur girilen oyunlar
+    if (g.turler && g.turler.length) {
+      var k = 0, s = 0, enCok = 0, anK = 0, anS = 0, anTur = 0;
+      g.turler.forEach(function(tr, i) {
+        k += tr.k || 0; s += tr.s || 0;
+        var fark = g.winner === 'A' ? (s - k) : (k - s);
+        if (fark > enCok) { enCok = fark; anK = k; anS = s; anTur = i + 1; }
+      });
+      if (enCok > 0) {
+        var kazA = g.winner === 'A';
+        geri.push({
+          fark: enCok, num: g.num, tur: anTur,
+          kazanan: kazA ? g.teamA : g.teamB, kaybeden: kazA ? g.teamB : g.teamA,
+          araSkor: kazA ? (anK + '–' + anS) : (anS + '–' + anK),
+          final: kazA ? (g.pts[0] + '–' + g.pts[1]) : (g.pts[1] + '–' + g.pts[0])
+        });
+      }
+    }
+  });
+  var liste = Object.keys(st).map(function(k) {
+    var x = st[k];
+    x.toplamN = x.mN + x.dN; x.toplamW = x.mW + x.dW;
+    x.toplamOran = x.toplamN ? x.toplamW / x.toplamN * 100 : 0;
+    x.mOran = x.mN ? x.mW / x.mN * 100 : null;
+    x.dOran = x.dN ? x.dW / x.dN * 100 : null;
+    return x;
+  }).filter(function(x) { return x.toplamN >= _EK_MIN_OYUN; });
+  var oran = liste.slice().sort(function(a, b) { return b.toplamOran - a.toplamOran || b.toplamW - a.toplamW; });
+  var rub = liste.slice().sort(function(a, b) { return (b.mY + b.dY) - (a.mY + a.dY) || (a.mO + a.dO) - (b.mO + b.dO); });
+  geri.sort(function(a, b) { return b.fark - a.fark; });
+  return { oran: oran, rub: rub, geri: geri };
+}
+
+function _ekTabloAc(baslik, html) {
+  var _ic = document.getElementById('top5-content');
+  if (_ic) { _ic.style.maxHeight = '65vh'; _ic.style.overflowY = 'auto'; }
+  document.getElementById('top5-title').textContent = baslik;
+  document.getElementById('top5-content').innerHTML = html;
+  document.getElementById('ov-top5').classList.add('on');
+}
+
+function _hucre(ana, alt, renk) {
+  return '<span style="text-align:center;line-height:1.15"><span style="font-size:.92rem;font-weight:700;' + (renk ? 'color:' + renk : '') + '">' + ana + '</span>' +
+    (alt !== undefined && alt !== '' ? '<br><span style="font-size:.62rem;color:var(--tx3)">' + alt + '</span>' : '') + '</span>';
+}
+
+function showKazanmaOrani() {
+  var l = _ekIst.oran, h = '';
+  var yz = function(x) { return x === null ? '-' : '%' + _ortYaz(x); };
+  if (!l.length) h = '<div class="empty">Veri yok</div>';
+  else {
+    h += '<div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px">Kazanılan oyunların oranı. Masada: masada oturduğu oyunlar, Dışarıdan: dışarıdan ortak / dam olduğu oyunlar. Parantezde oyun sayısı. ' + _EK_MIN_OYUN + ' oyundan az oynayanlar listelenmez.</div>';
+    var kol = 'display:grid;grid-template-columns:22px 1fr 64px 64px 64px;gap:4px;align-items:center;';
+    h += '<div style="' + kol + 'padding:6px 0;border-bottom:2px solid var(--bd2);font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3)">' +
+         '<span></span><span>Oyuncu</span><span style="text-align:center">Toplam</span><span style="text-align:center">Masada</span><span style="text-align:center">Dışarıdan</span></div>';
+    l.forEach(function(x, i) {
+      h += '<div style="' + kol + 'padding:8px 0;border-bottom:1px solid var(--bd)">' +
+           '<span style="font-size:.75rem;color:var(--tx3);text-align:center">' + (i + 1) + '</span>' +
+           '<span style="font-size:.88rem;font-weight:600">' + x.p.split(' ')[0] + '</span>' +
+           _hucre(yz(x.toplamOran), x.toplamN, 'var(--g1)') +
+           _hucre(yz(x.mOran), x.mN) +
+           _hucre(yz(x.dOran), x.dN) + '</div>';
+    });
+  }
+  _ekTabloAc('Kazanma Oranı', h);
+}
+
+function showRubikonDagilim() {
+  var l = _ekIst.rub, h = '';
+  if (!l.length) h = '<div class="empty">Veri yok</div>';
+  else {
+    h += '<div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px">Yaptı: takımı kazandı, rakip 51\'in altında kaldı. Oldu: kendi takımı 51\'in altında kaldı. ' + _EK_MIN_OYUN + ' oyundan az oynayanlar listelenmez.</div>';
+    var kol = 'display:grid;grid-template-columns:1fr 46px 46px 46px 46px;gap:4px;align-items:center;';
+    h += '<div style="' + kol + 'padding:4px 0 0;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3)">' +
+         '<span></span><span style="grid-column:span 2;text-align:center;border-bottom:1px solid var(--bd2)">Masada</span><span style="grid-column:span 2;text-align:center;border-bottom:1px solid var(--bd2)">Dışarıdan</span></div>';
+    h += '<div style="' + kol + 'padding:4px 0 6px;border-bottom:2px solid var(--bd2);font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3)">' +
+         '<span>Oyuncu</span><span style="text-align:center">Yaptı</span><span style="text-align:center">Oldu</span><span style="text-align:center">Yaptı</span><span style="text-align:center">Oldu</span></div>';
+    l.forEach(function(x) {
+      h += '<div style="' + kol + 'padding:9px 0;border-bottom:1px solid var(--bd)">' +
+           '<span style="font-size:.88rem;font-weight:600">' + x.p.split(' ')[0] + '</span>' +
+           _hucre(x.mY, '', 'var(--win)') + _hucre(x.mO, '', 'var(--lose)') +
+           _hucre(x.dY, '', 'var(--win)') + _hucre(x.dO, '', 'var(--lose)') + '</div>';
+    });
+  }
+  _ekTabloAc('Rubikon: Masada / Dışarıdan', h);
+}
+
+function showGeriDonusler() {
+  var l = _ekIst.geri.slice(0, 10), h = '';
+  if (!l.length) h = '<div class="empty">Tur tur girilmiş oyun yok</div>';
+  else {
+    h += '<div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px">Kazanan takımın oyun içinde en fazla kaç puan geride kaldığı. Sadece skor ekranından tur tur girilen oyunlar.</div>';
+    l.forEach(function(x, i) {
+      var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
+      h += '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)">' +
+           '<span style="font-size:1.05rem;width:30px;text-align:center">' + medal + '</span>' +
+           '<div style="flex:1;min-width:0">' +
+             '<div style="font-size:.9rem;font-weight:700">' + _kisaAdlar(x.kazanan) + '</div>' +
+             '<div style="font-size:.7rem;color:var(--tx3)">#' + x.num + ' · ' + x.tur + '. turda <span style="white-space:nowrap">' + x.araSkor + '</span> gerideyken · final <span style="white-space:nowrap">' + x.final + '</span> · rakip: ' + _kisaAdlar(x.kaybeden) + '</div>' +
+           '</div>' +
+           '<div style="font-size:1rem;font-weight:800;color:var(--win);white-space:nowrap">' + x.fark + ' puan</div>' +
+           '</div>';
+    });
+  }
+  _ekTabloAc('En Büyük Geri Dönüşler', h);
+}
 
 function _ortYaz(x) { return (Math.round(x * 10) / 10).toString().replace('.', ','); }
 
