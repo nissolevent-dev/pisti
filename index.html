@@ -7691,7 +7691,14 @@ function _disaridaIstatistikHesapla() {
       st[p].toplam += (r.say[p] || 0);
     }
   });
-  var liste = Object.keys(st).map(function(k) { var x = st[k]; x.ort = x.oturum ? x.toplam / x.oturum : 0; return x; });
+  // Ara sıra katılanlar (toplam oyun sayısı az olanlar) listelenmez
+  var oyunSay = {};
+  (D.allGames || []).forEach(function(g) {
+    if (!g) return;
+    (g.teamA || []).concat(g.teamB || []).forEach(function(p) { if (p) oyunSay[p] = (oyunSay[p] || 0) + 1; });
+  });
+  var liste = Object.keys(st).filter(function(k) { return (oyunSay[k] || 0) >= _EK_MIN_OYUN; })
+    .map(function(k) { var x = st[k]; x.ort = x.oturum ? x.toplam / x.oturum : 0; return x; });
   // Liste ortalama dışarıda kalma sayısına göre sıralı (eşitlikte toplam)
   liste.sort(function(a, b) { return b.ort - a.ort || b.toplam - a.toplam || a.p.localeCompare(b.p, 'tr'); });
   return liste;
@@ -7705,7 +7712,7 @@ function showDisaridaIstatistik() {
   var h = '';
   if (!l.length) h = '<div class="empty">Veri yok</div>';
   else {
-    h += '<div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px">Dışarıdan ortak / dam olarak oynanan eller. 8-10 kişide iki masanın aynı eli tek el sayılır. Elle girilen oturumlar dahil değil.</div>';
+    h += '<div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px">Dışarıdan ortak / dam olarak oynanan eller. 8-10 kişide iki masanın aynı eli tek el sayılır. Elle girilen oturumlar dahil değil. ' + _EK_MIN_OYUN + ' oyundan az oynayanlar listelenmez.</div>';
     h += '<div style="display:grid;grid-template-columns:28px 1fr 56px 56px 52px;gap:6px;padding:6px 0;border-bottom:2px solid var(--bd2);font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3)">' +
          '<span></span><span>Oyuncu</span><span style="text-align:center">Oturum</span><span style="text-align:center">Toplam</span><span style="text-align:center">Ort.</span></div>';
     l.forEach(function(x, i) {
