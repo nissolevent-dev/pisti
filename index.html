@@ -6197,11 +6197,15 @@ function renderStat() {
   }
 
   if (months.length > 0) {
-    var trendHtml = '<div class="sec" style="margin-top:8px">Aylık Kazanç/Kayıp Trendi</div>';
-    trendHtml += '<div class="card" style="overflow-x:auto;padding:12px">';
-    for (var mi = 0; mi < months.length; mi++) {
-      var mo = months[mi]; var md = monthlyData[mo];
-      trendHtml += '<div style="margin-bottom:10px"><div style="font-size:.68rem;font-weight:700;color:var(--g2);margin-bottom:5px">' + mo + '</div>';
+    // Sadece içinde bulunulan ay gösterilir (o ay veri yoksa en son ay); karta dokununca diğer aylar açılır
+    var _bugun = new Date();
+    var _buAy = ('0' + (_bugun.getMonth() + 1)).slice(-2) + '.' + _bugun.getFullYear();
+    var _ayNorm = function(m) { var a = m.split('.'); return ('0' + parseInt(a[0])).slice(-2) + '.' + a[1]; };
+    var anaAy = months.filter(function(m) { return _ayNorm(m) === _buAy; })[0] || months[months.length - 1];
+    var digerAylar = months.filter(function(m) { return m !== anaAy; }).reverse(); // yeniden eskiye
+    var ayHtml = function(mo) {
+      var md = monthlyData[mo];
+      var h = '<div style="margin-bottom:10px"><div style="font-size:.68rem;font-weight:700;color:var(--g2);margin-bottom:5px">' + mo + '</div>';
       var mPlayers = Object.keys(md).sort(function(a,b){ return md[b]-md[a]; });
       var maxAbsVal = 1;
       for (var pi2 = 0; pi2 < mPlayers.length; pi2++) {
@@ -6210,14 +6214,24 @@ function renderStat() {
       for (var pi2 = 0; pi2 < mPlayers.length; pi2++) {
         var mp = mPlayers[pi2]; var mv = md[mp];
         var pct = Math.round(Math.abs(mv)/maxAbsVal*100);
-        trendHtml += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">';
-        trendHtml += '<span style="font-size:.65rem;width:60px;flex-shrink:0">' + mp.split(' ')[0] + '</span>';
-        trendHtml += '<div style="flex:1;background:var(--bd);border-radius:3px;height:10px;overflow:hidden">';
-        trendHtml += '<div style="width:'+pct+'%;height:100%;background:'+(mv>=0?'var(--win)':'var(--lose)')+';border-radius:3px"></div></div>';
-        trendHtml += '<span style="font-size:.65rem;min-width:52px;text-align:right;color:'+(mv>=0?'var(--win)':'var(--lose)')+';font-weight:600">'+(mv>=0?'+':'')+'TL'+Math.abs(mv)+'</span>';
-        trendHtml += '</div>';
+        h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">';
+        h += '<span style="font-size:.65rem;width:60px;flex-shrink:0">' + mp.split(' ')[0] + '</span>';
+        h += '<div style="flex:1;background:var(--bd);border-radius:3px;height:10px;overflow:hidden">';
+        h += '<div style="width:'+pct+'%;height:100%;background:'+(mv>=0?'var(--win)':'var(--lose)')+';border-radius:3px"></div></div>';
+        h += '<span style="font-size:.65rem;min-width:52px;text-align:right;color:'+(mv>=0?'var(--win)':'var(--lose)')+';font-weight:600">'+(mv>=0?'+':'')+'TL'+Math.abs(mv)+'</span>';
+        h += '</div>';
       }
+      return h + '</div>';
+    };
+    var trendHtml = '<div class="sec" style="margin-top:8px">Aylık Kazanç/Kayıp Trendi</div>';
+    trendHtml += '<div class="card" style="overflow-x:auto;padding:12px' + (digerAylar.length ? ';cursor:pointer' : '') + '"' + (digerAylar.length ? ' onclick="_trendAcKapat()"' : '') + '>';
+    trendHtml += ayHtml(anaAy);
+    if (digerAylar.length) {
+      trendHtml += '<div id="trend-diger" style="display:' + (_trendAcik ? 'block' : 'none') + ';border-top:1px solid var(--bd);padding-top:10px;margin-top:4px">';
+      for (var mi = 0; mi < digerAylar.length; mi++) trendHtml += ayHtml(digerAylar[mi]);
       trendHtml += '</div>';
+      trendHtml += '<div id="trend-ipucu" style="text-align:center;font-size:.72rem;font-weight:700;color:var(--g2);padding-top:4px">' +
+        (_trendAcik ? 'Diğer ayları gizle ▴' : 'Diğer aylar (' + digerAylar.length + ') ▾') + '</div>';
     }
     trendHtml += '</div>';
     trendEl.innerHTML = trendHtml;
@@ -7536,6 +7550,13 @@ function showHttbGeriden() {
 }
 
 var _disaridaIst = [];
+var _trendAcik = false;
+function _trendAcKapat() {
+  _trendAcik = !_trendAcik;
+  var d = document.getElementById('trend-diger'), ip = document.getElementById('trend-ipucu');
+  if (d) d.style.display = _trendAcik ? 'block' : 'none';
+  if (ip) ip.textContent = _trendAcik ? 'Diğer ayları gizle ▴' : 'Diğer aylar (' + (d ? d.children.length : 0) + ') ▾';
+}
 var _ekIst = { oran: [], rub: [], geri: [] };
 var _EK_MIN_OYUN = 30; // ara sıra katılanlar listelenmez
 
