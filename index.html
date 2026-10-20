@@ -6302,33 +6302,94 @@ function renderStat() {
           '<span style="color:#7c3aed;font-size:.72rem">Disaridan Kazanc/Kayip</span>' +
           '<span class="psval ' + (partnerMoney>0?'pos':partnerMoney<0?'neg':'') + '" style="color:' + (partnerMoney>0?'var(--win)':partnerMoney<0?'var(--lose)':'#7c3aed') + '">' +
           (partnerMoney>=0?'+':'') + 'TL' + Math.abs(partnerMoney) + '</span></div>' : '';
-      html += '<div class="pscard"><div class="psnm">' + p + '</div>' +
+      var _acik = !!_acikOyuncu[p];
+      html += '<div class="pscard" style="padding-top:10px;padding-bottom:10px">' +
+        '<div class="psnm" data-oyuncu="' + encodeURIComponent(p) + '" onclick="_oyuncuAcKapat(this)" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin-bottom:0;padding-bottom:' + (_acik ? '8px' : '0') + ';border-bottom:' + (_acik ? '' : 'none') + '">' +
+          '<span>' + p + '</span><span class="ok-ok" style="font-size:.8rem;color:var(--tx3)">' + (_acik ? '▴' : '▾') + '</span></div>' +
+        '<div class="ps-detay" style="display:' + (_acik ? 'block' : 'none') + ';margin-top:8px">' +
         '<div class="psrow"><span>Oyun</span><span class="psval">' + d.g + '</span></div>' +
         '<div class="psrow"><span>Galibiyet</span><span class="psval">' + d.w + ' (%' + wr + ')</span></div>' +
         '<div class="psrow"><span>Maglubiyet</span><span class="psval">' + d.l + '</span></div>' +
         '<div class="psrow"><span>Pişti</span><span class="psval">' + d.pi + '</span></div>' +
         '<div class="psrow"><span>Para</span><span class="psval ' + (m>0?'pos':m<0?'neg':'') + '">' + (m>=0?'+':'') + 'TL' + Math.abs(m) + '</span></div>' +
-        partnerInfo + '</div>';
+        partnerInfo + '</div></div>';
     }
     spEl.innerHTML = html;
   }
 
   var sgEl = document.getElementById('st-games');
   if (!games.length) { sgEl.innerHTML = '<div class="empty">Henuz oyun yok</div>'; return; }
+  // Oyunları oturumlara göre grupla (yeniden eskiye); başlığa dokununca oyunlar açılır
+  var _gIdx = {};
+  games.forEach(function(g) { if (g && g.id != null) _gIdx[g.id] = g; });
+  var gruplar = [], kullanildi = {};
+  if (D.sessGames && D.sessGames.length) {
+    var acikOy = D.sessGames.map(function(g) { return g && _gIdx[g.id]; }).filter(Boolean);
+    if (acikOy.length) {
+      acikOy.forEach(function(g) { kullanildi[g.id] = true; });
+      gruplar.push({ key: 'acik', baslik: 'Devam eden oturum', alt: acikOy[0].date, oyunlar: acikOy });
+    }
+  }
+  (D.closedSess || []).slice().sort(function(a, b) { return (b.id || 0) - (a.id || 0); }).forEach(function(cs) {
+    if (!cs || cs.manual || !cs.sessGameIds || !cs.sessGameIds.length) return;
+    var oy = cs.sessGameIds.map(function(id) { return _gIdx[id]; }).filter(function(g) { return g && !kullanildi[g.id]; });
+    if (!oy.length) return;
+    oy.forEach(function(g) { kullanildi[g.id] = true; });
+    gruplar.push({ key: 's' + cs.id, baslik: cs.date || '', oyunlar: oy });
+  });
+  var kalan = games.filter(function(g) { return g && !kullanildi[g.id]; });
+  if (kalan.length) gruplar.push({ key: 'diger', baslik: 'Oturuma bağlı olmayan oyunlar', oyunlar: kalan });
+  _oyunGruplari = {};
   var html = '';
-  var rev = games.slice().reverse();
-  for (var i = 0; i < rev.length; i++) {
-    var g = rev[i];
-    // Ortaklar seti
+  gruplar.forEach(function(gr) {
+    _oyunGruplari[gr.key] = gr.oyunlar;
+    var acik = !!_acikOturum[gr.key];
+    html += '<div style="margin-bottom:8px">' +
+      '<div onclick="_oturumAcKapat(\'' + gr.key + '\')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:var(--wh);border:1px solid var(--bd);border-radius:9px;padding:11px 13px">' +
+        '<span style="font-size:.9rem;font-weight:700;color:var(--tx)">' + gr.baslik + (gr.alt ? ' <span style="font-weight:500;color:var(--tx3);font-size:.78rem">· ' + gr.alt + '</span>' : '') + '</span>' +
+        '<span style="font-size:.78rem;color:var(--tx3);white-space:nowrap">' + gr.oyunlar.length + ' oyun <span id="ot-ok-' + gr.key + '">' + (acik ? '▴' : '▾') + '</span></span>' +
+      '</div>' +
+      '<div id="ot-icerik-' + gr.key + '" style="display:' + (acik ? 'block' : 'none') + ';padding-top:8px">' + (acik ? _oturumOyunlariHtml(gr.oyunlar) : '') + '</div>' +
+      '</div>';
+  });
+  sgEl.innerHTML = html;
+  renderArsivStat();
+}
+
+var _acikOyuncu = {}, _acikOturum = {}, _oyunGruplari = {};
+
+function _oyuncuAcKapat(el) {
+  var p = decodeURIComponent(el.getAttribute('data-oyuncu'));
+  _acikOyuncu[p] = !_acikOyuncu[p];
+  var d = el.parentNode.querySelector('.ps-detay'), ok = el.querySelector('.ok-ok');
+  if (d) d.style.display = _acikOyuncu[p] ? 'block' : 'none';
+  if (ok) ok.textContent = _acikOyuncu[p] ? '▴' : '▾';
+  el.style.paddingBottom = _acikOyuncu[p] ? '8px' : '0';
+  el.style.borderBottom = _acikOyuncu[p] ? '' : 'none';
+}
+
+function _oturumAcKapat(key) {
+  _acikOturum[key] = !_acikOturum[key];
+  var ic = document.getElementById('ot-icerik-' + key), ok = document.getElementById('ot-ok-' + key);
+  if (ic) {
+    if (_acikOturum[key] && !ic.innerHTML) ic.innerHTML = _oturumOyunlariHtml(_oyunGruplari[key] || []);
+    ic.style.display = _acikOturum[key] ? 'block' : 'none';
+  }
+  if (ok) ok.textContent = _acikOturum[key] ? '▴' : '▾';
+}
+
+function _oturumOyunlariHtml(oyunlar) {
+  var html = '';
+  oyunlar.slice().reverse().forEach(function(g) {
     var gPart = {};
-    if (g.partners) { for (var pi9=0; pi9<g.partners.length; pi9++) gPart[g.partners[pi9]] = true; }
-    function renderNames(team) {
-      return team.map(function(p) {
+    (g.partners || []).forEach(function(x) { if (x) gPart[x] = true; });
+    var renderNames = function(team) {
+      return (team || []).map(function(p) {
         return gPart[p]
           ? '<span style="color:#7c3aed;font-style:italic">' + p + '</span>'
           : '<span>' + p + '</span>';
       }).join('<span style="color:var(--tx3)"> · </span>');
-    }
+    };
     html += '<div onclick="showGameTurDetay(' + g.id + ')" style="cursor:pointer;background:var(--wh);border:1px solid var(--bd);border-radius:9px;padding:10px 13px;margin-bottom:8px;font-size:.79rem">' +
       '<div style="display:flex;justify-content:space-between;margin-bottom:5px">' +
         '<b style="color:var(--g2)">#' + g.num + '</b>' + (g.rubikon ? ' <b style="color:#dc2626">[R]</b>' : '') +
@@ -6343,9 +6404,8 @@ function renderStat() {
           '<div style="font-size:.62rem;color:var(--tx3);margin-bottom:4px">Siyah Takım - ' + g.pts[1] + 'pt' + (g.pi[1]?' '+g.pi[1]+'pişti':'') + '</div>' +
           '<div style="font-weight:600;line-height:1.6">' + renderNames(g.teamB) + '</div></div>' +
       '</div></div>';
-  }
-  sgEl.innerHTML = html;
-  renderArsivStat();
+  });
+  return html;
 }
 
 // ── ADD PLAYER OVERLAY ──
