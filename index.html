@@ -5967,7 +5967,7 @@ function renderStat() {
   // Dışarıda kalma: oturum bazında (kapalı oturumlar + açık oturum)
   _disaridaIst = _disaridaIstatistikHesapla();
   var dIlk = _disaridaIst[0]; // ortalaması en yüksek olan
-  var card15 = '<div class="stcard" onclick="showDisaridaIstatistik()" style="cursor:pointer;grid-column:1/-1">' +
+  var card15 = '<div class="stcard" onclick="showDisaridaIstatistik()" style="cursor:pointer">' +
     '<div class="stv" style="font-size:1.3rem">' + (dIlk ? 'ort. ' + _ortYaz(dIlk.ort) : '-') + '</div>' +
     '<div class="stl">En Çok Dışarıda Kalan</div>' +
     '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + (dIlk ? dIlk.p.split(' ')[0] + ' · ' + dIlk.oturum + ' oturumda toplam ' + dIlk.toplam + ' kez' : 'Henüz veri yok') + '</div>' +
@@ -5986,7 +5986,7 @@ function renderStat() {
     '<div class="stl">Rubikon: Masada / Dışarıdan</div>' +
     '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + (rIlk ? rIlk.p.split(' ')[0] + ' · en çok yapan' : 'Henüz veri yok') + '</div>' +
     '</div>';
-  var card18 = '<div class="stcard" onclick="showGeriDonusler()" style="cursor:pointer;grid-column:1/-1">' +
+  var card18 = '<div class="stcard" onclick="showGeriDonusler()" style="cursor:pointer">' +
     '<div class="stv" style="font-size:1.3rem">' + (gIlk ? gIlk.fark + ' puan' : '-') + '</div>' +
     '<div class="stl">En Büyük Geri Dönüş</div>' +
     '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + (gIlk ? _kisaAdlar(gIlk.kazanan) + ' · ' + gIlk.araSkor + ' gerideyken ' + gIlk.final : 'Tur tur girilmiş oyun yok') + '</div>' +
@@ -6156,7 +6156,7 @@ function renderStat() {
     grid3El.className = 'stgrid';
     grid2El.parentNode.insertBefore(grid3El, grid2El.nextSibling);
   }
-  grid3El.innerHTML = card9 + card10 + card11 + card12 + card13 + card14 + card15 + card16 + card17 + card18;
+  grid3El.innerHTML = card9 + card10 + card11 + card12 + card13 + card14 + card16 + card17 + card15 + card18;
 
   // ── Aylık trend ──
   var monthlyData = {};
