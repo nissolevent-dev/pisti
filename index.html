@@ -7634,7 +7634,7 @@ function showKazanmaOrani() {
   var yz = function(x) { return x === null ? '-' : '%' + _ortYaz(x); };
   if (!l.length) h = '<div class="empty">Veri yok</div>';
   else {
-    h += '<div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px">Kazanılan oyunların oranı. Masada: masada oturduğu oyunlar, Dışarıdan: dışarıdan ortak / dam olduğu oyunlar. Parantezde oyun sayısı. ' + _EK_MIN_OYUN + ' oyundan az oynayanlar listelenmez.</div>';
+    h += '<div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px">Kazanılan oyunların oranı. Masada: masada oturduğu oyunlar, Dışarıdan: dışarıdan ortak / dam olduğu oyunlar. Altında kazanılan / oynanan oyun sayısı. ' + _EK_MIN_OYUN + ' oyundan az oynayanlar listelenmez.</div>';
     var kol = 'display:grid;grid-template-columns:22px 1fr 64px 64px 64px;gap:4px;align-items:center;';
     h += '<div style="' + kol + 'padding:6px 0;border-bottom:2px solid var(--bd2);font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3)">' +
          '<span></span><span>Oyuncu</span><span style="text-align:center">Toplam</span><span style="text-align:center">Masada</span><span style="text-align:center">Dışarıdan</span></div>';
@@ -7642,9 +7642,9 @@ function showKazanmaOrani() {
       h += '<div style="' + kol + 'padding:8px 0;border-bottom:1px solid var(--bd)">' +
            '<span style="font-size:.75rem;color:var(--tx3);text-align:center">' + (i + 1) + '</span>' +
            '<span style="font-size:.88rem;font-weight:600">' + x.p.split(' ')[0] + '</span>' +
-           _hucre(yz(x.toplamOran), x.toplamN, 'var(--g1)') +
-           _hucre(yz(x.mOran), x.mN) +
-           _hucre(yz(x.dOran), x.dN) + '</div>';
+           _hucre(yz(x.toplamOran), x.toplamW + '/' + x.toplamN, 'var(--g1)') +
+           _hucre(yz(x.mOran), x.mW + '/' + x.mN) +
+           _hucre(yz(x.dOran), x.dW + '/' + x.dN) + '</div>';
     });
   }
   _ekTabloAc('Kazanma Oranı', h);
