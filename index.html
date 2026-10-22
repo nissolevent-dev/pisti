@@ -7671,9 +7671,15 @@ function _ortakDuzeltCiz() {
 function ortakDuzeltKaydet() {
   var g = _odOyun; if (!g) return;
   var k = _odKontrol(); if (!k.gecerli) return;
-  var yA = _odSira.filter(function(p) { return _odDurum[p].t === 'A'; });
-  var yB = _odSira.filter(function(p) { return _odDurum[p].t === 'B'; });
-  var yP = _odSira.filter(function(p) { return _odDurum[p].o; });
+  // Takım sırası: önce takımda kalanlar (eski sırayla), sonra takıma gelenler;
+  // masada oturanlar önde, dışarıdan ortaklar en sonda (uygulamanın normal yazım sırası)
+  var takimSirala = function(t, eski) {
+    var uyeler = (eski || []).filter(function(p) { return _odDurum[p] && _odDurum[p].t === t; })
+      .concat(_odSira.filter(function(p) { return _odDurum[p].t === t && (eski || []).indexOf(p) < 0; }));
+    return uyeler.filter(function(p) { return !_odDurum[p].o; }).concat(uyeler.filter(function(p) { return _odDurum[p].o; }));
+  };
+  var yA = takimSirala('A', g.teamA), yB = takimSirala('B', g.teamB);
+  var yP = yA.concat(yB).filter(function(p) { return _odDurum[p].o; });
   var ayni = function(a, b) { return a.length === b.length && a.every(function(x) { return b.indexOf(x) >= 0; }); };
   var takimDegisti = !(ayni(yA, g.teamA || []) && ayni(yB, g.teamB || []));
   if (takimDegisti && !_odAcikOturum) { toast('Kapanmış oturumda takım değiştirilemez'); return; }
