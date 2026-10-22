@@ -5976,11 +5976,11 @@ function renderStat() {
   var disKayArr = disArr.filter(function(x) { return x.valNum < 0; }).sort(function(a, b) { return a.valNum - b.valNum; });
   // Dışarıda kalma: oturum bazında (kapalı oturumlar + açık oturum)
   _disaridaIst = _disaridaIstatistikHesapla();
-  var dIlk = _disaridaIst[0]; // ortalaması en yüksek olan
+  var dIlk = _disaridaIst[0]; // oranı en yüksek olan
   var card15 = '<div class="stcard" onclick="showDisaridaIstatistik()" style="cursor:pointer">' +
-    '<div class="stv" style="font-size:1.3rem">' + (dIlk ? 'ort. ' + _ortYaz(dIlk.ort) : '-') + '</div>' +
+    '<div class="stv" style="font-size:1.3rem">' + (dIlk ? '%' + _ortYaz(dIlk.oran) : '-') + '</div>' +
     '<div class="stl">En Çok Dışarıda Kalan</div>' +
-    '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + (dIlk ? dIlk.p.split(' ')[0] + ' · ' + dIlk.oturum + ' oturumda toplam ' + dIlk.toplam + ' kez' : 'Henüz veri yok') + '</div>' +
+    '<div style="font-size:.62rem;color:var(--tx3);margin-top:4px">' + (dIlk ? dIlk.p.split(' ')[0] + ' · ' + dIlk.toplam + '/' + dIlk.el + ' el' : 'Henüz veri yok') + '</div>' +
     '</div>';
 
   // Kazanma oranı, masada/dışarıdan rubikon, en büyük geri dönüş
@@ -7908,35 +7908,34 @@ function showGeriDonusler() {
 function _ortYaz(x) { return (Math.round(x * 10) / 10).toString().replace('.', ','); }
 
 function _disaridaIstatistikHesapla() {
-  var byId = {};
-  (D.allGames || []).forEach(function(g) { if (g && g.id != null) byId[g.id] = g; });
-  var oturumlar = [];
-  (D.closedSess || []).forEach(function(cs) {
-    if (cs.manual || !cs.sessGameIds || !cs.sessGameIds.length) return;
-    var gs = cs.sessGameIds.map(function(id) { return byId[id]; }).filter(Boolean);
-    if (gs.length) oturumlar.push(gs);
+  // Oyun (el) bazında: oynadığı el sayısı, dışarıda kaldığı el sayısı ve oranı.
+  // 8-10 kişide iki masanın aynı eli tek el sayılır.
+  var games = (D.allGames || []).filter(Boolean);
+  var anahtar = _elAnahtarlari(games), eller = {};
+  games.forEach(function(g, i) {
+    var e = eller[anahtar[i]] || (eller[anahtar[i]] = { kat: {}, otur: {} });
+    (g.teamA || []).concat(g.teamB || []).forEach(function(p) { if (p) e.kat[p] = true; });
+    var o = _7kGercekOturanlar(g);
+    for (var p in o) e.otur[p] = true;
   });
-  if (D.sessGames && D.sessGames.length) oturumlar.push(D.sessGames);
   var st = {};
-  oturumlar.forEach(function(gs) {
-    var r = _oturumDisaridaSayilari(gs);
-    for (var p in r.gorulen) {
+  Object.keys(eller).forEach(function(k) {
+    var e = eller[k];
+    for (var p in e.kat) {
       if (!p || p === 'undefined') continue;
-      if (!st[p]) st[p] = { p: p, oturum: 0, toplam: 0 };
-      st[p].oturum++;
-      st[p].toplam += (r.say[p] || 0);
+      var x = st[p] || (st[p] = { p: p, el: 0, toplam: 0 });
+      x.el++;
+      if (!e.otur[p]) x.toplam++;
     }
   });
   // Ara sıra katılanlar (toplam oyun sayısı az olanlar) listelenmez
   var oyunSay = {};
-  (D.allGames || []).forEach(function(g) {
-    if (!g) return;
+  games.forEach(function(g) {
     (g.teamA || []).concat(g.teamB || []).forEach(function(p) { if (p) oyunSay[p] = (oyunSay[p] || 0) + 1; });
   });
   var liste = Object.keys(st).filter(function(k) { return (oyunSay[k] || 0) >= _EK_MIN_OYUN; })
-    .map(function(k) { var x = st[k]; x.ort = x.oturum ? x.toplam / x.oturum : 0; return x; });
-  // Liste ortalama dışarıda kalma sayısına göre sıralı (eşitlikte toplam)
-  liste.sort(function(a, b) { return b.ort - a.ort || b.toplam - a.toplam || a.p.localeCompare(b.p, 'tr'); });
+    .map(function(k) { var x = st[k]; x.oran = x.el ? x.toplam / x.el * 100 : 0; return x; });
+  liste.sort(function(a, b) { return b.oran - a.oran || b.toplam - a.toplam || a.p.localeCompare(b.p, 'tr'); });
   return liste;
 }
 
@@ -7948,16 +7947,17 @@ function showDisaridaIstatistik() {
   var h = '';
   if (!l.length) h = '<div class="empty">Veri yok</div>';
   else {
-    h += '<div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px">Dışarıdan ortak / dam olarak oynanan eller. 8-10 kişide iki masanın aynı eli tek el sayılır. Elle girilen oturumlar dahil değil. ' + _EK_MIN_OYUN + ' oyundan az oynayanlar listelenmez.</div>';
-    h += '<div style="display:grid;grid-template-columns:28px 1fr 56px 56px 52px;gap:6px;padding:6px 0;border-bottom:2px solid var(--bd2);font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3)">' +
-         '<span></span><span>Oyuncu</span><span style="text-align:center">Oturum</span><span style="text-align:center">Toplam</span><span style="text-align:center">Ort.</span></div>';
+    h += '<div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px">Oynadığı eller içinde dışarıdan ortak / dam olarak kaldığı el oranı. 8-10 kişide iki masanın aynı eli tek el sayılır. ' + _EK_MIN_OYUN + ' oyundan az oynayanlar listelenmez.</div>';
+    var kol = 'display:grid;grid-template-columns:24px 1fr 52px 64px 58px;gap:6px;align-items:center;';
+    h += '<div style="' + kol + 'padding:6px 0;border-bottom:2px solid var(--bd2);font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3)">' +
+         '<span></span><span>Oyuncu</span><span style="text-align:center">El</span><span style="text-align:center">Dışarıda</span><span style="text-align:center">Oran</span></div>';
     l.forEach(function(x, i) {
-      h += '<div style="display:grid;grid-template-columns:28px 1fr 56px 56px 52px;gap:6px;align-items:center;padding:9px 0;border-bottom:1px solid var(--bd)">' +
+      h += '<div style="' + kol + 'padding:9px 0;border-bottom:1px solid var(--bd)">' +
            '<span style="font-size:.78rem;color:var(--tx3);text-align:center">' + (i + 1) + '</span>' +
            '<span style="font-size:.88rem;font-weight:600">' + x.p + '</span>' +
-           '<span style="text-align:center;font-size:.88rem">' + x.oturum + '</span>' +
-           '<span style="text-align:center;font-size:.95rem;font-weight:800">' + x.toplam + '</span>' +
-           '<span style="text-align:center;font-size:.88rem;color:var(--g2);font-weight:700">' + _ortYaz(x.ort) + '</span></div>';
+           '<span style="text-align:center;font-size:.88rem">' + x.el + '</span>' +
+           '<span style="text-align:center;font-size:.92rem;font-weight:700">' + x.toplam + '</span>' +
+           '<span style="text-align:center;font-size:.92rem;color:var(--g2);font-weight:800">%' + _ortYaz(x.oran) + '</span></div>';
     });
   }
   document.getElementById('top5-content').innerHTML = h;
