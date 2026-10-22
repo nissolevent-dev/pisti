@@ -657,6 +657,16 @@ button,.btn,.chip{touch-action:manipulation}
   </div>
 </div>
 
+<div class="ov" id="ov-ortak-duzelt" style="align-items:center;z-index:700">
+  <div class="ovbox" style="max-width:420px;max-height:88vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="ovttl" id="od-baslik" style="margin-bottom:0">Ortakları Düzelt</div>
+      <button class="btn bo bs" onclick="closeOv('ov-ortak-duzelt')">Vazgeç</button>
+    </div>
+    <div id="od-icerik"></div>
+  </div>
+</div>
+
 <div class="ov" id="ov-tur-detay" style="align-items:center">
   <div class="ovbox" style="max-width:400px;max-height:85vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
@@ -4392,7 +4402,7 @@ function renderGameCards() {
 
     html += '<div class="gcard">';
     var masaLbl = g.masa ? ' <span style="background:var(--g2);color:#fff;font-size:.58rem;padding:2px 5px;border-radius:3px">M' + g.masa + '</span>' : '';
-    html += '<div class="ghd"><span class="gnum">' + g.snum + '. Oyun' + masaLbl + (g.rubikon ? '<span class="rubi">RUBIKON</span>' : '') + '</span><span style="font-size:.68rem;color:var(--tx3)">' + g.date + '</span><div style="display:flex;gap:2px"><button class="gdel" onclick="undoGame(' + g.id + ')" style="background:none;border:none;color:var(--g2);cursor:pointer;font-size:.85rem;padding:3px 6px">↩</button><button class="gdel" onclick="delGame(' + g.id + ')">x</button></div></div>';
+    html += '<div class="ghd"><span class="gnum">' + g.snum + '. Oyun' + masaLbl + (g.rubikon ? '<span class="rubi">RUBIKON</span>' : '') + '</span><span style="font-size:.68rem;color:var(--tx3)">' + g.date + '</span><div style="display:flex;gap:2px"><button class="gdel" onclick="ortakDuzeltAc(' + g.id + ')" title="Ortakları düzelt" style="background:none;border:none;cursor:pointer;font-size:.8rem;padding:3px 6px">✏️</button><button class="gdel" onclick="undoGame(' + g.id + ')" style="background:none;border:none;color:var(--g2);cursor:pointer;font-size:.85rem;padding:3px 6px">↩</button><button class="gdel" onclick="delGame(' + g.id + ')">x</button></div></div>';
     html += '<div class="gbody">';
     html += '<div class="gteam' + (wA ? ' won' : '') + '"><div class="gtlbl">Kırmızı Takım' + (wA ? ' W' : '') + '</div><div class="gtnm">' + g.teamA.join(', ') + '</div><div class="gtpt">' + g.pts[0] + '</div>' + (g.pi[0] ? '<div class="gtpi">' + g.pi[0] + ' pişti</div>' : '') + '<div class="plines">' + payA + '</div></div>';
     html += '<div class="gvs">vs</div>';
@@ -7247,22 +7257,32 @@ function undoGame(gameId) {
     for (var i = D.allGames.length-1; i >= 0; i--) {
       if (D.allGames[i].id === gameId) { D.allGames.splice(i, 1); break; }
     }
+    var sonOyunMuydu = !!(D.sessGames.length && D.sessGames[D.sessGames.length - 1] && D.sessGames[D.sessGames.length - 1].id === gameId);
     for (var i = D.sessGames.length-1; i >= 0; i--) {
       if (D.sessGames[i].id === gameId) { D.sessGames.splice(i, 1); break; }
     }
 
     // Sıralı modda: önceki oyuna dön
-    if (D.siraliMod && _siraliOyunIdx > 0 && D.sess && D.sess.players && D.sess.players.length === 5) {
-      _siraliOyunIdx--;
-      var rot = ROTASYON[_siraliOyunIdx].r;
-      var k1 = _siraliSira[rot[0]], k2 = _siraliSira[rot[1]];
-      var s1 = _siraliSira[rot[2]], s2 = _siraliSira[rot[3]];
-      var dis = _siraliSira[rot[4]];
-      D.round.masa1 = { A: [k1, k2], B: [s1, s2, dis] };
-      D.round.masa1active = true;
-      D.round.masa2active = false;
-      D.round.partners = {};
-      D.round.partners[dis] = { m1: disTakim, m2: null };
+    if (D.siraliMod && (D.siraliElIdx || 0) > 0 && D.sess && D.sess.players && D.sess.players.length === 5 && sonOyunMuydu) {
+      // Sıralı modda geri alınan oyunun rotasyon adımına dön. (Eskiden burada tanımsız bir
+      // değişken yüzünden hata oluşuyor, ayrıca sıra bir adım atlıyordu.)
+      if ((!_siraliSira || !_siraliSira.length) && D.siraliSira && D.siraliSira.length) _siraliSira = D.siraliSira.slice();
+      var kIdx = (D.siraliElIdx || 0) - 1;
+      if (game.roundSnapshot) {
+        D.round = JSON.parse(JSON.stringify(game.roundSnapshot));
+      } else if (ROTASYON[kIdx] && _siraliSira && _siraliSira.length === 5) {
+        var rotObj = ROTASYON[kIdx], rot = rotObj.r;
+        var dis = _siraliSira[rot[4]], disTakim = rotObj.dis;
+        D.round.masa1 = { A: [_siraliSira[rot[0]], _siraliSira[rot[1]]], B: [_siraliSira[rot[2]], _siraliSira[rot[3]]] };
+        D.round.masa1[disTakim === 'A' ? 'A' : 'B'].push(dis);
+        D.round.masa1active = true;
+        D.round.masa2active = false;
+        D.round.partners = {};
+        D.round.partners[dis] = { m1: disTakim, m2: null };
+      }
+      D.siraliElIdx = kIdx;
+      D.siraliOyunIdx = kIdx;
+      _siraliOyunIdx = kIdx;
       updateMasaLabels();
     } else if (game.roundSnapshot) {
       // Normal oyun: kayıt anındaki masa düzenine dön
@@ -7571,8 +7591,137 @@ function showGameTurDetay(gameId) {
         + '</div>';
     }
   }
+  html += '<button class="btn bo bfw" style="margin-top:14px" onclick="ortakDuzeltAc(' + g.id + ')">✏️ Ortakları düzelt</button>';
   document.getElementById('tur-detay-content').innerHTML = html;
   document.getElementById('ov-tur-detay').classList.add('on');
+}
+
+// ── ORTAKLARI DÜZELT ──
+// Kaydedilmiş bir oyunun ortak bilgisini (ve açık oturumda takımları) düzeltir.
+// Para sadece takımlara/takım büyüklüğüne bağlıdır: yalnız ortak bilgisi değişirse para
+// değişmez; biri takım değiştirirse (sadece açık oturumdaki oyunlarda) para yeniden hesaplanır.
+// Mevcut masa düzenine, sıralı moda veya kart çekme turlarına dokunmaz.
+var _odOyun = null, _odDurum = {}, _odSira = [], _odAcikOturum = false;
+
+function ortakDuzeltAc(gameId) {
+  sifreSor('Ortakları düzeltmek için şifre:', function(sifre) {
+    if (sifre !== '2580') { toast('Yanlış şifre'); return; }
+    _ortakDuzeltGoster(gameId);
+  });
+}
+
+function _ortakDuzeltGoster(gameId) {
+  var g = null;
+  for (var i = 0; i < D.allGames.length; i++) { if (D.allGames[i] && D.allGames[i].id === gameId) { g = D.allGames[i]; break; } }
+  if (!g) { toast('Oyun bulunamadı'); return; }
+  _odOyun = g;
+  _odAcikOturum = (D.sessGames || []).some(function(x) { return x && x.id === gameId; });
+  var ortak = {};
+  (g.partners || []).forEach(function(x) { if (x) ortak[x] = true; });
+  _odDurum = {}; _odSira = [];
+  (g.teamA || []).forEach(function(x) { _odDurum[x] = { t: 'A', o: !!ortak[x] }; _odSira.push(x); });
+  (g.teamB || []).forEach(function(x) { _odDurum[x] = { t: 'B', o: !!ortak[x] }; _odSira.push(x); });
+  document.getElementById('od-baslik').textContent = '#' + g.num + ' · Ortakları Düzelt';
+  _ortakDuzeltCiz();
+  closeOv('ov-tur-detay');
+  document.getElementById('ov-ortak-duzelt').classList.add('on');
+}
+
+function _odSec(i, alan, deger) {
+  var p = _odSira[i]; if (!p) return;
+  if (alan === 't') { if (!_odAcikOturum) return; _odDurum[p].t = deger; }
+  else _odDurum[p].o = !_odDurum[p].o;
+  _ortakDuzeltCiz();
+}
+
+function _odKontrol() {
+  var mA = 0, mB = 0, oA = 0, oB = 0;
+  _odSira.forEach(function(p) {
+    var d = _odDurum[p];
+    if (d.t === 'A') { if (d.o) oA++; else mA++; } else { if (d.o) oB++; else mB++; }
+  });
+  return { mA: mA, mB: mB, oA: oA, oB: oB, gecerli: mA === 2 && mB === 2 };
+}
+
+function _ortakDuzeltCiz() {
+  var g = _odOyun, k = _odKontrol();
+  var btn = function(aktif, renk, metin, onclick, kapali) {
+    return '<button onclick="' + onclick + '"' + (kapali ? ' disabled' : '') + ' style="padding:6px 9px;border-radius:7px;font-family:inherit;font-size:.74rem;font-weight:700;cursor:' + (kapali ? 'default' : 'pointer') + ';opacity:' + (kapali && !aktif ? '.35' : '1') + ';border:2px solid ' + (aktif ? renk : 'var(--bd2)') + ';background:' + (aktif ? renk : 'var(--wh)') + ';color:' + (aktif ? '#fff' : 'var(--tx2)') + '">' + metin + '</button>';
+  };
+  var h = '<div style="font-size:.74rem;color:var(--tx3);margin-bottom:10px">' +
+    (_odAcikOturum
+      ? 'Her oyuncunun takımını ve dışarıdan ortak olup olmadığını seçin. Takım değişirse para yeniden hesaplanır.'
+      : 'Bu oyun kapanmış bir oturuma ait: sadece ortak bilgisi düzeltilebilir, takımlar ve para değişmez.') + '</div>';
+  _odSira.forEach(function(p, i) {
+    var d = _odDurum[p];
+    h += '<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--bd)">' +
+      '<span style="flex:1;font-size:.88rem;font-weight:600;' + (d.o ? 'color:#7c3aed;font-style:italic' : '') + '">' + p + '</span>' +
+      btn(d.t === 'A', '#cc0000', 'Kırmızı', '_odSec(' + i + ',\'t\',\'A\')', !_odAcikOturum) +
+      btn(d.t === 'B', '#111', 'Siyah', '_odSec(' + i + ',\'t\',\'B\')', !_odAcikOturum) +
+      btn(d.o, '#7c3aed', 'Ortak', '_odSec(' + i + ',\'o\')', false) +
+      '</div>';
+  });
+  h += '<div style="margin:10px 0;font-size:.78rem;font-weight:600;color:' + (k.gecerli ? 'var(--g2)' : 'var(--lose)') + '">' +
+    'Kırmızı: ' + k.mA + ' masada' + (k.oA ? ' + ' + k.oA + ' ortak' : '') + ' · Siyah: ' + k.mB + ' masada' + (k.oB ? ' + ' + k.oB + ' ortak' : '') +
+    (k.gecerli ? '' : '<br>Her takımda masada tam 2 kişi olmalı.') + '</div>';
+  h += '<button class="btn bp bfw" ' + (k.gecerli ? '' : 'disabled style="opacity:.45"') + ' onclick="ortakDuzeltKaydet()">Kaydet</button>';
+  document.getElementById('od-icerik').innerHTML = h;
+}
+
+function ortakDuzeltKaydet() {
+  var g = _odOyun; if (!g) return;
+  var k = _odKontrol(); if (!k.gecerli) return;
+  var yA = _odSira.filter(function(p) { return _odDurum[p].t === 'A'; });
+  var yB = _odSira.filter(function(p) { return _odDurum[p].t === 'B'; });
+  var yP = _odSira.filter(function(p) { return _odDurum[p].o; });
+  var ayni = function(a, b) { return a.length === b.length && a.every(function(x) { return b.indexOf(x) >= 0; }); };
+  var takimDegisti = !(ayni(yA, g.teamA || []) && ayni(yB, g.teamB || []));
+  if (takimDegisti && !_odAcikOturum) { toast('Kapanmış oturumda takım değiştirilemez'); return; }
+
+  // Para: takım değiştiyse yeniden dağıt (birim tutar eski dağılımdan bulunur)
+  var yeniPay = null;
+  if (takimDegisti && (g.winner === 'A' || g.winner === 'B') && g.payMap) {
+    var eskiW = g.winner === 'A' ? g.teamA : g.teamB, eskiL = g.winner === 'A' ? g.teamB : g.teamA;
+    var perUnit = (eskiW.length >= eskiL.length) ? (g.payMap[eskiW[0]] || 0) : -(g.payMap[eskiL[0]] || 0);
+    yeniPay = calcPay(Math.abs(perUnit), g.winner === 'A' ? yA : yB, g.winner === 'A' ? yB : yA);
+    var oyuncular = {};
+    Object.keys(g.payMap).concat(Object.keys(yeniPay)).forEach(function(p) { oyuncular[p] = true; });
+    Object.keys(oyuncular).forEach(function(p) {
+      var fark = (yeniPay[p] || 0) - (g.payMap[p] || 0);
+      if (!fark) return;
+      D.ldg[p] = (D.ldg[p] || 0) + fark;
+      D.sessLdg[p] = (D.sessLdg[p] || 0) + fark;
+    });
+  }
+
+  var uygula = function(x) {
+    if (!x) return;
+    x.teamA = yA.slice(); x.teamB = yB.slice(); x.partners = yP.slice();
+    if (yeniPay) x.payMap = JSON.parse(JSON.stringify(yeniPay));
+    var rs = x.roundSnapshot;
+    if (rs) {
+      var m = x.masa || 1, anahtar = 'm' + m;
+      rs['masa' + m] = { A: yA.slice(), B: yB.slice() };
+      if (!rs.partners) rs.partners = {};
+      yA.concat(yB).forEach(function(p) {
+        if (yP.indexOf(p) >= 0) {
+          if (!rs.partners[p]) rs.partners[p] = { m1: null, m2: null };
+          rs.partners[p][anahtar] = yA.indexOf(p) >= 0 ? 'A' : 'B';
+        } else if (rs.partners[p]) {
+          rs.partners[p][anahtar] = null;
+          if (!rs.partners[p].m1 && !rs.partners[p].m2) delete rs.partners[p];
+        }
+      });
+    }
+  };
+  (D.allGames || []).forEach(function(x) { if (x && x.id === g.id) uygula(x); });
+  (D.sessGames || []).forEach(function(x) { if (x && x.id === g.id) uygula(x); });
+
+  saveD();
+  renderGameCards();
+  if (typeof renderStat === 'function') { try { renderStat(); } catch (e) {} }
+  closeOv('ov-ortak-duzelt');
+  toast(yeniPay ? 'Ortaklar düzeltildi, para yeniden hesaplandı' : 'Ortaklar düzeltildi');
 }
 
 var _httbGeridenListe = [];
