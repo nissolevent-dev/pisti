@@ -1835,6 +1835,31 @@ function secDortE2(val) {
   show6KisiKartCekme();
 }
 
+function _6kDevamEdenTur() {
+  // Oturumun sonunda aynı 6 kişiyle (4 masada + 2 dışarıdan ortak) oynanmış kesintisiz
+  // oyunlar. Sayıları 3'ün katı değilse tur yarım kalmıştır: kaldığı yeri döndürür.
+  var games = D.sessGames || [];
+  var oyuncular = (D.sess && D.sess.players ? D.sess.players : []).slice().sort().join('|');
+  if (!games.length || (D.sess.players || []).length !== 6) return null;
+  var seri = [];
+  for (var i = games.length - 1; i >= 0; i--) {
+    var g = games[i];
+    if (!g) break;
+    var kat = (g.teamA || []).concat(g.teamB || []).slice().sort().join('|');
+    var ort = (g.partners || []).filter(Boolean);
+    if (kat !== oyuncular || ort.length !== 2) break;
+    seri.unshift({ g: g, ort: ort });
+  }
+  var kalan = seri.length % 3;
+  if (!kalan) return null; // tur tamamlanmış (ya da hiç oyun yok): baştan çekiliş
+  var tur = seri.slice(seri.length - kalan);
+  var gecmis = {};
+  // Son oyunun dışarıdakileri _6kYenidenCekFromGame içinde eklenir; öncekiler burada
+  tur.slice(0, -1).forEach(function(x) { x.ort.forEach(function(p) { gecmis[p] = (gecmis[p] || 0) + 1; }); });
+  var son = tur[tur.length - 1];
+  return { son: son.g, ortaklar: son.ort, gecmis: gecmis };
+}
+
 function show6KisiKartCekme() {
   if (_devamEdenCekilisVarMi('6k')) {
     // Başka bir cihaz zaten bu çekilişi başlattı — aynı kartlarla ona katıl
@@ -1842,6 +1867,20 @@ function show6KisiKartCekme() {
     document.getElementById('ov-6kart').classList.add('on');
     _6kListen();
     if (_6k.asama === 'Y1') { _6kRenderY1(); } else { _6kRender(); }
+    return;
+  }
+  // Kart çekme kapalıyken aynı 6 kişiyle oynanmış oyunlar varsa ve 3 oyunluk tur
+  // tamamlanmamışsa, çekiliş turun kaldığı yerden devam eder (2. veya 3. oyun).
+  var _devamTur = _6kDevamEdenTur();
+  if (_devamTur) {
+    _7k.pending = false;
+    if (typeof _kPending !== 'undefined') _kPending = false;
+    if (typeof _4kPending !== 'undefined') _4kPending = false;
+    D._rotasyonDurumu = null;
+    if (typeof guncelleRotasyonBanner === 'function') guncelleRotasyonBanner();
+    D._6kDisaridaGecmis = _devamTur.gecmis;
+    var _sonO = _devamTur.son;
+    _6kYenidenCekFromGame((_sonO.teamA || []).slice(), (_sonO.teamB || []).slice(), _devamTur.ortaklar.slice());
     return;
   }
   // Yeni (baştan) bir 6 kişilik çekiliş — önceki rotasyon geçmişini/işaretlerini sıfırla
