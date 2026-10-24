@@ -191,6 +191,7 @@ button,.btn,.chip{touch-action:manipulation}
   <div id="s3" style="display:none">
     <div class="card">
       <div class="ctitle">Masa Duzeni</div>
+      <button id="s3-kart-modu" class="btn bo bfw" onclick="kartCekmeModunaGec()" style="display:none;margin-bottom:12px;border-color:var(--g2);color:var(--g2);font-weight:700">🃏 Kart çekme moduna geç</button>
       <div class="sgrid">
         <div class="sbox"><h3>Masa 1</h3>
           <div style="font-size:.6rem;color:#cc0000;font-weight:700;margin-bottom:4px">Kırmızı Takım</div>
@@ -1596,6 +1597,23 @@ function _s3ButonlariGuncelle() {
   var oyunVar = _oyunDevamEdiyorMu();
   don.style.display = oyunVar ? '' : 'none';
   geri.style.display = oyunVar ? 'none' : '';
+  // Kart çekme modu bu oyuncu sayısı için kapatıldıysa geri açma düğmesi
+  var km = document.getElementById('s3-kart-modu');
+  if (km) {
+    var n = D.sess && D.sess.players ? D.sess.players.length : 0;
+    km.style.display = (n >= 6 && n <= 10 && D.kartCekmeModuKapaliSayi === n) ? '' : 'none';
+  }
+}
+
+function kartCekmeModunaGec() {
+  onaySor('Masa düzeni kart çekerek kurulsun mu? Bundan sonraki oyunlarda da kart çekme modu kullanılır.', function() {
+    D.kartCekmeModuKapaliSayi = null;
+    _taslakPartners = null;
+    _masaDuzenleniyor = false;
+    saveD();
+    _s3ButonlariGuncelle();
+    kartCekmeModuEvet();
+  });
 }
 
 function masaDuzeniIptalOyunaDon() {
