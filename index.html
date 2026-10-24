@@ -5261,9 +5261,9 @@ function showBorcAlacakPaylas() {
   var toplam = 0;
   for (var i = 0; i < names.length; i++) toplam += (D.borcAlacak[names[i]] || 0);
 
-  var rowH = 54, headH = 68, footH = 56, outerPad = 16;
-  var cardH = headH + names.length * rowH + footH;
-  var H = cardH + outerPad * 2 + 20;
+  var rowH = 54, footH = 56, outerPad = 16, cardTop = 6;
+  var cardH = cardTop + Math.max(names.length, 1) * rowH + footH;
+  var H = outerPad + 44 + cardH + outerPad; // kartın tamamı (alt kenarı dahil) görselin içinde
 
   canvas.width = W * dpr;
   canvas.height = H * dpr;
@@ -5300,7 +5300,7 @@ function showBorcAlacakPaylas() {
 
   var innerX = cardX + 20;
   var innerW = cardW - 40;
-  var y = cardY + rowH * 0.1;
+  var y = cardY + cardTop;
 
   for (var i = 0; i < names.length; i++) {
     var p = names[i];
@@ -7396,7 +7396,14 @@ function showShareCard(data) {
   var players = data.players.slice().sort(function(a,b) {
     return (data.summary[b]||0) - (data.summary[a]||0);
   });
-  var allP = data.pool.slice().sort(function(a,b) {
+  // Ara sıra gelenler (toplam oyun sayısı az olanlar) sadece paylaşım görselinin
+  // "Tüm Zamanlar" listesinde gösterilmez; uygulamada ve verilerde hiçbir şey değişmez.
+  var _paylasimOyunSay = {};
+  (D.allGames || []).forEach(function(g) {
+    if (!g) return;
+    (g.teamA || []).concat(g.teamB || []).forEach(function(x) { if (x) _paylasimOyunSay[x] = (_paylasimOyunSay[x] || 0) + 1; });
+  });
+  var allP = data.pool.filter(function(p) { return (_paylasimOyunSay[p] || 0) >= _EK_MIN_OYUN; }).sort(function(a,b) {
     var totA = (data.allLdg[a]||0) + (data.initialLdg[a]||0);
     var totB = (data.allLdg[b]||0) + (data.initialLdg[b]||0);
     return totB - totA;
