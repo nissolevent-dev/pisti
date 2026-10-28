@@ -765,7 +765,7 @@ button,.btn,.chip{touch-action:manipulation}
 
     <!-- Tur ekle -->
     <div id="skor-giris" style="margin-top:12px;padding:12px;background:var(--bg2);border-radius:9px">
-      <div style="font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--g2);margin-bottom:10px">Yeni Tur</div>
+      <div id="tur-giris-baslik" style="font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--g2);margin-bottom:10px">Yeni Tur</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
         <div>
           <label style="color:#cc0000;font-size:.7rem">Kırmızı Puan</label>
@@ -785,7 +785,8 @@ button,.btn,.chip{touch-action:manipulation}
         </div>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn bp bfw" onclick="_getAudioCtx();addTur()">+ Tur Ekle</button>
+        <button id="tur-ekle-btn" class="btn bp bfw" onclick="_getAudioCtx();addTur()">+ Tur Ekle</button>
+        <button id="tur-duzelt-iptal" class="btn bo" onclick="turDuzeltIptal()" style="display:none;flex:0 0 auto;white-space:nowrap">Vazgeç</button>
       </div>
     </div>
 
@@ -6511,6 +6512,7 @@ var _dagiticiIdx = 0;   // şu anki dağıtıcının index'i
 var _skorMasa = 1;
 
 function setSkorMasa(masa) {
+  if (typeof _turDuzeltIdx !== 'undefined' && _turDuzeltIdx !== null) _turDuzeltBitir();
   _skorMasa = masa;
   document.getElementById('skor-masa-sel').value = masa;
   var btn1 = document.getElementById('skor-masa-btn1');
@@ -6534,6 +6536,7 @@ function setSkorMasa(masa) {
 }
 
 function showSkorTakip() {
+  if (typeof _turDuzeltIdx !== 'undefined' && _turDuzeltIdx !== null) _turDuzeltBitir();
   if (!D.skorTakip) D.skorTakip = {};
   var masa = activeMasa || 1;
   // Dağıtıcı sırasını Firebase'den yükle
@@ -6824,7 +6827,8 @@ function renderSkorTakip() {
     totSpi += (t.spi || 0);
     var runK = 0, runS = 0;
     for (var j = 0; j <= i; j++) { runK += turler[j].k||0; runS += turler[j].s||0; }
-    html += '<div style="display:grid;grid-template-columns:auto 1fr auto 1fr auto;gap:4px;padding:6px 0;border-bottom:1px solid var(--bd);align-items:center">';
+    var _duzeltilen = (_turDuzeltIdx === i && _turDuzeltMasa === masa);
+    html += '<div onclick="turDuzeltBasla(' + i + ')" style="cursor:pointer;display:grid;grid-template-columns:auto 1fr auto 1fr auto;gap:4px;padding:6px 0;border-bottom:1px solid var(--bd);align-items:center' + (_duzeltilen ? ';background:#fef9c3;border-radius:6px' : '') + '">';
     html += '<div style="font-size:.65rem;color:var(--tx3);width:24px">' + (i+1) + '.</div>';
     html += '<div style="text-align:center">';
     html += '<div style="font-size:.88rem;font-weight:700;color:#cc0000">' + (t.k||0) + (t.kpi?'<span style="font-size:.65rem;color:var(--tx3)"> +'+t.kpi+'P</span>':'') + '</div>';
@@ -6840,7 +6844,7 @@ function renderSkorTakip() {
     html += '<div style="text-align:center">';
     html += '<div style="font-size:.88rem;font-weight:700">' + (t.s||0) + (t.spi?'<span style="font-size:.65rem;color:var(--tx3)"> +'+t.spi+'P</span>':'') + '</div>';
     html += '<div style="font-size:.62rem;color:var(--tx3)">top: ' + runS + '</div></div>';
-    html += '<button onclick="delTur(' + i + ')" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:.9rem;padding:2px 6px">×</button>';
+    html += '<button onclick="event.stopPropagation();delTur(' + i + ')" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:.9rem;padding:2px 6px">×</button>';
     html += '</div>';
   }
 
@@ -6914,6 +6918,19 @@ function addTur() {
   if (!D.skorTakip) D.skorTakip = {};
   var key = 'm' + masa;
   if (!D.skorTakip[key]) D.skorTakip[key] = {turler:[]};
+
+  // Düzeltme modu: mevcut turun yerine yaz (dağıtıcı sırası ilerlemez)
+  if (_turDuzeltIdx !== null && _turDuzeltMasa === masa && D.skorTakip[key].turler[_turDuzeltIdx]) {
+    var eski = D.skorTakip[key].turler[_turDuzeltIdx];
+    if (eski.httb) tur.httb = true;
+    D.skorTakip[key].turler[_turDuzeltIdx] = tur;
+    var no = _turDuzeltIdx + 1;
+    _turDuzeltBitir();
+    saveSkorTakip();
+    renderSkorTakip();
+    toast(no + '. tur düzeltildi');
+    return;
+  }
   D.skorTakip[key].turler.push(tur);
   // Dağıtıcı sırasını ilerlet
   if (_dagiticiSira && _dagiticiSira.length > 0) {
@@ -6986,6 +7003,35 @@ function saveSkorTakip() {
   });
 }
 
+var _turDuzeltIdx = null, _turDuzeltMasa = null;
+
+function turDuzeltBasla(idx) {
+  var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
+  var t = D.skorTakip && D.skorTakip['m' + masa] && D.skorTakip['m' + masa].turler[idx];
+  if (!t) return;
+  _turDuzeltIdx = idx; _turDuzeltMasa = masa;
+  var yaz = function(id, v) { document.getElementById(id).value = v ? v : ''; };
+  yaz('tur-kpts', t.k); yaz('tur-spts', t.s); yaz('tur-kpi', t.kpi); yaz('tur-spi', t.spi);
+  document.getElementById('tur-giris-baslik').textContent = (idx + 1) + '. turu düzelt';
+  document.getElementById('tur-giris-baslik').style.color = '#a16207';
+  document.getElementById('tur-ekle-btn').textContent = '✓ Turu Güncelle';
+  document.getElementById('tur-duzelt-iptal').style.display = '';
+  renderSkorTakip();
+  var gb = document.getElementById('skor-giris');
+  if (gb && gb.scrollIntoView) gb.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function _turDuzeltBitir() {
+  _turDuzeltIdx = null; _turDuzeltMasa = null;
+  ['tur-kpts','tur-spts','tur-kpi','tur-spi'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+  var b = document.getElementById('tur-giris-baslik');
+  if (b) { b.textContent = 'Yeni Tur'; b.style.color = ''; }
+  var e = document.getElementById('tur-ekle-btn'); if (e) e.textContent = '+ Tur Ekle';
+  var c = document.getElementById('tur-duzelt-iptal'); if (c) c.style.display = 'none';
+}
+
+function turDuzeltIptal() { _turDuzeltBitir(); renderSkorTakip(); }
+
 function delTur(idx) {
   onaySor('Turu silmek istiyor musunuz?', function() {
     var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
@@ -6994,6 +7040,7 @@ function delTur(idx) {
     if (tur && tur.httb) {
       httbSoruldeIsaretle(masa, false);
     }
+    if (_turDuzeltIdx !== null) _turDuzeltBitir();
     D.skorTakip['m'+masa].turler.splice(idx, 1);
     // Dağıtıcı sırasını geri al
     if (_dagiticiSira && _dagiticiSira.length > 0) {
@@ -7011,6 +7058,7 @@ function delTur(idx) {
 }
 
 function resetSkor() {
+  if (typeof _turDuzeltIdx !== 'undefined' && _turDuzeltIdx !== null) _turDuzeltBitir();
   var _rm = parseInt(document.getElementById('skor-masa-sel').value) || 1;
   var masa = parseInt(document.getElementById('skor-masa-sel').value) || 1;
   if (!confirm('Bu masanın skor takibini sıfırla?')) return;
