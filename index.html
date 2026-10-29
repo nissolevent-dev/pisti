@@ -1007,6 +1007,19 @@ CEK.on('value', function(snap) {
   _cekUzaktanUygula(val, false);
 });
 
+var _sunucuAnahtarlari = [];
+function _anaYaz(obj) {
+  // Ana veriyi yazar ama skor takibine (skorTakip) dokunmaz: o düğüm masa masa ayrı
+  // yazılıyor. Böylece bir cihaz oyun kaydederken başka cihazın girdiği tur silinmez.
+  // Yerelde silinmiş anahtarlar sunucuda da silinsin diye null gönderilir.
+  var guncel = {};
+  Object.keys(obj).forEach(function(k) { if (k !== 'skorTakip') guncel[k] = obj[k]; });
+  (_sunucuAnahtarlari || []).forEach(function(k) {
+    if (k !== 'skorTakip' && !(k in guncel)) guncel[k] = null;
+  });
+  return REF.update(guncel);
+}
+
 function _anaKayitHazirla(toSave) {
   // Ana ağaca (pisti) yapılan her REF.set'ten önce çağrılır.
   delete toSave._rotasyonDurumu;          // kart çekme ayrı düğümde
@@ -1060,7 +1073,7 @@ function saveD() {
   // screen'i Firebase'e kaydetme - her cihaz kendi ekranını yönetsin
   var toSave = JSON.parse(JSON.stringify(D));
   delete toSave.screen;
-  REF.set(_anaKayitHazirla(toSave)).then(function() {
+  _anaYaz(_anaKayitHazirla(toSave)).then(function() {
     saving = false;
     syncDot('#22c55e');
   }).catch(function(e) {
@@ -1072,6 +1085,7 @@ function saveD() {
 
 // ── LISTEN ──
 var firstLoad = true;
+var _sonGorulenYazan = null;
 var localSaveId = null; // kendi kaydetmelerimizi takip et
 
 REF.on('value', function(snap) {
@@ -1084,10 +1098,15 @@ REF.on('value', function(snap) {
 
   // Kendi yazımımız mı? Sadece "saving" bayrağına bakmak yetmiyordu: kayıt sürerken
   // başka cihazdan gelen güncelleme de "kendi kaydımız" sanılıp ekrana yansımıyordu.
+  _sunucuAnahtarlari = Object.keys(val);
   var isOwnSave = saving && val._yazan === _anaSonYazim;
-  var isSkorSave = savingSkor;
+  // Ana veri (oyunlar, masa düzeni vb.) en son görülenden farklıysa başka bir cihaz
+  // ana kayıt yapmıştır — skor/dağıtıcı kaydımız sürüyor olsa bile bu güncelleme alınmalı.
+  var anaDegisti = val._yazan !== _sonGorulenYazan;
+  _sonGorulenYazan = val._yazan;
+  var isSkorSave = savingSkor && !anaDegisti;
   var _yerelRotasyon = D._rotasyonDurumu; // kart çekme durumu ayrı düğümden yönetilir
-  var isDagiticiSave = savingDagitici;
+  var isDagiticiSave = savingDagitici && !anaDegisti;
 
   if (isDagiticiSave) {
     // Sadece dagitici kaydediliyor - hiçbir şeye dokunma
@@ -1715,7 +1734,7 @@ function toggleSess(name) {
     saving = false;
     var toSave = JSON.parse(JSON.stringify(D));
     delete toSave.screen;
-    REF.set(_anaKayitHazirla(toSave));
+    _anaYaz(_anaKayitHazirla(toSave));
     renderSessChips();
     return;
   }
@@ -2532,7 +2551,7 @@ function _6kMasaKur() {
   closeOv('ov-6kart');
   saving = true; syncDot('#f59e0b');
   var toSave = JSON.parse(JSON.stringify(D)); delete toSave.screen;
-  REF.set(_anaKayitHazirla(toSave)).then(function() {
+  _anaYaz(_anaKayitHazirla(toSave)).then(function() {
     saving = false; syncDot('#22c55e');
     updateMasaLabels(); renderSessChips(); renderGameCards(); goS(4); switchMasa(1);
     setTimeout(function() { showSkorTakip(); }, 100);
@@ -3399,7 +3418,7 @@ function _7kMasaKur() {
   closeOv('ov-7kart');
   saving = true; syncDot('#f59e0b');
   var toSave = JSON.parse(JSON.stringify(D)); delete toSave.screen;
-  REF.set(_anaKayitHazirla(toSave)).then(function() {
+  _anaYaz(_anaKayitHazirla(toSave)).then(function() {
     saving = false; syncDot('#22c55e');
     updateMasaLabels(); renderSessChips(); renderGameCards(); goS(4); switchMasa(1);
     setTimeout(function() { showSkorTakip(); }, 100);
@@ -3610,7 +3629,7 @@ function _4kKurMasa(kirmizi, siyah) {
   saving = true; syncDot('#f59e0b');
   var toSave = JSON.parse(JSON.stringify(D));
   delete toSave.screen;
-  REF.set(_anaKayitHazirla(toSave)).then(function() {
+  _anaYaz(_anaKayitHazirla(toSave)).then(function() {
     saving = false; syncDot('#22c55e');
     updateMasaLabels(); renderSessChips(); renderGameCards(); goS(4); switchMasa(1); guncelleRotasyonBanner();
     setTimeout(function() { showSkorTakip(); }, 100);
@@ -4162,7 +4181,7 @@ function startPlay() {
   syncDot('#f59e0b');
   var toSave = JSON.parse(JSON.stringify(D));
   delete toSave.screen;
-  REF.set(_anaKayitHazirla(toSave)).then(function() {
+  _anaYaz(_anaKayitHazirla(toSave)).then(function() {
     saving = false;
     syncDot('#22c55e');
     renderGameCards();
@@ -4529,7 +4548,7 @@ function _delGameExec(id) {
     // Tüm D'yi Firebase'e yaz
     var toSave = JSON.parse(JSON.stringify(D));
     delete toSave.screen;
-    REF.set(_anaKayitHazirla(toSave)).then(function() {
+    _anaYaz(_anaKayitHazirla(toSave)).then(function() {
       syncDot('#22c55e');
     });
     renderPool();
@@ -6889,7 +6908,7 @@ function httbSoruldeIsaretle(masa, deger) {
   if (!D.skorTakip) D.skorTakip = {};
   if (!D.skorTakip['m'+masa]) D.skorTakip['m'+masa] = {turler:[]};
   D.skorTakip['m'+masa].httbAsked = deger;
-  saveSkorTakip();
+  saveSkorTakip(masa);
 }
 
 function addTur() {
@@ -6926,7 +6945,7 @@ function addTur() {
     D.skorTakip[key].turler[_turDuzeltIdx] = tur;
     var no = _turDuzeltIdx + 1;
     _turDuzeltBitir();
-    saveSkorTakip();
+    saveSkorTakip(masa);
     renderSkorTakip();
     toast(no + '. tur düzeltildi');
     return;
@@ -6942,7 +6961,7 @@ function addTur() {
     REF.child('dagitici').set(D.dagitici).then(function(){savingDagitici=false;}).catch(function(){savingDagitici=false;});
     renderDagitici(masa2);
   }
-  saveSkorTakip();
+  saveSkorTakip(masa);
 
   // Inputları temizle
   ['tur-kpts','tur-spts','tur-kpi','tur-spi'].forEach(function(id){
@@ -6982,7 +7001,7 @@ function httbCevap(evet) {
     if (D.skorTakip[key] && D.skorTakip[key].turler[_httbPendingTur]) {
       D.skorTakip[key].turler[_httbPendingTur].httb = true;
     }
-    saveSkorTakip();
+    saveSkorTakip(_httbMasa);
     renderSkorTakip();
   }
   // Hayır seçilince flag sıfır kalır - koşul sağlanınca tekrar sorulur
@@ -6994,9 +7013,13 @@ function httbCevap(evet) {
 var savingSkor = false;
 var savingDagitici = false;
 
-function saveSkorTakip() {
+function saveSkorTakip(masa) {
+  // Sadece ilgili masanın skorunu yazar. (Eskiden iki masanın skoru birlikte yazılıyordu;
+  // iki cihaz iki masaya aynı anda tur girince birinin turu siliniyordu.)
+  if (!masa) masa = parseInt((document.getElementById('skor-masa-sel') || {}).value) || 1;
   savingSkor = true;
-  REF.child('skorTakip').set(D.skorTakip || {}).then(function() {
+  var kayit = (D.skorTakip && D.skorTakip['m' + masa]) ? JSON.parse(JSON.stringify(D.skorTakip['m' + masa])) : null;
+  REF.child('skorTakip').child('m' + masa).set(kayit).then(function() {
     savingSkor = false;
   }).catch(function(e) {
     savingSkor = false;
@@ -7051,7 +7074,7 @@ function delTur(idx) {
       REF.child('dagitici').set(D.dagitici).then(function(){savingDagitici=false;}).catch(function(){savingDagitici=false;});
       renderDagitici(masa);
     }
-    saveSkorTakip();
+    saveSkorTakip(masa);
     renderSkorTakip();
     toast('Tur silindi');
   });
@@ -7064,7 +7087,7 @@ function resetSkor() {
   if (!confirm('Bu masanın skor takibini sıfırla?')) return;
   if (!D.skorTakip) D.skorTakip = {};
   D.skorTakip['m' + masa] = {turler:[]};
-  saveSkorTakip();
+  saveSkorTakip(masa);
   renderSkorTakip();
 }
 
@@ -7174,7 +7197,7 @@ function _bitirOyunOnay(masa) {
 
   // Skor takibini sıfırla
   D.skorTakip['m'+masa] = {turler:[]};
-  saveSkorTakip();
+  saveSkorTakip(masa);
   closeOv('ov-skor');
 
   // Puan girme alanını doldur ve direkt kaydet
@@ -7397,6 +7420,7 @@ function undoGame(gameId) {
 
     if (!D.skorTakip) D.skorTakip = {};
     D.skorTakip['m'+masa] = {turler: game.turler || []};
+    saveSkorTakip(masa);
 
     saveD();
     renderGameCards();
@@ -7431,6 +7455,7 @@ function undoLastGame() {
   // Turları geri yükle
   if (!D.skorTakip) D.skorTakip = {};
   D.skorTakip['m'+masa] = {turler: _undoTurler || []};
+  saveSkorTakip(masa);
 
   saveD();
   renderGameCards();
@@ -8347,6 +8372,9 @@ function showKartCekme(){
   _kGrupSiradaki=0;
   // Dam çekemeyen oyuncular (son grup hariç hepsi)
   _kDamYasakli=maxSayi>0;
+  // 8 kişide kimse dışarıda kalmıyor: dam geçmişine göre sıralamanın anlamı yok,
+  // herkes serbest çeker.
+  if(n===8){ _kGruplar=[]; _kDamYasakli=false; }
 
   // Oturuma sonradan oyuncu eklendiyse (9-10 kişi): yeni gelenler ve en çok dışarıda
   // kalanlar dam çekemez (kesin masada), daha az dışarıda kalanlar doğrudan dam olur
@@ -8805,7 +8833,7 @@ function kartOnayla(){
   saving=true; syncDot('#f59e0b');
   var toSave=JSON.parse(JSON.stringify(D));
   delete toSave.screen;
-  REF.set(_anaKayitHazirla(toSave)).then(function(){
+  _anaYaz(_anaKayitHazirla(toSave)).then(function(){
     saving=false;syncDot('#22c55e');
     updateMasaLabels();renderSessChips();renderGameCards();goS(4);switchMasa(1);guncelleRotasyonBanner();
     setTimeout(function(){showSkorTakip();},100);
