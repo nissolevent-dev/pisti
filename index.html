@@ -2225,7 +2225,23 @@ function _6kY1Hazirla(oncekiMasada4, oncekiDisarida2) {
   _6k._oncekiDisarida = oncekiDisarida2;
   _6k._y1OnKalan = null; _6k._y1OnGerekli = null; _6k._azDisarida = [];
   _6k._y1Aktif = null; _6k._y1KilitliKalan = null; _6k._y1KilitliDisarida = null; _6k._y1GerekliKalan = null;
-  var on = _oncelikSirala(oncekiMasada4, 2);
+  // Yeni düzenden önce de oynayıp hiç dışarıda kalmamış olanlar önce dışarı çıkar
+  var fo = _fazOncesiOturanlar();
+  var zor = oncekiMasada4.filter(function(p) { return fo[p]; });
+  var serbest = oncekiMasada4.filter(function(p) { return !fo[p]; });
+  var on;
+  if (zor.length && serbest.length >= 2) {
+    on = _oncelikSirala(serbest, 2);
+    on.az = on.az.concat(zor);
+  } else if (zor.length && serbest.length) {
+    on = _oncelikSirala(zor, 2 - serbest.length);
+    on.kesin = serbest.concat(on.kesin);
+    zor = [];
+  } else {
+    on = _oncelikSirala(oncekiMasada4, 2);
+    zor = [];
+  }
+  _6k._zorunluDisarida = zor;
   _6k._azDisarida = on.az;
   if (!on.esit.length) {
     // Kart çekmeye gerek yok
@@ -2243,8 +2259,10 @@ function _6kY1Hazirla(oncekiMasada4, oncekiDisarida2) {
 
 function _6kOtoMesaj(kalanlar) {
   var ad = function(l) { return l.map(function(p) { return p.split(' ')[0]; }).join(', '); };
-  var az = _6k._azDisarida || [], t = '';
-  if (az.length) t += ad(az) + ' daha az dışarıda kaldığı için otomatik dışarıda.';
+  var zor = _6k._zorunluDisarida || [];
+  var az = (_6k._azDisarida || []).filter(function(p) { return zor.indexOf(p) < 0; }), t = '';
+  if (zor.length) t += ad(zor) + ' üst üste oynadığı için otomatik dışarıda.';
+  if (az.length) t += (t ? ' ' : '') + ad(az) + ' daha az dışarıda kaldığı için otomatik dışarıda.';
   if (kalanlar && kalanlar.length && az.length) t += ' ' + ad(kalanlar) + ' daha çok dışarıda kaldığı için masada.';
   return t;
 }
@@ -2702,6 +2720,33 @@ function _ikiMasaFazSayilari() {
     faz.unshift(games[i]);
   }
   return faz.length ? _oturumDisaridaSayilari(faz).say : {};
+}
+
+function _fazOncesiOturanlar() {
+  // Oyuncu sayısı değiştikten sonraki (ör. 4→6, 4→7, 5→7) oyunlarda: önceki düzenin
+  // son elinde de masada oturmuş ve o zamandan beri hiç dışarıda kalmamış kişiler.
+  // Bunlar yeni düzene geçmeden önce de oynuyordu; bir sonraki oyunda 3. kez üst üste
+  // oynamasınlar diye kart çekmeden dışarıda bırakılırlar. Oturum baştan aynı sayıyla
+  // oynanıyorsa (normal döngü) boş döner — mevcut kurallar değişmez.
+  var games = D.sessGames || [];
+  if (!games.length) return {};
+  var anahtar = _elAnahtarlari(games), sira = [], el = {};
+  games.forEach(function(g, i) {
+    var id = anahtar[i];
+    if (!el[id]) { el[id] = { katilan: {}, oturan: {} }; sira.push(id); }
+    (g.teamA || []).concat(g.teamB || []).concat(g.partners || []).forEach(function(p) { el[id].katilan[p] = true; });
+    var o = _7kGercekOturanlar(g); for (var p in o) el[id].oturan[p] = true;
+  });
+  var boy = function(id) { return Object.keys(el[id].katilan).length; };
+  var son = sira.length - 1, n = boy(sira[son]), bas = son;
+  while (bas > 0 && boy(sira[bas - 1]) === n) bas--;
+  if (bas === 0) return {};
+  var sonuc = {};
+  Object.keys(el[sira[bas - 1]].oturan).forEach(function(p) {
+    for (var i = bas; i <= son; i++) if (!el[sira[i]].oturan[p]) return;
+    sonuc[p] = true;
+  });
+  return sonuc;
 }
 
 function _sonElDisaridakiler() {
@@ -3191,6 +3236,10 @@ function _7kYenidenCekFromGame(teamA, teamB, partnersList) {
   var ustuste = _7kUstusteOturanlar();
   var sonIki = _7kSonIkiOyundaOturanlar();
   for (var sk in sonIki) ustuste[sk] = true;
+  // Oyuncu sayısı değiştiyse (ör. 4→7): önceki düzende de oynayıp o zamandan beri
+  // hiç dışarıda kalmamış olanlar da üst üste oynamış sayılır.
+  var fo7 = _fazOncesiOturanlar();
+  for (var fk in fo7) ustuste[fk] = true;
   var zorunluDisarida = oncekiMasada4.filter(function(p) { return ustuste[p]; });
   var cekecekler = oncekiMasada4.filter(function(p) { return !ustuste[p]; });
   // Güvenlik: normalde en fazla 1 kişi üst üste olabilir; hepsi zorunlu çıkarsa
@@ -3293,7 +3342,7 @@ function _7kOtoDisariMesaj() {
   var x2 = (_7k._zorunluDisarida || []).filter(function(p) { return az.indexOf(p) < 0; });
   var kalan = (_7k._y1OnKalan || []);
   var t = '';
-  if (x2.length) t += ad(x2) + ' üst üste 2 oyun oynadığı için otomatik dışarıda.';
+  if (x2.length) t += ad(x2) + ' üst üste oynadığı için otomatik dışarıda.';
   if (az.length) t += (t ? ' ' : '') + ad(az) + ' daha az dışarıda kaldığı için otomatik dışarıda.';
   if (kalan.length) t += (t ? ' ' : '') + ad(kalan) + ' daha çok dışarıda kaldığı için masada.';
   return t;
