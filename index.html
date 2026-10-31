@@ -1979,6 +1979,7 @@ function _6kKartTik(idx) {
     _6k.eslesen[_6k.secilen] = k;
     _6k.secilen = null;
     _6kRender();
+    _kartFlas('6kart-kart', k);
   } else if (_6k.asama === 2) {
     if (!_6k.ortakSecilen) return;
     // idx: hangi kart pozisyonuna tıklandı (0-3)
@@ -1999,6 +2000,7 @@ function _6kKartTik(idx) {
     _6k.disOrtak[_6k.disSecilen] = k.renk;
     _6k.disSecilen = null;
     _6kRender();
+    _kartFlas('6kart-kart', k);
     if (Object.keys(_6k.disOrtak).length === _6k.disaridakiler.length) {
       setTimeout(function() { _6kAsamaBit3(); }, 600);
     }
@@ -2134,8 +2136,8 @@ function _6kRender() {
       var sel = _6k.secilen === p;
       var bg = esl ? 'var(--g1)' : sel ? 'var(--g2)' : 'var(--bg2)';
       var col = (esl||sel) ? '#fff' : 'var(--tx1)';
-      var lbl = p.split(' ')[0] + (esl ? '<br><span style="font-size:1rem;">' + esl.deger + esl.sembol + '</span>' : '');
-      oyHtml += '<div '+ (!esl?'data-6kp="'+i+'"':'')+' style="padding:8px 4px;border:2px solid '+(sel?'var(--g2)':esl?'var(--g1)':'var(--bd2)')+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(esl?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
+      var lbl = _cekEtiket(p.split(' ')[0], esl);
+      oyHtml += '<div '+ (!esl?'data-6kp="'+i+'"':'onclick="_cekGeriAl(\'6k\',D.sess.players['+D.sess.players.indexOf(p)+'])"')+' style="padding:8px 4px;border:2px solid '+(sel?'var(--g2)':esl?'var(--g1)':'var(--bd2)')+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(esl?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
     }
     oyDiv.innerHTML = oyHtml;
     var active = !!_6k.secilen;
@@ -2199,6 +2201,122 @@ function _6kRender() {
   }
   _6kListen();
   _rotasyonKaydet();
+}
+
+// ── Kart çekme ekranları: ortak yardımcılar ──
+function _kartRenk(k) { return String((k && k.renk) || '').toUpperCase() === 'K' ? '#cc0000' : '#111'; }
+function _kartYazi(k) {
+  if (!k) return '';
+  var d = k.deger != null ? k.deger : (k.tip === 'as' ? 'A' : k.tip === 'kral' ? 'K' : k.tip === 'dam' ? 'Q' : '');
+  return d + (k.sembol || '');
+}
+function _cekEtiket(ad, k, ek) {
+  // İsim ve çekilen kart yan yana, okunaklı boyutta
+  var h = '<span style="font-size:1rem;font-weight:700">' + ad + '</span>';
+  if (k) h += '<span style="background:#fff;color:' + _kartRenk(k) + ';border-radius:6px;padding:1px 8px;font-size:1.2rem;font-weight:900;line-height:1.35;white-space:nowrap">' + _kartYazi(k) + '</span>';
+  return '<span style="display:inline-flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">' + h + (ek || '') + '</span>';
+}
+function _kartYuzHtml(k) {
+  var c = _kartRenk(k);
+  return '<div style="border:2px solid var(--bd2);border-radius:14px;padding:20px 16px;width:88px;box-sizing:border-box;background:var(--g1);user-select:none;-webkit-user-select:none;">' +
+    '<div style="position:relative;width:100%;padding-top:140%;background:#fff;border:1px solid rgba(0,0,0,.28);border-radius:5px">' +
+    '<div style="position:absolute;left:0;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:900;color:' + c + '">' + _kartYazi(k) + '</div></div></div>';
+}
+var _flas = null;
+function _kartFlas(divId, k) {
+  // Çekilen kart kapalı destenin yerinde 1 saniye açık görünür, sonra kapanır.
+  // Bu sırada ekran yeniden çizilse bile (ör. sıradaki isme dokunulunca) kart açık kalır.
+  var d = document.getElementById(divId);
+  if (!d || !k || typeof MutationObserver === 'undefined') return;
+  if (_flas) { _flas.obs.disconnect(); clearTimeout(_flas.timer); if (_flas.d.innerHTML === _flas.uyg) _flas.d.innerHTML = _flas.normal; }
+  var f = _flas = { d: d, html: _kartYuzHtml(k), normal: d.innerHTML, uyg: null };
+  var gozle = function() { f.obs.observe(d, { childList: true, subtree: true, characterData: true }); };
+  var uygula = function() {
+    f.obs.disconnect();
+    if (d.innerHTML !== f.uyg) f.normal = d.innerHTML;
+    d.innerHTML = f.html; f.uyg = d.innerHTML;
+    gozle();
+  };
+  f.obs = new MutationObserver(function() { if (d.innerHTML !== f.uyg) uygula(); });
+  uygula();
+  f.timer = setTimeout(function() {
+    f.obs.disconnect();
+    if (_flas === f) _flas = null;
+    if (d.innerHTML === f.uyg) d.innerHTML = f.normal;
+  }, 1000);
+}
+function _kapaliKartlariKaristir(deste) {
+  // Açık kartlar yerinde kalır, kapalı kartların yerleri karıştırılır
+  var idx = [], kartlar = [];
+  for (var i = 0; i < deste.length; i++) if (!deste[i].acik) { idx.push(i); kartlar.push(deste[i]); }
+  _kShuffle(kartlar);
+  for (var j = 0; j < idx.length; j++) deste[idx[j]] = kartlar[j];
+}
+function _cekGeriAl(tip, p) {
+  // Yanlış kişi adına çekilen kartı geri alır (onay sorarak)
+  if (!p) return;
+  var ad = p.split(' ')[0];
+  var soru = function(k, sonra) {
+    onaySor(ad + ' adına çekilen kart' + (k ? ' (' + _kartYazi(k) + ')' : '') + ' geri alınsın mı? ' + ad + ' yeniden çeker.', sonra);
+  };
+  if (tip === '6k' || tip === '7k') {
+    var h = tip === '6k' ? _6k : _7k;
+    var k = h.eslesen && h.eslesen[p];
+    if (!k || !(h.asama === 1 || h.asama === 'Y1')) return;
+    if (h.asama === 1 && h._aktifCekenler && h._aktifCekenler.indexOf(p) < 0) return;
+    if (h.asama === 'Y1' && h._y1Aktif && h._y1Aktif.indexOf(p) < 0) return;
+    soru(k, function() {
+      if (h.eslesen[p] !== k) return;
+      delete h.eslesen[p];
+      h.deste52.splice(Math.floor(Math.random() * (h.deste52.length + 1)), 0, k);
+      h.secilen = null;
+      if (h.asama === 'Y1') { if (tip === '6k') _6kRenderY1(); else _7kRenderY1(); }
+      else { if (tip === '6k') _6kRender(); else _7kRender(); }
+    });
+  } else if (tip === '4k') {
+    var r = _4kEslesen[p];
+    if (!r || Object.keys(_4kEslesen).length >= 4) return;
+    soru({ deger: 'A', sembol: r === 'K' ? '♥' : '♠', renk: r }, function() {
+      if (_4kEslesen[p] !== r || Object.keys(_4kEslesen).length >= 4) return;
+      for (var i = 0; i < _4kDeste.length; i++) if (_4kDeste[i].acik && _4kDeste[i].renk === r) { _4kDeste[i].acik = false; break; }
+      delete _4kEslesen[p];
+      _kapaliKartlariKaristir(_4kDeste);
+      _4kSecilen = null;
+      _4kRender();
+    });
+  } else if (tip === 'sk') {
+    var dg = _skEslesen[p];
+    if (dg == null || Object.keys(_skEslesen).length >= D.sess.players.length) return;
+    soru({ deger: dg, renk: ({ A: 'K', '3': 'K', '5': 'K' })[dg] || 'S' }, function() {
+      if (_skEslesen[p] !== dg || Object.keys(_skEslesen).length >= D.sess.players.length) return;
+      for (var i = 0; i < _skDeste.length; i++) if (_skDeste[i].acik && _skDeste[i].deger === dg) { _skDeste[i].acik = false; break; }
+      delete _skEslesen[p];
+      _kapaliKartlariKaristir(_skDeste);
+      _skSecilen = null;
+      _skRender();
+    });
+  } else if (tip === 'k') {
+    var e = _kEslesen[p];
+    if (!e || _kAsama !== 1 || _kDamUyari) return false;
+    if (Object.keys(_kEslesen).length >= D.sess.players.length) return false;
+    // Önceliğe göre otomatik dışarıda (dam) verilenler geri alınamaz
+    if (_kGruplar && _kGruplar.length && !_kGruplar.some(function(g) { return g.oyuncular.indexOf(p) >= 0; })) return false;
+    soru(e, function() {
+      if (_kEslesen[p] !== e || _kAsama !== 1) return;
+      for (var i = 0; i < _kDeste1.length; i++) if (_kDeste1[i].id === e.id) { _kDeste1[i].acik = false; break; }
+      delete _kEslesen[p];
+      var di = _kDamlar.indexOf(p); if (di >= 0) _kDamlar.splice(di, 1);
+      _kapaliKartlariKaristir(_kDeste1);
+      if (_kGruplar && _kGruplar.length) {
+        var gi = 0;
+        while (gi < _kGruplar.length - 1 && _kGruplar[gi].oyuncular.every(function(x) { return !!_kEslesen[x]; })) gi++;
+        _kGrupIdx = gi; _kGrupSiradaki = 0;
+      }
+      _kSecilen = null;
+      _kRender();
+    });
+    return true;
+  }
 }
 
 function _oncelikSirala(adaylar, koltuk) {
@@ -2447,6 +2565,7 @@ function _6kKartTikY1() {
   _6k.eslesen[_6k.secilen] = k;
   _6k.secilen = null;
   _6kRenderY1();
+  _kartFlas('6kart-kart', k);
 }
 
 function _6kRenderY1() {
@@ -2467,8 +2586,8 @@ function _6kRenderY1() {
     var sel = _6k.secilen === p;
     var bg = esl ? 'var(--g1)' : sel ? 'var(--g2)' : 'var(--bg2)';
     var col = (esl||sel) ? '#fff' : 'var(--tx1)';
-    var lbl = p.split(' ')[0] + (esl ? '<br><span style="font-size:1rem;">' + esl.deger + esl.sembol + '</span>' : '');
-    oyHtml += '<div '+ (!esl?'data-6kp="'+i+'"':'')+' style="padding:8px 4px;border:2px solid '+(sel?'var(--g2)':esl?'var(--g1)':'var(--bd2)')+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(esl?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
+    var lbl = _cekEtiket(p.split(' ')[0], esl);
+    oyHtml += '<div '+ (!esl?'data-6kp="'+i+'"':'onclick="_cekGeriAl(\'6k\',D.sess.players['+D.sess.players.indexOf(p)+'])"')+' style="padding:8px 4px;border:2px solid '+(sel?'var(--g2)':esl?'var(--g1)':'var(--bd2)')+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(esl?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
   }
   oyDiv.innerHTML = oyHtml;
   var active = !!_6k.secilen;
@@ -2928,6 +3047,7 @@ function _7kKartTik(idx) {
     _7k.eslesen[_7k.secilen] = k;
     _7k.secilen = null;
     _7kRender();
+    _kartFlas('7kart-kart', k);
     // Herkes çekince otomatik geçmez — "Tamam" butonuyla devam edilir (bkz. _7kRender)
   } else if (_7k.asama === 2) {
     if (!_7k.ortakSecilen) return;
@@ -2948,6 +3068,7 @@ function _7kKartTik(idx) {
     _7k.disOrtak[_7k.disSecilen] = k.renk;
     _7k.disSecilen = null;
     _7kRender();
+    _kartFlas('7kart-kart', k);
     if (Object.keys(_7k.disOrtak).length === _7k.disaridakiler.length) {
       setTimeout(function() { _7kAsamaBit3(); }, 600);
     }
@@ -3077,8 +3198,8 @@ function _7kRender() {
       var sel = _7k.secilen === p;
       var bg = esl ? 'var(--g1)' : sel ? 'var(--g2)' : 'var(--bg2)';
       var col = (esl||sel) ? '#fff' : 'var(--tx1)';
-      var lbl = p.split(' ')[0] + (esl ? '<br><span style="font-size:1rem;">' + esl.deger + esl.sembol + '</span>' : '');
-      oyHtml += '<div '+ (!esl?'data-7kp="'+i+'"':'')+' style="padding:8px 4px;border:2px solid '+(sel?'var(--g2)':esl?'var(--g1)':'var(--bd2)')+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(esl?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
+      var lbl = _cekEtiket(p.split(' ')[0], esl);
+      oyHtml += '<div '+ (!esl?'data-7kp="'+i+'"':'onclick="_cekGeriAl(\'7k\',D.sess.players['+D.sess.players.indexOf(p)+'])"')+' style="padding:8px 4px;border:2px solid '+(sel?'var(--g2)':esl?'var(--g1)':'var(--bd2)')+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(esl?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
     }
     oyDiv.innerHTML = oyHtml;
     var active = !!_7k.secilen;
@@ -3334,6 +3455,7 @@ function _7kKartTikY1() {
   _7k.eslesen[_7k.secilen] = k;
   _7k.secilen = null;
   _7kRenderY1();
+  _kartFlas('7kart-kart', k);
 }
 
 function _7kOtoDisariMesaj() {
@@ -3367,8 +3489,8 @@ function _7kRenderY1() {
     var sel = _7k.secilen === p;
     var bg = esl ? 'var(--g1)' : sel ? 'var(--g2)' : 'var(--bg2)';
     var col = (esl||sel) ? '#fff' : 'var(--tx1)';
-    var lbl = p.split(' ')[0] + (esl ? '<br><span style="font-size:1rem;">' + esl.deger + esl.sembol + '</span>' : '');
-    oyHtml += '<div '+ (!esl?'data-7kp="'+i+'"':'')+' style="padding:8px 4px;border:2px solid '+(sel?'var(--g2)':esl?'var(--g1)':'var(--bd2)')+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(esl?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
+    var lbl = _cekEtiket(p.split(' ')[0], esl);
+    oyHtml += '<div '+ (!esl?'data-7kp="'+i+'"':'onclick="_cekGeriAl(\'7k\',D.sess.players['+D.sess.players.indexOf(p)+'])"')+' style="padding:8px 4px;border:2px solid '+(sel?'var(--g2)':esl?'var(--g1)':'var(--bd2)')+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(esl?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
   }
   oyDiv.innerHTML = oyHtml;
   var active = !!_7k.secilen;
@@ -3596,8 +3718,8 @@ function _4kRender() {
     var bg = esl ? (esl==='K'?'#cc0000':'#111') : sel ? 'var(--g2)' : 'var(--bg2)';
     var col = (esl||sel) ? '#fff' : 'var(--tx1)';
     var brd = sel ? 'var(--g2)' : esl ? (esl==='K'?'#cc0000':'#111') : 'var(--bd2)';
-    var lbl = p.split(' ')[0] + (esl ? ' '+(esl==='K'?'♥':'♠') : '');
-    oyHtml += '<div '+ (!esl?'data-4kp="'+i+'"':'')+' style="padding:8px 4px;border:2px solid '+brd+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(esl?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
+    var lbl = _cekEtiket(p.split(' ')[0], esl ? {deger:'A', sembol:(esl==='K'?'♥':'♠'), renk:esl} : null);
+    oyHtml += '<div '+ (!esl?'data-4kp="'+i+'"':'onclick="_cekGeriAl(\'4k\',D.sess.players['+i+'])"')+' style="padding:8px 4px;border:2px solid '+brd+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(esl?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
   }
   oyDiv.innerHTML = oyHtml;
 
@@ -3842,11 +3964,11 @@ function _skRender() {
     var p = D.sess.players[i];
     var esl = _skEslesen[p];
     var sel = _skSecilen === p;
-    var lbl = p.split(' ')[0] + (esl ? ' — ' + esl : '');
+    var lbl = _cekEtiket(p.split(' ')[0], esl ? {deger:esl, renk:(({A:'K','3':'K','5':'K'})[esl]||'S')} : null);
     var bg = esl ? 'var(--g1)' : sel ? 'var(--g2)' : 'var(--bg2)';
     var col = (esl || sel) ? '#fff' : 'var(--tx1)';
     var brd = sel ? 'var(--g2)' : esl ? 'var(--g1)' : 'var(--bd2)';
-    oyHtml += '<div ' + (!esl ? 'data-skp="' + i + '"' : '') +
+    oyHtml += '<div ' + (!esl ? 'data-skp="' + i + '"' : 'onclick="_cekGeriAl(\'sk\',D.sess.players[' + i + '])"') +
       ' style="padding:8px 4px;border:2px solid ' + brd + ';background:' + bg +
       ';color:' + col + ';border-radius:8px;cursor:' + (!esl ? 'pointer' : 'default') +
       ';font-size:.78rem;font-weight:600;text-align:center;user-select:none;-webkit-user-select:none;">' + lbl + '</div>';
@@ -8345,7 +8467,7 @@ function _kFindTap(e, prevent){
       if(kb!==null){
         if(prevent)e.preventDefault();
         var bp=D.sess.players[parseInt(kb)], be=bp&&_kEslesen[bp];
-        if(be) toast(bp.split(' ')[0]+(be.tip==='dam'?' dışarıda — kart çekmez. Diğer oyuncular çeksin.':' kartını çekti.'));
+        if(be && !_cekGeriAl('k', bp)) toast(bp.split(' ')[0]+(be.tip==='dam'?' dışarıda — kart çekmez. Diğer oyuncular çeksin.':' kartını çekti.'));
         return;
       }
     }
@@ -8631,12 +8753,12 @@ function _kRender(){
       var sel=_kSecilen===p;
       var aktif=_kOyuncuAktifMi(p)&&!esl;
       var dmO=esl&&esl.tip==='dam';
-      var lbl=p.split(' ')[0]+(esl?' '+(esl.tip==='as'?'A':esl.tip==='kral'?'K':'Q')+esl.sembol:'')+(dmO?'<br><span style="font-size:.68rem;font-weight:700;">Dışarıda</span>':'');
+      var lbl=_cekEtiket(p.split(' ')[0], esl, dmO?'<span style="font-size:.75rem;font-weight:700;">Dışarıda</span>':'');
       var bg=dmO?'var(--bg2)':esl?'var(--g1)':sel?'var(--g2)':'var(--bg2)';
       var col=dmO?'var(--tx3)':(esl||sel)?'#fff':'var(--tx1)';
       var brd=sel?'var(--g2)':'var(--bd2)';
       var op=(!esl&&!aktif)?'0.35':'1';
-      oyHtml+='<div '+(aktif&&!esl?'data-kp="'+i+'"':esl?'data-kbilgi="'+i+'"':'')+' style="padding:10px 14px;border:2px solid '+brd+';background:'+bg+';color:'+col+';border-radius:8px;cursor:'+(aktif?'pointer':'default')+';font-family:inherit;font-size:.82rem;font-weight:600;display:inline-block;margin:3px;user-select:none;-webkit-user-select:none;opacity:'+op+';">'+lbl+'</div>';
+      oyHtml+='<div '+(aktif&&!esl?'data-kp="'+i+'"':esl?'data-kbilgi="'+i+'"':'')+' style="padding:10px 14px;border:2px solid '+brd+';background:'+bg+';color:'+col+';border-radius:8px;cursor:'+(aktif?'pointer':'default')+';font-family:inherit;font-size:.82rem;font-weight:600;display:inline-block;text-align:center;margin:3px;user-select:none;-webkit-user-select:none;opacity:'+op+';">'+lbl+'</div>';
     }
     if(oyDiv)oyDiv.innerHTML=oyHtml;
     var kartHtml='';
