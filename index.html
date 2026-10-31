@@ -2158,7 +2158,7 @@ function _6kRender() {
       var kr = esl ? (esl.renk==='K'?'#cc0000':'#111') : null;
       var bg = esl ? (esl.renk==='K'?'#fef2f2':'var(--bg2)') : sel ? 'var(--g2)' : 'var(--bg2)';
       var col = sel ? '#fff' : esl ? (esl.renk==='K'?'#cc0000':'#111') : 'var(--tx1)';
-      var lbl = p.split(' ')[0] + (esl ? '<br><span style="font-size:1rem;">A'+esl.sembol+'</span>' : '');
+      var lbl = _cekEtiket(p.split(' ')[0], esl ? {deger:'A', sembol:esl.sembol, renk:esl.renk} : null);
       oyHtml += '<div '+ (!esl?'data-6kp="'+i+'"':'')+' style="padding:8px 4px;border:2px solid '+(sel?'var(--g2)':esl?kr:'var(--bd2)')+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(esl?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
     }
     oyDiv.innerHTML = oyHtml;
@@ -2172,7 +2172,7 @@ function _6kRender() {
         kartHtml2 += '<div style="min-width:68px;box-sizing:border-box;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid '+kr2+';border-radius:10px;padding:8px 4px;text-align:center;background:#fff;">';
         kartHtml2 += '<div style="font-size:1.4rem;color:'+kr2+';font-weight:900;">A'+acik.sembol+'</div>';
         var sah = Object.keys(_6k.ortakEslesen).find(function(p){return _6k.ortakEslesen[p]&&_6k.ortakEslesen[p]._idx===ki;}) || '';
-        kartHtml2 += '<div style="font-size:.6rem;color:var(--tx3);font-weight:700;">'+( sah ? sah.split(' ')[0] : '')+'</div></div>';
+        kartHtml2 += '<div style="font-size:.8rem;color:var(--tx2);font-weight:700;">'+( sah ? sah.split(' ')[0] : '')+'</div></div>';
       } else {
         kartHtml2 += '<div data-6kk="'+ki+'" style="min-width:68px;box-sizing:border-box;border:2px solid var(--bd2);border-radius:10px;padding:12px 4px;background:var(--g1);opacity:'+(active2?'1':'0.4')+';text-align:center;cursor:'+(active2?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb-sm"></div></div>';
       }
@@ -2191,7 +2191,7 @@ function _6kRender() {
       var sel = _6k.disSecilen === p;
       var bg = renk ? (renk==='K'?'#fef2f2':'var(--bg2)') : sel ? 'var(--g2)' : 'var(--bg2)';
       var col = sel ? '#fff' : renk ? (renk==='K'?'#cc0000':'#111') : 'var(--tx1)';
-      var lbl = p.split(' ')[0] + (renk ? '<br><span style="font-size:1.1rem;">'+(renk==='K'?'♥':'♠')+'</span>' : '');
+      var lbl = _cekEtiket(p.split(' ')[0], renk ? {deger:'', sembol:(renk==='K'?'♥':'♠'), renk:renk} : null);
       oyHtml += '<div '+ (!renk?'data-6kp="'+i+'"':'')+' style="padding:8px 4px;border:2px solid '+(sel?'var(--g2)':renk?(renk==='K'?'#cc0000':'#111'):'var(--bd2)')+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(renk?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
     }
     oyDiv.innerHTML = oyHtml;
@@ -2962,7 +2962,7 @@ function _onAciklama(h) {
 
 function _onKilitliKutu(p, durum, oyunc) {
   var masada = durum === 'masa';
-  return '<div style="padding:8px 4px;border:2px solid ' + (masada ? 'var(--g1)' : 'var(--bd2)') + ';background:' + (masada ? '#f0fdf4' : 'var(--bg2)') + ';color:' + (masada ? 'var(--g1)' : 'var(--tx3)') + ';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:default;user-select:none;-webkit-user-select:none;">' + p.split(' ')[0] + '<br><span style="font-size:.68rem;font-weight:700;">' + (masada ? 'Masada ✓' : 'Dışarıda') + '</span></div>';
+  return '<div style="padding:8px 4px;border:2px solid ' + (masada ? 'var(--g1)' : 'var(--bd2)') + ';background:' + (masada ? '#f0fdf4' : 'var(--bg2)') + ';color:' + (masada ? 'var(--g1)' : 'var(--tx3)') + ';border-radius:8px;text-align:center;font-size:1rem;font-weight:700;cursor:default;user-select:none;-webkit-user-select:none;">' + p.split(' ')[0] + '<br><span style="font-size:.75rem;font-weight:700;">' + (masada ? 'Masada ✓' : 'Dışarıda') + '</span></div>';
 }
 
 function show7KisiKartCekme() {
@@ -3220,7 +3220,7 @@ function _7kRender() {
       var kr = esl ? (esl.renk==='K'?'#cc0000':'#111') : null;
       var bg = esl ? (esl.renk==='K'?'#fef2f2':'var(--bg2)') : sel ? 'var(--g2)' : 'var(--bg2)';
       var col = sel ? '#fff' : esl ? (esl.renk==='K'?'#cc0000':'#111') : 'var(--tx1)';
-      var lbl = p.split(' ')[0] + (esl ? '<br><span style="font-size:1rem;">A'+esl.sembol+'</span>' : '');
+      var lbl = _cekEtiket(p.split(' ')[0], esl ? {deger:'A', sembol:esl.sembol, renk:esl.renk} : null);
       oyHtml += '<div '+ (!esl?'data-7kp="'+i+'"':'')+' style="padding:8px 4px;border:2px solid '+(sel?'var(--g2)':esl?kr:'var(--bd2)')+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(esl?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
     }
     oyDiv.innerHTML = oyHtml;
@@ -3233,7 +3233,7 @@ function _7kRender() {
         kartHtml2 += '<div style="min-width:68px;box-sizing:border-box;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid '+kr2+';border-radius:10px;padding:8px 4px;text-align:center;background:#fff;">';
         kartHtml2 += '<div style="font-size:1.4rem;color:'+kr2+';font-weight:900;">A'+acik.sembol+'</div>';
         var sah = Object.keys(_7k.ortakEslesen).find(function(p){return _7k.ortakEslesen[p]&&_7k.ortakEslesen[p]._idx===ki;}) || '';
-        kartHtml2 += '<div style="font-size:.6rem;color:var(--tx3);font-weight:700;">'+( sah ? sah.split(' ')[0] : '')+'</div></div>';
+        kartHtml2 += '<div style="font-size:.8rem;color:var(--tx2);font-weight:700;">'+( sah ? sah.split(' ')[0] : '')+'</div></div>';
       } else {
         kartHtml2 += '<div data-7kk="'+ki+'" style="min-width:68px;box-sizing:border-box;border:2px solid var(--bd2);border-radius:10px;padding:12px 4px;background:var(--g1);opacity:'+(active2?'1':'0.4')+';text-align:center;cursor:'+(active2?'pointer':'default')+';user-select:none;-webkit-user-select:none;"><div class="kb-sm"></div></div>';
       }
@@ -3252,7 +3252,7 @@ function _7kRender() {
       var sel = _7k.disSecilen === p;
       var bg = renk ? (renk==='K'?'#fef2f2':'var(--bg2)') : sel ? 'var(--g2)' : 'var(--bg2)';
       var col = sel ? '#fff' : renk ? (renk==='K'?'#cc0000':'#111') : 'var(--tx1)';
-      var lbl = p.split(' ')[0] + (renk ? '<br><span style="font-size:1.1rem;">'+(renk==='K'?'♥':'♠')+'</span>' : '');
+      var lbl = _cekEtiket(p.split(' ')[0], renk ? {deger:'', sembol:(renk==='K'?'♥':'♠'), renk:renk} : null);
       oyHtml += '<div '+ (!renk?'data-7kp="'+i+'"':'')+' style="padding:8px 4px;border:2px solid '+(sel?'var(--g2)':renk?(renk==='K'?'#cc0000':'#111'):'var(--bd2)')+';background:'+bg+';color:'+col+';border-radius:8px;text-align:center;font-size:.82rem;font-weight:600;cursor:'+(renk?'default':'pointer')+';user-select:none;-webkit-user-select:none;">'+lbl+'</div>';
     }
     oyDiv.innerHTML = oyHtml;
@@ -3987,7 +3987,7 @@ function _skRender() {
       var kr = renkMap[k.deger] || '#111';
       kartHtml += '<div style="border:2px solid ' + kr + ';border-radius:10px;padding:8px 4px;text-align:center;background:#fff;min-width:44px;box-sizing:border-box;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;">' +
         '<div style="font-size:1.5rem;color:' + kr + ';font-weight:900;">' + k.deger + '</div>' +
-        '<div style="font-size:.6rem;color:var(--tx3);font-weight:700;margin-top:2px;">' + sahibi + '</div></div>';
+        '<div style="font-size:.8rem;color:var(--tx2);font-weight:700;margin-top:2px;">' + sahibi + '</div></div>';
     } else {
       kartHtml += '<div data-skk="' + i + '" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 4px;background:var(--g1);opacity:' +
         (active ? '1' : '0.4') + ';text-align:center;min-width:44px;user-select:none;-webkit-user-select:none;">' +
@@ -8769,7 +8769,7 @@ function _kRender(){
       if(k.acik){
         var kr=k.renk==='k'?'#cc0000':'#111';
         var tl=k.tip==='as'?'A':k.tip==='kral'?'K':'Q';
-        kartHtml+='<div style="border:2px solid '+kr+';border-radius:10px;padding:8px;text-align:center;background:#fff;min-width:52px;box-sizing:border-box;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="font-size:1.4rem;color:'+kr+';font-weight:900;">'+tl+k.sembol+'</div><div style="font-size:.65rem;color:var(--tx3);font-weight:700;">'+sahibi+'</div></div>';
+        kartHtml+='<div style="border:2px solid '+kr+';border-radius:10px;padding:8px;text-align:center;background:#fff;min-width:52px;box-sizing:border-box;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="font-size:1.4rem;color:'+kr+';font-weight:900;">'+tl+k.sembol+'</div><div style="font-size:.8rem;color:var(--tx2);font-weight:700;">'+sahibi+'</div></div>';
       } else {
         var active=!!_kSecilen;
         kartHtml+='<div data-kk="'+i+'" style="border:2px solid var(--bd2);border-radius:10px;padding:12px 8px;background:var(--g1);opacity:'+(active?'1':'0.4')+';min-width:52px;text-align:center;user-select:none;-webkit-user-select:none;"><div class="kb-sm"></div></div>';
@@ -8795,9 +8795,9 @@ function _kRender(){
       var col=(secmis||sel)?'#fff':'var(--tx1)';
       var brd=sel?'var(--g2)':secmis?'var(--g1)':'var(--bd2)';
       if(secmis){
-        oyHtml+='<div style="padding:10px 14px;border:2px solid '+brd+';background:'+bg+';color:'+col+';border-radius:8px;font-family:inherit;font-size:.82rem;font-weight:600;display:inline-block;margin:3px;">'+p.split(' ')[0]+' ✓</div>';
+        oyHtml+='<div style="padding:10px 14px;border:2px solid '+brd+';background:'+bg+';color:'+col+';border-radius:8px;font-family:inherit;font-size:1rem;font-weight:700;display:inline-block;margin:3px;">'+p.split(' ')[0]+' ✓</div>';
       } else {
-        oyHtml+='<div data-kp="'+i+'" style="padding:10px 14px;border:2px solid '+brd+';background:'+bg+';color:'+col+';border-radius:8px;cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:600;display:inline-block;margin:3px;user-select:none;-webkit-user-select:none;">'+p.split(' ')[0]+'</div>';
+        oyHtml+='<div data-kp="'+i+'" style="padding:10px 14px;border:2px solid '+brd+';background:'+bg+';color:'+col+';border-radius:8px;cursor:pointer;font-family:inherit;font-size:1rem;font-weight:700;display:inline-block;margin:3px;user-select:none;-webkit-user-select:none;">'+p.split(' ')[0]+'</div>';
       }
     }
     if(oyDiv)oyDiv.innerHTML=oyHtml;
@@ -8832,7 +8832,7 @@ function _kRender(){
     if(baslik)baslik.textContent='🃏 Ortak Seçimi';
     if(aciklama_el)aciklama_el.textContent='Seçim tamamlandı.';
     var ortaklar=_kDamKartlar.map(function(d){return d.oyuncu.split(' ')[0];}).join(', ');
-    if(oyDiv)oyDiv.innerHTML='<div style="padding:10px 14px;border:2px solid var(--g1);background:var(--g1);color:#fff;border-radius:8px;font-family:inherit;font-size:.82rem;font-weight:600;display:inline-block;">'+ortaklar+'</div>';
+    if(oyDiv)oyDiv.innerHTML='<div style="padding:10px 14px;border:2px solid var(--g1);background:var(--g1);color:#fff;border-radius:8px;font-family:inherit;font-size:1rem;font-weight:700;display:inline-block;">'+ortaklar+'</div>';
     var secilenIds=_kDamKartlar.map(function(d){return d.kart.id;});
     var kartHtml='';
     for(var i=0;i<_kDeste2.length;i++){
