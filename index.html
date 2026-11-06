@@ -842,7 +842,7 @@ var VAPID_ANAHTAR = 'BPJ3_zx3Kp3Dti4RDXgXkHpkZJf_Xyp2fmuLKOhhyaD8semmW8xKW2WifKo
 var BREF = db.ref('pisti_bildirim');
 var AREF = db.ref('pisti_anket');
 var _anketler = {}, _kayitlilar = {}, _sonGonderim = null, _bekleyenIstek = null;
-var _anketGun = null, _anketSaatAcik = false, _anketGonderForm = false;
+var _anketGun = null, _anketSaatAcik = false, _anketGonderForm = false, _bildirimHata = '';
 var _ANKET_YAZI = { var: 'Var', belki: 'Belli değil', yok: 'Yok' };
 // Varım denince sorulan saatler (çarşamba / cumartesi)
 function _anketSaatleri(gun) {
@@ -1010,6 +1010,11 @@ function _anketCiz() {
     h += '<button class="btn bp bfw" onclick="bildirimIzinVer()">🔔 Bildirimlere izin ver</button>';
   }
 
+  if (_bildirimHata && d !== 'acik') {
+    h += '<div style="margin-top:10px;padding:10px;border-radius:8px;background:#fdeeee;color:#a00;font-size:.78rem;line-height:1.45;word-break:break-word;user-select:text;-webkit-user-select:text">' +
+      '<b>Bildirim açılamadı.</b> Bu yazının ekran görüntüsünü gönder:<br>' + _bildirimHata.replace(/</g, '&lt;') + '</div>';
+  }
+
   // ── Bildirim gönder (şifreli) ──
   if (_anketGonderForm) {
     var oto = _anketOtoFark();
@@ -1101,10 +1106,16 @@ function _swKaydet() {
 
 function _tokenKaydet(ad, sessiz) {
   if (!VAPID_ANAHTAR) return Promise.reject(new Error('Bildirim anahtarı (VAPID) henüz girilmedi'));
+  var asama = '1-sw';
   return _swKaydet().then(function(reg) {
+    asama = '2-token';
     return firebase.messaging().getToken({ vapidKey: VAPID_ANAHTAR, serviceWorkerRegistration: reg });
+  }).catch(function(e) {
+    var m = (e && (e.code ? e.code + ' — ' : '') + (e.message || e)) || String(e);
+    throw new Error('[' + asama + '] ' + m);
   }).then(function(tok) {
-    if (!tok) throw new Error('Bildirim kimliği alınamadı');
+    if (!tok) throw new Error('[2-token] Bildirim kimliği alınamadı');
+    _bildirimHata = '';
     var key = _tokAnahtar(tok), eski = _yerelAl('pisti_tok_key');
     var isler = [
       BREF.child('tokens').child(key).set({ token: tok, oyuncu: ad, url: location.href.split('?')[0].split('#')[0], ua: navigator.userAgent.slice(0, 120), t: Date.now() }),
@@ -1132,7 +1143,8 @@ function bildirimIzinVer() {
     return _tokenKaydet(ad);
   }).catch(function(e) {
     console.log('Bildirim hatası', e);
-    toast('Bildirim açılamadı: ' + ((e && e.message) || e));
+    _bildirimHata = String((e && e.message) || e);
+    toast('Bildirim açılamadı');
     _anketCiz();
   });
 }
