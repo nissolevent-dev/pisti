@@ -1,0 +1,74 @@
+name: Bildirim gönder
+
+# Saatler UTC'dir (İstanbul = UTC+3).
+on:
+  schedule:
+    - cron: '0 17 * * 2'      # Salı 20:00       — Yarın kim var?
+    - cron: '0 19 * * 2'      # Salı 22:00       — hatırlatma
+    - cron: '0 13 * * 3'      # Çarşamba 16:00   — hatırlatma
+    - cron: '0 17 * * 5'      # Cuma 20:00       — Yarın kim var?
+    - cron: '0 19 * * 5'      # Cuma 22:00       — hatırlatma
+    - cron: '0 8 * * 6'       # Cumartesi 11:00  — hatırlatma
+    - cron: '*/5 6-21 * * *'  # 09:00–00:55 arası 5 dakikada bir: uygulamadan gelen gönderme isteği var mı?
+  workflow_dispatch:
+    inputs:
+      mesaj:
+        description: 'Mesaj (boş bırakırsan "Kim var?" gider)'
+        required: false
+        default: ''
+      gun:
+        description: 'Anket hangi gün için?'
+        type: choice
+        options: [otomatik, bugun, yarin]
+        default: otomatik
+      herkese:
+        description: 'Cevap vermiş olanlara da gönder'
+        type: boolean
+        default: false
+
+concurrency:
+  group: bildirim
+  cancel-in-progress: false
+
+jobs:
+  gonder:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Yapılacak iş var mı?
+        id: kontrol
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "*/5 6-21 * * *" ]; then
+            V=$(curl -s --max-time 20 "https://pisti-2f056-default-rtdb.europe-west1.firebasedatabase.app/pisti_bildirim/istek.json")
+            if [ -z "$V" ] || [ "$V" = "null" ]; then
+              echo "Bekleyen istek yok."
+              echo "is=yok" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "is=var" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: steps.kontrol.outputs.is == 'var'
+
+      - uses: actions/setup-node@v4
+        if: steps.kontrol.outputs.is == 'var'
+        with:
+          node-version: 20
+
+      - name: Kurulum
+        if: steps.kontrol.outputs.is == 'var'
+        working-directory: bildirim
+        run: npm install --no-audit --no-fund --loglevel=error
+
+      - name: Bildirimleri gönder
+        if: steps.kontrol.outputs.is == 'var'
+        working-directory: bildirim
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+          OLAY: ${{ github.event_name }}
+          ZAMAN: ${{ github.event.schedule }}
+          MESAJ: ${{ inputs.mesaj }}
+          GUN: ${{ inputs.gun }}
+          HERKESE: ${{ inputs.herkese }}
+        run: node gonder.js
