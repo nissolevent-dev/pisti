@@ -839,6 +839,17 @@ var REF = db.ref('pisti');
 // • Uygulamadan gönderme isteği: pisti_bildirim/istek (GitHub görevi birkaç dakikada bir bakar)
 // Firebase konsolu → Proje ayarları → Cloud Messaging → Web Push sertifikaları → "Key pair"
 var VAPID_ANAHTAR = 'BPJ3_zx3Kp3Dti4RDXgXkHpkZJf_Xyp2fmuLKOhhyaD8semmW8xKW2WifKo2eMhorUsjhbgEOsbDnX-uUkoyG2U';
+// Bildirim kaydı için ayrı API anahtarı (yalnızca Installations / FCM servislerine açık)
+var BILDIRIM_API_ANAHTARI = 'AIzaSyDb4Hl2qjBZ8xj4F8lNSbkxner7e_yzb3g';
+var _bildirimApp = null;
+function _mesajlasma() {
+  if (!_bildirimApp) {
+    var cfg = {}; for (var k in FB_CFG) cfg[k] = FB_CFG[k];
+    if (BILDIRIM_API_ANAHTARI) cfg.apiKey = BILDIRIM_API_ANAHTARI;
+    _bildirimApp = firebase.initializeApp(cfg, 'bildirim');
+  }
+  return firebase.messaging(_bildirimApp);
+}
 var BREF = db.ref('pisti_bildirim');
 var AREF = db.ref('pisti_anket');
 var _anketler = {}, _kayitlilar = {}, _sonGonderim = null, _bekleyenIstek = null;
@@ -1109,7 +1120,7 @@ function _tokenKaydet(ad, sessiz) {
   var asama = '1-sw';
   return _swKaydet().then(function(reg) {
     asama = '2-token';
-    return firebase.messaging().getToken({ vapidKey: VAPID_ANAHTAR, serviceWorkerRegistration: reg });
+    return _mesajlasma().getToken({ vapidKey: VAPID_ANAHTAR, serviceWorkerRegistration: reg });
   }).catch(function(e) {
     var m = (e && (e.code ? e.code + ' — ' : '') + (e.message || e)) || String(e);
     throw new Error('[' + asama + '] ' + m);
