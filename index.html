@@ -977,6 +977,9 @@ function _anketCiz() {
           return '<button onclick="anketSaatSec(\'' + t + '\')" style="flex:1;padding:12px 4px;border-radius:9px;font-family:inherit;font-size:1rem;font-weight:800;cursor:pointer;border:2px solid #1b7a3d;background:' + (on ? '#1b7a3d' : '#fff') + ';color:' + (on ? '#fff' : '#1b7a3d') + '">' + t + '</button>';
         }).join('') + '</div></div>';
     }
+    if (benC && !_anketSaatAcik) {
+      h += '<div style="text-align:center;margin:-8px 0 14px"><button onclick="anketCevapKaldir()" style="background:none;border:none;color:var(--tx3);font-size:.82rem;text-decoration:underline;font-family:inherit;cursor:pointer;padding:6px">Seçimimi kaldır</button></div>';
+    }
   }
 
   var liste = function(baslik, kisiler, renk) {
@@ -1061,6 +1064,15 @@ function anketCevapla(cevap) {
   _anketSaatAcik = false;
   _anketYaz(cevap);
   _anketCiz();
+}
+
+function anketCevapKaldir() {
+  var ad = _benKim();
+  if (!ad || !_anketGun) return;
+  _anketSaatAcik = false;
+  AREF.child(_anketGun).child('cevaplar').child(_anketAnahtar(ad)).remove().then(function() {
+    toast('Seçimin kaldırıldı');
+  }).catch(function() { toast('Kaldırılamadı, bağlantıyı kontrol et'); });
 }
 
 function anketSaatSec(saat) {
