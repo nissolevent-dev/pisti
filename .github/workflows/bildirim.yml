@@ -26,6 +26,10 @@ on:
         description: 'Cevap vermiş olanlara da gönder'
         type: boolean
         default: false
+      slot:
+        description: 'Boş bırak (cron-job.org otomatik çağrısı "kontrol" gönderir)'
+        required: false
+        default: ''
 
 concurrency:
   group: bildirim
@@ -40,7 +44,8 @@ jobs:
         id: kontrol
         run: |
           DB="https://pisti-2f056-default-rtdb.europe-west1.firebasedatabase.app"
-          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "*/5 6-21 * * *" ]; then
+          # 5 dakikalık kontrol: GitHub'ın kendi zamanlaması ya da cron-job.org'dan gelen "kontrol" çağrısı
+          if { [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "*/5 6-21 * * *" ]; } || [ "${{ inputs.slot }}" = "kontrol" ]; then
             # GitHub saat başı görevlerini bazen geciktiriyor ya da hiç çalıştırmıyor.
             # Bu yüzden 5 dakikalık kontrol, saati geçmiş ama gönderilmemiş bildirimi de yakalar (2 saat içinde).
             GUN=$(TZ=Europe/Istanbul date +%u); SA=$(TZ=Europe/Istanbul date +%H%M | sed 's/^0*//'); SA=${SA:-0}
@@ -141,10 +146,11 @@ jobs:
             const zaman = process.env.ZAMAN || '';
             let is;
 
-            if (olay === 'workflow_dispatch') {
+            const slotAd = Object.values(SLOTLAR).find(x => x.ad === process.env.SLOT);
+            if (olay === 'workflow_dispatch' && !slotAd && process.env.KONTROL !== 'kontrol') {
               is = { kaynak: 'github', mesaj: (process.env.MESAJ || '').trim(), gun: process.env.GUN || 'otomatik', herkese: process.env.HERKESE === 'true' };
-            } else if (SLOTLAR[zaman] || Object.values(SLOTLAR).some(x => x.ad === process.env.SLOT)) {
-              const s = SLOTLAR[zaman] || Object.values(SLOTLAR).find(x => x.ad === process.env.SLOT);
+            } else if (slotAd || SLOTLAR[zaman]) {
+              const s = slotAd || SLOTLAR[zaman];
               is = { kaynak: 'zaman', slot: s.ad, fark: s.gunFark, tur: s.tur, herkese: false };
             } else {
               // Uygulamadan gelen istek
@@ -227,6 +233,7 @@ jobs:
           OLAY: ${{ github.event_name }}
           ZAMAN: ${{ github.event.schedule }}
           SLOT: ${{ steps.kontrol.outputs.slot }}
+          KONTROL: ${{ inputs.slot }}
           MESAJ: ${{ inputs.mesaj }}
           GUN: ${{ inputs.gun }}
           HERKESE: ${{ inputs.herkese }}
