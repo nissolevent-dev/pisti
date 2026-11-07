@@ -39,10 +39,27 @@ jobs:
       - name: Yapılacak iş var mı?
         id: kontrol
         run: |
+          DB="https://pisti-2f056-default-rtdb.europe-west1.firebasedatabase.app"
           if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "*/5 6-21 * * *" ]; then
-            V=$(curl -s --max-time 20 "https://pisti-2f056-default-rtdb.europe-west1.firebasedatabase.app/pisti_bildirim/istek.json")
+            # GitHub saat başı görevlerini bazen geciktiriyor ya da hiç çalıştırmıyor.
+            # Bu yüzden 5 dakikalık kontrol, saati geçmiş ama gönderilmemiş bildirimi de yakalar (2 saat içinde).
+            GUN=$(TZ=Europe/Istanbul date +%u); SA=$(TZ=Europe/Istanbul date +%H%M | sed 's/^0*//'); SA=${SA:-0}
+            BUGUN=$(TZ=Europe/Istanbul date +%F); YARIN=$(TZ=Europe/Istanbul date -d tomorrow +%F)
+            for S in "2 2000 sali20 $YARIN" "2 2200 sali22 $YARIN" "3 1600 carsamba16 $BUGUN" "5 2000 cuma20 $YARIN" "5 2200 cuma22 $YARIN" "6 1100 cumartesi11 $BUGUN"; do
+              set -- $S
+              if [ "$GUN" = "$1" ] && [ "$SA" -ge "$2" ] && [ "$SA" -lt $(( $2 + 200 )) ]; then
+                F=$(curl -s --max-time 20 "$DB/pisti_bildirim/gonderilen/${4}_${3}.json")
+                if [ "$F" = "null" ]; then
+                  echo "Zamanı gelmiş bildirim: $3"
+                  echo "slot=$3" >> "$GITHUB_OUTPUT"
+                  echo "is=var" >> "$GITHUB_OUTPUT"
+                  exit 0
+                fi
+              fi
+            done
+            V=$(curl -s --max-time 20 "$DB/pisti_bildirim/istek.json")
             if [ -z "$V" ] || [ "$V" = "null" ]; then
-              echo "Bekleyen istek yok."
+              echo "Bekleyen iş yok."
               echo "is=yok" >> "$GITHUB_OUTPUT"
               exit 0
             fi
@@ -126,8 +143,8 @@ jobs:
 
             if (olay === 'workflow_dispatch') {
               is = { kaynak: 'github', mesaj: (process.env.MESAJ || '').trim(), gun: process.env.GUN || 'otomatik', herkese: process.env.HERKESE === 'true' };
-            } else if (SLOTLAR[zaman]) {
-              const s = SLOTLAR[zaman];
+            } else if (SLOTLAR[zaman] || Object.values(SLOTLAR).some(x => x.ad === process.env.SLOT)) {
+              const s = SLOTLAR[zaman] || Object.values(SLOTLAR).find(x => x.ad === process.env.SLOT);
               is = { kaynak: 'zaman', slot: s.ad, fark: s.gunFark, tur: s.tur, herkese: false };
             } else {
               // Uygulamadan gelen istek
@@ -209,6 +226,7 @@ jobs:
           VAPID_GIZLI: ${{ secrets.VAPID_GIZLI }}
           OLAY: ${{ github.event_name }}
           ZAMAN: ${{ github.event.schedule }}
+          SLOT: ${{ steps.kontrol.outputs.slot }}
           MESAJ: ${{ inputs.mesaj }}
           GUN: ${{ inputs.gun }}
           HERKESE: ${{ inputs.herkese }}
