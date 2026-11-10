@@ -1043,8 +1043,18 @@ function _anketYaz(cevap, saat) {
   var kayit = { ad: ad, cevap: cevap, t: Date.now() };
   if (saat) kayit.saat = saat;
   AREF.child(_anketGun).child('cevaplar').child(_anketAnahtar(ad)).set(kayit).then(function() {
+    _cevapOlayiYaz(ad, cevap, saat);
     toast(({ var: '✅ Varsın', belki: '🤔 Belli değil', yok: '❌ Yoksun' })[cevap] + (saat ? ' (' + saat + ')' : ''));
   }).catch(function() { toast('Kaydedilemedi, bağlantıyı kontrol et'); });
+}
+
+// Cevap değişikliği bildirim kuyruğuna yazılır; GitHub görevi birkaç dakikada bir
+// toplayıp bildirimi açık diğer herkese "Kori: Varım (21:00)" şeklinde gönderir.
+// Kişi başına tek kayıt tutulur: kısa sürede fikir değiştiren için yalnızca son cevap gider.
+function _cevapOlayiYaz(ad, cevap, saat) {
+  var olay = { ad: ad, cevap: cevap, gun: _anketGun, t: Date.now() };
+  if (saat) olay.saat = saat;
+  BREF.child('cevapOlay').child(_anketAnahtar(ad)).set(olay).catch(function() {});
 }
 
 function anketCevapla(cevap) {
@@ -1065,6 +1075,7 @@ function anketCevapKaldir() {
   if (!ad || !_anketGun) return;
   _anketSaatAcik = false;
   AREF.child(_anketGun).child('cevaplar').child(_anketAnahtar(ad)).remove().then(function() {
+    _cevapOlayiYaz(ad, 'kaldirdi');
     toast('Seçimin kaldırıldı');
   }).catch(function() { toast('Kaldırılamadı, bağlantıyı kontrol et'); });
 }
