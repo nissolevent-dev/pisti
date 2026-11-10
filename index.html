@@ -989,6 +989,7 @@ function _anketCiz() {
     .filter(function(a) { return a && !s.hepsi[a]; }).sort(function(a, b) { return a.localeCompare(b, 'tr'); });
   h += liste('✅ Var', adlar(s.var), '#1b7a3d') + liste('🤔 Belli değil', adlar(s.belki), '#a07400') + liste('❌ Yok', adlar(s.yok), '#cc0000') + liste('⏳ Cevap vermedi', cevapsiz, 'var(--tx3)');
   if (!s.var.length && !s.belki.length && !s.yok.length) h += '<div style="font-size:.85rem;color:var(--tx3);margin-bottom:10px">Henüz cevap yok.</div>';
+  else h += '<button class="btn bo bfw bs" style="margin-top:4px" onclick="anketPaylas()">📤 WhatsApp\'ta paylaş</button>';
 
   // ── Bildirimler ──
   h += '<div style="border-top:1.5px solid var(--bd2);margin-top:14px;padding-top:12px">';
@@ -1055,6 +1056,98 @@ function _cevapOlayiYaz(ad, cevap, saat) {
   var olay = { ad: ad, cevap: cevap, gun: _anketGun, t: Date.now() };
   if (saat) olay.saat = saat;
   BREF.child('cevapOlay').child(_anketAnahtar(ad)).set(olay).catch(function() {});
+}
+
+// Anket sonuç görseli (WhatsApp paylaşımı) — uygulamadaki paylaşım görselleriyle aynı stil
+function _anketGorselCiz(canvas, v) {
+  // v = {baslik, tarih, var:[{ad,saat}], belki:[ad], yok:[ad], cevapsiz:[ad], saatSirasi:[], guncel}
+  var W = 400, dpr = 2, pad = 16, outerPad = 16;
+  var rowH = 40, secH = 30, headH = 92, gapH = 14, footH = 40;
+  var bolumler = [
+    { ad: 'GELİYOR', renk: '#166534', ikon: '✅', liste: v.var, saatli: true },
+    { ad: 'BELLİ DEĞİL', renk: '#a07400', ikon: '🤔', liste: v.belki.map(function(a) { return { ad: a }; }) },
+    { ad: 'GELMİYOR', renk: '#991b1b', ikon: '❌', liste: v.yok.map(function(a) { return { ad: a }; }) },
+    { ad: 'CEVAP VERMEDİ', renk: '#6a8a6a', ikon: '⏳', liste: v.cevapsiz.map(function(a) { return { ad: a }; }), soluk: true }
+  ].filter(function(b) { return b.liste.length; });
+
+  var H = outerPad * 2 + headH + footH;
+  bolumler.forEach(function(b, i) { H += secH + b.liste.length * rowH + (i ? gapH : 0); });
+
+  canvas.width = W * dpr; canvas.height = H * dpr; canvas.style.height = '';
+  var ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#f1f5f1'; ctx.fillRect(0, 0, W, H);
+
+  // Başlık
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#1b4332'; ctx.font = 'bold 26px Arial';
+  ctx.fillText('PİŞTİ', W / 2, outerPad + 28);
+  ctx.fillStyle = '#6a8a6a'; ctx.font = '12px Arial';
+  ctx.fillText('ORTAKLI TAKİP', W / 2, outerPad + 44);
+  ctx.fillStyle = '#1b4332'; ctx.font = 'bold 17px Arial';
+  ctx.fillText(v.baslik, W / 2, outerPad + 70);
+  ctx.fillStyle = '#6a8a6a'; ctx.font = '13px Arial';
+  ctx.fillText(v.tarih + '  •  ' + v.var.length + ' var · ' + v.belki.length + ' belli değil · ' + v.yok.length + ' yok', W / 2, outerPad + 88);
+
+  var y = outerPad + headH;
+  bolumler.forEach(function(b, bi) {
+    if (bi) y += gapH;
+    ctx.textAlign = 'left'; ctx.fillStyle = b.renk; ctx.font = 'bold 13px Arial';
+    ctx.fillText(b.ikon + '  ' + b.ad + ' (' + b.liste.length + ')', pad + 4, y + secH - 10);
+    y += secH;
+    var kx = pad, kw = W - pad * 2, kh = b.liste.length * rowH;
+    ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#c0d4c0'; ctx.lineWidth = 1.5;
+    _anketYuvarlak(ctx, kx, y, kw, kh, 14); ctx.fill(); ctx.stroke();
+    // Sol renk şeridi
+    ctx.save(); _anketYuvarlak(ctx, kx, y, kw, kh, 14); ctx.clip();
+    ctx.fillStyle = b.renk; ctx.fillRect(kx, y, 5, kh); ctx.restore();
+    var ix = kx + 20, sag = kx + kw - 18;
+    b.liste.forEach(function(x, i) {
+      var ry = y + i * rowH, my = ry + rowH / 2 + 6;
+      if (i) { ctx.strokeStyle = '#e2ece2'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ix, ry); ctx.lineTo(sag, ry); ctx.stroke(); }
+      ctx.textAlign = 'left'; ctx.fillStyle = b.soluk ? '#6a8a6a' : '#1a2e1a'; ctx.font = '600 17px Arial';
+      ctx.fillText(x.ad, ix, my);
+      if (b.saatli && x.saat) {
+        ctx.font = 'bold 15px Arial'; var sw = ctx.measureText(x.saat).width;
+        ctx.fillStyle = '#e8f5ec'; _anketYuvarlak(ctx, sag - sw - 16, ry + 9, sw + 16, rowH - 18, 8); ctx.fill();
+        ctx.fillStyle = '#166534'; ctx.textAlign = 'right'; ctx.fillText(x.saat, sag - 8, my - 1);
+      }
+    });
+    y += kh;
+  });
+
+  ctx.strokeStyle = '#c0d4c0'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad, H - footH); ctx.lineTo(W - pad, H - footH); ctx.stroke();
+  ctx.fillStyle = '#1b4332'; ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('Güncelleme: ' + v.guncel, W / 2, H - footH + 22);
+}
+function _anketYuvarlak(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h); ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r); ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+}
+
+function anketPaylas() {
+  var gun = _anketGun;
+  if (!gun) return;
+  var s = _anketCevaplari(gun), et = _gunEtiket(gun);
+  var ad = function(x) { return String(x).split(' ')[0]; };
+  var cevapsiz = Object.keys(_kayitlilar).map(function(k) { return _kayitlilar[k] && _kayitlilar[k].ad; })
+    .filter(function(a) { return a && !s.hepsi[a]; }).sort(function(a, b) { return a.localeCompare(b, 'tr'); });
+  var an = new Date();
+  var aylar = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+  _anketGorselCiz(document.getElementById('share-canvas'), {
+    baslik: '🃏 ' + et.kisa + ' kim var?',
+    tarih: et.uzun,
+    var: s.var.map(function(x) { return { ad: ad(x.ad), saat: x.saat || '' }; }),
+    belki: s.belki.map(function(x) { return ad(x.ad); }),
+    yok: s.yok.map(function(x) { return ad(x.ad); }),
+    cevapsiz: cevapsiz.map(ad),
+    guncel: an.getDate() + ' ' + aylar[an.getMonth()] + ', ' + String(an.getHours()).padStart(2, '0') + ':' + String(an.getMinutes()).padStart(2, '0')
+  });
+  _shareImageTitle = 'Pişti – ' + et.kisa + ' kim var?';
+  closeOv('ov-anket');
+  document.getElementById('ov-share').classList.add('on');
 }
 
 function anketCevapla(cevap) {
