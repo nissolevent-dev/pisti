@@ -15,7 +15,7 @@ self.addEventListener('push', function (e) {
     body: govde,
     icon: 'icon-192.png',
     badge: 'icon-192.png',
-    tag: 'pisti-anket',
+    tag: d.tag || 'pisti-anket',
     renotify: true,
     data: { gun: d.gun || '', url: d.url || '' }
   }));
