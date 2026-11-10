@@ -1014,12 +1014,15 @@ function _anketCiz() {
 
   // ── Bildirim gönder (şifreli) ──
   if (_anketGonderForm) {
-    var oto = _anketOtoFark();
+    // Gün, form açıldığı anda kesin tarih olarak belirlenir (gece yarısını geçince kaymasın diye)
+    var bugunT = _tarihStr(0), yarinT = _tarihStr(1);
+    var oto = _anketGun === yarinT ? 1 : _anketGun === bugunT ? 0 : _anketOtoFark();
+    var gunAd = function(t) { return _gunEtiket(t).uzun.split(',')[0]; };
     h += '<div style="margin-top:14px;padding:12px;border-radius:10px;background:var(--bg2)">' +
       '<div style="font-size:.85rem;font-weight:800;margin-bottom:8px">📣 Bildirim gönder</div>' +
       '<textarea id="bld-mesaj" rows="2" maxlength="140" placeholder="Mesaj (boş bırakırsan &quot;' + (oto ? 'Yarın' : 'Bugün') + ' kim var?&quot;)" style="width:100%;box-sizing:border-box;font-size:1rem;padding:8px;border-radius:8px;border:1.5px solid var(--bd2);font-family:inherit;margin-bottom:8px"></textarea>' +
-      '<div style="display:flex;gap:18px;font-size:.9rem;margin-bottom:10px"><label style="display:flex;align-items:center;gap:6px"><input type="radio" name="bld-gun" value="bugun" style="-webkit-appearance:auto;appearance:auto;width:18px;height:18px;margin:0;padding:0;flex:none"' + (oto ? '' : ' checked') + '> Bugün için</label>' +
-      '<label style="display:flex;align-items:center;gap:6px"><input type="radio" name="bld-gun" value="yarin" style="-webkit-appearance:auto;appearance:auto;width:18px;height:18px;margin:0;padding:0;flex:none"' + (oto ? ' checked' : '') + '> Yarın için</label></div>' +
+      '<div style="display:flex;gap:18px;font-size:.9rem;margin-bottom:10px"><label style="display:flex;align-items:center;gap:6px"><input type="radio" name="bld-gun" value="' + bugunT + '" style="-webkit-appearance:auto;appearance:auto;width:18px;height:18px;margin:0;padding:0;flex:none"' + (oto ? '' : ' checked') + '> Bugün (' + gunAd(bugunT) + ')</label>' +
+      '<label style="display:flex;align-items:center;gap:6px"><input type="radio" name="bld-gun" value="' + yarinT + '" style="-webkit-appearance:auto;appearance:auto;width:18px;height:18px;margin:0;padding:0;flex:none"' + (oto ? ' checked' : '') + '> Yarın (' + gunAd(yarinT) + ')</label></div>' +
       '<label style="display:flex;align-items:center;gap:6px;font-size:.88rem;margin-bottom:12px"><input type="checkbox" id="bld-herkese" style="-webkit-appearance:auto;appearance:auto;width:18px;height:18px;margin:0;padding:0;flex:none"> Cevap vermiş olanlara da gönder</label>' +
       '<div style="display:flex;gap:8px"><button class="btn bo" style="flex:1" onclick="_anketGonderForm=false;_anketCiz()">Vazgeç</button>' +
       '<button class="btn bp" style="flex:2" onclick="bildirimIstegiGonder()">Gönder</button></div></div>';
@@ -1329,7 +1332,8 @@ function bildirimIstegiGonder() {
   var mesaj = (document.getElementById('bld-mesaj').value || '').trim();
   var gunEl = document.querySelector('input[name="bld-gun"]:checked');
   var herkese = document.getElementById('bld-herkese').checked;
-  BREF.child('istek').set({ mesaj: mesaj, gun: gunEl ? gunEl.value : 'otomatik', herkese: herkese, kim: _benKim() || '', t: Date.now() })
+  var tarih = gunEl ? gunEl.value : _tarihStr(_anketOtoFark());
+  BREF.child('istek').set({ mesaj: mesaj, tarih: tarih, gun: tarih === _tarihStr(1) ? 'yarin' : 'bugun', herkese: herkese, kim: _benKim() || '', t: Date.now() })
     .then(function() {
       _anketGonderForm = false;
       toast('📣 Bildirim sıraya alındı');
