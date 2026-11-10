@@ -106,12 +106,13 @@ jobs:
 
           // Cron ifadesi → bildirim türü. gunFark: anketin günü (0 = bugün, 1 = yarın)
           const SLOTLAR = {
-            '0 17 * * 2': { ad: 'sali20', gunFark: 1, tur: 'ilk' },
-            '0 19 * * 2': { ad: 'sali22', gunFark: 1, tur: 'hatirlatma' },
-            '0 13 * * 3': { ad: 'carsamba16', gunFark: 0, tur: 'hatirlatma' },
-            '0 17 * * 5': { ad: 'cuma20', gunFark: 1, tur: 'ilk' },
-            '0 19 * * 5': { ad: 'cuma22', gunFark: 1, tur: 'hatirlatma' },
-            '0 8 * * 6': { ad: 'cumartesi11', gunFark: 0, tur: 'hatirlatma' }
+            // hg: haftanın günü (0 = pazar … 6 = cumartesi), sa: İstanbul saati (SSDD)
+            '0 17 * * 2': { ad: 'sali20', gunFark: 1, tur: 'ilk', hg: 2, sa: 2000 },
+            '0 19 * * 2': { ad: 'sali22', gunFark: 1, tur: 'hatirlatma', hg: 2, sa: 2200 },
+            '0 13 * * 3': { ad: 'carsamba16', gunFark: 0, tur: 'hatirlatma', hg: 3, sa: 1600 },
+            '0 17 * * 5': { ad: 'cuma20', gunFark: 1, tur: 'ilk', hg: 5, sa: 2000 },
+            '0 19 * * 5': { ad: 'cuma22', gunFark: 1, tur: 'hatirlatma', hg: 5, sa: 2200 },
+            '0 8 * * 6': { ad: 'cumartesi11', gunFark: 0, tur: 'hatirlatma', hg: 6, sa: 1100 }
           };
 
           const GUNLER = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
@@ -154,6 +155,15 @@ jobs:
               is = { kaynak: 'github', mesaj: (process.env.MESAJ || '').trim(), gun: process.env.GUN || 'otomatik', herkese: process.env.HERKESE === 'true' };
             } else if (slotAd || SLOTLAR[zaman]) {
               const s = slotAd || SLOTLAR[zaman];
+              // GitHub zamanlanmış görevi saatlerce geciktirebiliyor (ör. salı 22:00 görevi gece 01:10'da
+              // çalıştı ve "yarın"ı perşembe sandı). Bildirim yalnızca kendi gününde ve saatinden
+              // sonraki 2 saat içinde gönderilir; daha geç çalışırsa atlanır.
+              const anSaat = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date()).replace(':', ''));
+              const anGun = haftaGunu(istanbulTarih(0));
+              if (anGun !== s.hg || anSaat < s.sa || anSaat >= s.sa + 200) {
+                console.log(`Zamanı geçmiş bildirim atlandı: ${s.ad} (şu an gün ${anGun}, saat ${anSaat})`);
+                return;
+              }
               is = { kaynak: 'zaman', slot: s.ad, fark: s.gunFark, tur: s.tur, herkese: false };
             } else {
               // Uygulamadan gelen istek
@@ -162,12 +172,17 @@ jobs:
               await dbSil('pisti_bildirim/istek');
               if (Date.now() - (v.t || 0) > 3 * 3600e3) { console.log('3 saatten eski istek atlandı.'); return; }
               is = { kaynak: 'uygulama', mesaj: String(v.mesaj || '').trim(), gun: v.gun || 'otomatik', herkese: !!v.herkese, kim: v.kim || '' };
+              // Uygulama anketin kesin tarihini gönderir; gece yarısını geçse bile gün kaymaz
+              if (/^\d{4}-\d\d-\d\d$/.test(v.tarih || '')) {
+                if (v.tarih < istanbulTarih(0)) { console.log('Geçmiş güne ait istek atlandı: ' + v.tarih); return; }
+                is.tarih = v.tarih;
+              }
             }
 
             const fark = is.fark != null ? is.fark : (is.gun === 'bugun' ? 0 : is.gun === 'yarin' ? 1 : otomatikFark());
-            const tarih = istanbulTarih(fark);
+            const tarih = is.tarih || istanbulTarih(fark);
             const gunAdi = GUNLER[haftaGunu(tarih)];
-            const ne = fark === 1 ? 'Yarın' : 'Bugün';
+            const ne = tarih === istanbulTarih(0) ? 'Bugün' : tarih === istanbulTarih(1) ? 'Yarın' : gunAdi;
 
             // Zamanlanmış bildirim aynı gün iki kez gitmesin (görevler sırayla çalışır)
             if (is.kaynak === 'zaman') {
