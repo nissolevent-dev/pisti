@@ -889,10 +889,12 @@ function _anketBannerCiz() {
   }
   var s = _anketCevaplari(g), et = _gunEtiket(g), ben = _benKim(), benC = ben ? s.hepsi[ben] : null;
   var sag = benC ? ({ var: '✅ Varsın' + (s.saat[ben] ? ' (' + s.saat[ben] + ')' : ''), belki: '🤔 Belli değil', yok: '❌ Yoksun' })[benC] : 'Cevapla ›';
-  el.innerHTML = '<div onclick="anketAc(\'' + g + '\')" style="background:#e8c96a;color:#3a2f00;border-radius:10px;padding:11px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer;user-select:none;-webkit-user-select:none">' +
-    '<div><div style="font-weight:800;font-size:.95rem">🃏 ' + et.kisa + ' kim var?</div>' +
-    '<div style="font-size:.8rem;font-weight:600;margin-top:2px">✅ ' + s.var.length + ' var · 🤔 ' + s.belki.length + ' belli değil · ❌ ' + s.yok.length + ' yok</div></div>' +
-    '<div style="font-weight:800;font-size:.85rem;white-space:nowrap">' + sag + '</div></div>';
+  el.innerHTML = '<div onclick="anketAc(\'' + g + '\')" style="background:#e8c96a;color:#3a2f00;border-radius:10px;padding:11px 14px;margin-bottom:12px;cursor:pointer;user-select:none;-webkit-user-select:none">' +
+    // 1. satır: başlık + kişinin kendi durumu; 2. satır: sayılar (tek satırda, kaymasın)
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">' +
+    '<div style="font-weight:800;font-size:.95rem;white-space:nowrap">🃏 ' + et.kisa + ' kim var?</div>' +
+    '<div style="font-weight:800;font-size:.85rem;white-space:nowrap">' + sag + '</div></div>' +
+    '<div style="font-size:.8rem;font-weight:600;margin-top:4px;white-space:nowrap">✅ ' + s.var.length + ' var · 🤔 ' + s.belki.length + ' belli değil · ❌ ' + s.yok.length + ' yok</div></div>';
 }
 
 function anketAc(gun) {
