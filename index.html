@@ -1689,6 +1689,7 @@ var localSaveId = null; // kendi kaydetmelerimizi takip et
 
 REF.on('value', function(snap) {
   var val = snap.val();
+  var _ilkYukleme = firstLoad;
   if (!val) {
     syncDot('#22c55e');
     if (firstLoad) { firstLoad = false; refreshAll(); _cekBekleyeniAc(); }
@@ -1777,6 +1778,9 @@ REF.on('value', function(snap) {
   }
 
   syncDot('#22c55e');
+  // Maşallah: oyunu hangi cihaz kaydetmiş olursa olsun her cihazda gösterilir.
+  // Uygulama ilk açıldığında zaten 800'ü geçmiş olanlar için gösterilmez.
+  try { _masallahKontrol(_ilkYukleme); } catch (e) {}
   if (firstLoad) {
     firstLoad = false;
     refreshAll();
@@ -5128,13 +5132,8 @@ function saveGame(masa, turler) {
   for (var p in payMap) {
     D.ldg[p] = (D.ldg[p] || 0) + payMap[p];
     D.sessLdg[p] = (D.sessLdg[p] || 0) + payMap[p];
-    // Maşallah kontrolü: oturumda 500 TL'yi ilk kez geçti mi?
-    if (!D.masallahGoster) D.masallahGoster = {};
-    if (!D.masallahGoster[p] && D.sessLdg[p] >= 800) {
-      D.masallahGoster[p] = true;
-      showMasallah(p);
-    }
   }
+  _masallahKontrol(false);
 
   // Bu masadaki gerçek ortakları tespit et
   // Gerçek masada oturanlar = SIDS'den gelen isimler (partners dahil değil)
@@ -9806,6 +9805,32 @@ function oyunSonucuKapat() {
 }
 
 var _masallahKuyruk = [];
+
+// Oturumda +800 TL'yi geçen için "Maşallah" penceresi (altına düşüp yeniden geçerse tekrar çıkar).
+// Kimin gösterildiği her cihazda o oturum için ayrı tutulur (D.oturumId'ye bağlı),
+// böylece eski oturumdan kalan işaretler yeni oturumu engellemez.
+var _MASALLAH_SINIR = 800;
+var _masallahGorulen = null, _masallahOturum = null;
+function _masallahKontrol(sessiz) {
+  var oid = String(D.oturumId || (D.sess && D.sess.startDate) || 'x');
+  if (_masallahOturum !== oid) {
+    _masallahOturum = oid;
+    _masallahGorulen = {};
+    try { _masallahGorulen = JSON.parse(localStorage.getItem('pisti_masallah_' + oid) || '{}') || {}; } catch (e) {}
+  }
+  var degisti = false;
+  // 800'ün altına düşen kişinin işareti kalkar; yeniden geçerse pencere tekrar çıkar
+  Object.keys(_masallahGorulen).forEach(function(p) {
+    if ((D.sessLdg && D.sessLdg[p] || 0) < _MASALLAH_SINIR) { delete _masallahGorulen[p]; degisti = true; }
+  });
+  Object.keys(D.sessLdg || {}).forEach(function(p) {
+    if ((D.sessLdg[p] || 0) >= _MASALLAH_SINIR && !_masallahGorulen[p]) {
+      _masallahGorulen[p] = true; degisti = true;
+      if (!sessiz) showMasallah(p);
+    }
+  });
+  if (degisti) { try { localStorage.setItem('pisti_masallah_' + oid, JSON.stringify(_masallahGorulen)); } catch (e) {} }
+}
 
 function showMasallah(oyuncu) {
   _masallahKuyruk.push(oyuncu);
