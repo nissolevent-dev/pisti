@@ -10,6 +10,8 @@ on:
     - cron: '0 17 * * 5'      # Cuma 20:00       — Yarın kim var?
     - cron: '0 19 * * 5'      # Cuma 22:00       — hatırlatma
     - cron: '0 8 * * 6'       # Cumartesi 11:00  — hatırlatma
+    - cron: '30 15 * * 3'     # Çarşamba 18:30   — bugünün durumu (herkese)
+    - cron: '0 9 * * 6'       # Cumartesi 12:00  — bugünün durumu (herkese)
     - cron: '*/5 6-21 * * *'  # 09:00–00:55 arası 5 dakikada bir: uygulamadan gelen gönderme isteği var mı?
   workflow_dispatch:
     inputs:
@@ -50,7 +52,7 @@ jobs:
             # Bu yüzden 5 dakikalık kontrol, saati geçmiş ama gönderilmemiş bildirimi de yakalar (2 saat içinde).
             GUN=$(TZ=Europe/Istanbul date +%u); SA=$(TZ=Europe/Istanbul date +%H%M | sed 's/^0*//'); SA=${SA:-0}
             BUGUN=$(TZ=Europe/Istanbul date +%F); YARIN=$(TZ=Europe/Istanbul date -d tomorrow +%F)
-            for S in "2 2000 sali20 $YARIN" "2 2200 sali22 $YARIN" "3 1600 carsamba16 $BUGUN" "5 2000 cuma20 $YARIN" "5 2200 cuma22 $YARIN" "6 1100 cumartesi11 $BUGUN"; do
+            for S in "2 2000 sali20 $YARIN" "2 2200 sali22 $YARIN" "3 1600 carsamba16 $BUGUN" "5 2000 cuma20 $YARIN" "5 2200 cuma22 $YARIN" "6 1100 cumartesi11 $BUGUN" "3 1830 carsamba1830 $BUGUN" "6 1200 cumartesi12 $BUGUN"; do
               set -- $S
               if [ "$GUN" = "$1" ] && [ "$SA" -ge "$2" ] && [ "$SA" -lt $(( $2 + 200 )) ]; then
                 F=$(curl -s --max-time 20 "$DB/pisti_bildirim/gonderilen/${4}_${3}.json")
@@ -112,7 +114,9 @@ jobs:
             '0 13 * * 3': { ad: 'carsamba16', gunFark: 0, tur: 'hatirlatma', hg: 3, sa: 1600 },
             '0 17 * * 5': { ad: 'cuma20', gunFark: 1, tur: 'ilk', hg: 5, sa: 2000 },
             '0 19 * * 5': { ad: 'cuma22', gunFark: 1, tur: 'hatirlatma', hg: 5, sa: 2200 },
-            '0 8 * * 6': { ad: 'cumartesi11', gunFark: 0, tur: 'hatirlatma', hg: 6, sa: 1100 }
+            '0 8 * * 6': { ad: 'cumartesi11', gunFark: 0, tur: 'hatirlatma', hg: 6, sa: 1100 },
+            '30 15 * * 3': { ad: 'carsamba1830', gunFark: 0, tur: 'durum', hg: 3, sa: 1830 },
+            '0 9 * * 6': { ad: 'cumartesi12', gunFark: 0, tur: 'durum', hg: 6, sa: 1200 }
           };
 
           const GUNLER = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
@@ -164,7 +168,8 @@ jobs:
                 console.log(`Zamanı geçmiş bildirim atlandı: ${s.ad} (şu an gün ${anGun}, saat ${anSaat})`);
                 return;
               }
-              is = { kaynak: 'zaman', slot: s.ad, fark: s.gunFark, tur: s.tur, herkese: false };
+              // "durum" bildirimi cevap vermiş olanlar dahil herkese gider
+              is = { kaynak: 'zaman', slot: s.ad, fark: s.gunFark, tur: s.tur, herkese: s.tur === 'durum' };
             } else {
               // Uygulamadan gelen istek
               const v = await dbAl('pisti_bildirim/istek');
@@ -208,6 +213,32 @@ jobs:
               dbAl('pisti_anket/' + tarih + '/cevaplar')
             ]);
             const cevaplayan = new Set(Object.values(cevaplar || {}).map(c => c && c.ad).filter(Boolean));
+
+            // Günün durumu: gelenler saat gruplarıyla ("21:00 Dani, Nisso · 21:30 Kori"), sonra diğerleri
+            if (is.tur === 'durum' && !is.mesaj) {
+              const ad = x => String(x).split(' ')[0];
+              const liste = Object.values(cevaplar || {}).filter(c => c && c.ad && c.cevap).sort((a, b) => (a.t || 0) - (b.t || 0));
+              const gelen = liste.filter(c => c.cevap === 'var');
+              const saatSirasi = ['21:00', '21:30', '13:00', '13:30', 'Daha geç'];
+              const gruplar = {};
+              gelen.forEach(c => { const k = c.saat || ''; (gruplar[k] = gruplar[k] || []).push(ad(c.ad)); });
+              const anahtarlar = Object.keys(gruplar).sort((a, b) => {
+                const ia = a ? (saatSirasi.indexOf(a) < 0 ? 50 : saatSirasi.indexOf(a)) : 99;
+                const ib = b ? (saatSirasi.indexOf(b) < 0 ? 50 : saatSirasi.indexOf(b)) : 99;
+                return ia - ib || a.localeCompare(b);
+              });
+              const satirlar = [];
+              if (gelen.length) satirlar.push(`✅ Var (${gelen.length}): ` + anahtarlar.map(k => (k ? k + ' ' : '') + gruplar[k].join(', ')).join(' · '));
+              const belki = liste.filter(c => c.cevap === 'belki').map(c => ad(c.ad));
+              const yok = liste.filter(c => c.cevap === 'yok').map(c => ad(c.ad));
+              if (belki.length) satirlar.push(`🤔 Belli değil (${belki.length}): ` + belki.join(', '));
+              if (yok.length) satirlar.push(`❌ Yok (${yok.length}): ` + yok.join(', '));
+              const kayitli = Object.values((await dbAl('pisti_bildirim/kayitli')) || {}).map(k => k && k.ad).filter(Boolean);
+              const cevapsiz = [...new Set(kayitli)].filter(a => !cevaplayan.has(a)).sort((a, b) => a.localeCompare(b, 'tr')).map(ad);
+              if (cevapsiz.length) satirlar.push(`⏳ Cevap vermedi (${cevapsiz.length}): ` + cevapsiz.join(', '));
+              baslik = '🃏 ' + (ne === 'Bugün' ? 'Bugünün' : ne + ' için') + ' durumu (' + gunAdi + ')';
+              govde = satirlar.length ? satirlar.join('\n') : 'Henüz kimse cevap vermedi.';
+            }
             const gorulen = new Set();
             const hedef = Object.entries(kayitlar || {}).filter(([, r]) => {
               const ab = r && r.abonelik;
@@ -221,7 +252,7 @@ jobs:
             let basarili = 0;
             const silinecek = [];
             await Promise.all(hedef.map(async ([anahtar, r]) => {
-              const veri = JSON.stringify({ data: { title: baslik, body: govde, gun: tarih, url: r.url || '' } });
+              const veri = JSON.stringify({ data: { title: baslik, body: govde, gun: tarih, url: r.url || '', tag: is.tur === 'durum' ? 'pisti-durum-' + tarih : 'pisti-anket' } });
               try {
                 await webpush.sendNotification(r.abonelik, veri, { TTL: 43200, urgency: 'high' });
                 basarili++;
