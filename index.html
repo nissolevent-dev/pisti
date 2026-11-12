@@ -9996,6 +9996,17 @@ function showMasallah(oyuncu, tip) {
 
 function _masallahGoster() {
   if (_masallahKuyruk.length === 0) return;
+  // Oyun sonucu penceresi açıksa (ya da hemen açılacaksa) önce o kapatılsın;
+  // Maşallah / YUUUHHH penceresi ve sesi ondan sonra birlikte gelir.
+  setTimeout(function bekle() {
+    var sonuc = document.getElementById('ov-oyun-sonucu');
+    if (sonuc && sonuc.classList.contains('on')) { setTimeout(bekle, 250); return; }
+    _masallahGosterSimdi();
+  }, 80);
+}
+
+function _masallahGosterSimdi() {
+  if (_masallahKuyruk.length === 0) return;
   var x = _masallahKuyruk[0];
   if (x.tip === 'yuh') {
     document.getElementById('yuh-isim').textContent = x.ad;
