@@ -1045,7 +1045,7 @@ function _anketCiz() {
   var d = _bildirimDurumu();
   if (d === 'acik') {
     h += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="font-size:.85rem;font-weight:700;color:var(--g2)">🔔 Bildirimler açık' + (ben ? ' (' + ben.split(' ')[0] + ')' : '') + '</div>' +
-      '<button class="btn bo bs" onclick="bildirimKapat()">Kapat</button></div>';
+      '<button onclick="bildirimKapatSor()" style="background:none;border:none;color:var(--tx3);font-size:.75rem;text-decoration:underline;font-family:inherit;cursor:pointer;padding:4px;white-space:nowrap">Bildirimleri kapat</button></div>';
   } else if (d === 'ana-ekran') {
     h += '<div style="font-size:.82rem;color:var(--tx2);line-height:1.5">🔔 Bildirim almak için uygulamayı Safari\'de <b>Paylaş → Ana Ekrana Ekle</b> ile ekleyip ana ekrandaki simgeden açın.</div>';
   } else if (d === 'desteksiz') {
@@ -1347,6 +1347,11 @@ function bildirimIzinVer() {
     toast('Bildirim açılamadı');
     _anketCiz();
   });
+}
+
+// Pencereyi kapatan "Kapat" ile karışmasın diye bildirimleri kapatmadan önce onay sorulur
+function bildirimKapatSor() {
+  onaySor('Bildirimleri kapatmak istediğine emin misin? Bu telefona bir daha "Kim var?" hatırlatması gelmeyecek.', bildirimKapat);
 }
 
 function bildirimKapat() {
