@@ -898,10 +898,16 @@ function _benAyarla(ad) { try { localStorage.setItem('pisti_ben', ad); } catch (
 function _yerelAl(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
 function _yerelYaz(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} }
 
+// Oyun günlerinde sarı bant belli bir saatten sonra gizlenir (oyun başlamış olur):
+// çarşamba 22:00, cumartesi 15:00
+var _ANKET_BITIS_SAATI = { 3: 22, 6: 15 };
 function _aktifAnketGunu() {
-  var bugun = _tarihStr(0);
+  var bugun = _tarihStr(0), an = new Date();
+  var bitis = _ANKET_BITIS_SAATI[an.getDay()];
+  var bugunBitti = bitis != null && an.getHours() >= bitis;
   var adaylar = Object.keys(_anketler).filter(function(k) { return /^\d{4}-\d\d-\d\d$/.test(k) && k >= bugun; });
-  if ([2, 3, 5, 6].indexOf(new Date().getDay()) >= 0) adaylar.push(_tarihStr(_anketOtoFark()));
+  if ([2, 3, 5, 6].indexOf(an.getDay()) >= 0) adaylar.push(_tarihStr(_anketOtoFark()));
+  if (bugunBitti) adaylar = adaylar.filter(function(k) { return k !== bugun; });
   adaylar.sort();
   return adaylar[0] || null;
 }
@@ -1422,7 +1428,7 @@ function _anketBaslat() {
   });
   _anketBannerCiz();
   // Gün değişince (uygulama açık kalırsa) banner güncellensin
-  setInterval(_anketBannerCiz, 10 * 60 * 1000);
+  setInterval(_anketBannerCiz, 60 * 1000);
 
   // Bildirime dokunarak açıldıysa anketi göster
   var m = /[?&]anket=([^&#]*)/.exec(location.search);
