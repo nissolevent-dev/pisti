@@ -145,7 +145,7 @@ button,.btn,.chip{touch-action:manipulation}
   </div>
   <div class="hdr-r">
     <span class="sync" id="sync-dot"></span>
-    <button class="hbtn" onclick="showAP()">+ Oyuncu</button>
+    <button class="hbtn" onclick="ustOyuncuDugmesi()">+/- Oyuncu</button>
   </div>
 </div>
 
@@ -2284,6 +2284,16 @@ function masaDuzeniIptalOyunaDon() {
   renderGameCards();
   if (D.round && D.round.masa1active) switchMasa(1);
   else if (D.round && D.round.masa2active) switchMasa(2);
+}
+
+// Üstteki "+/- Oyuncu" düğmesi: masa düzeni ekranındaki "Oturuma oyuncu ekle" ile aynı iş
+// (bugünkü oyuncular ekranına gider; hangi sekmede olunursa olunsun önce Oyun sekmesine geçer)
+function ustOyuncuDugmesi() {
+  var sekme = document.querySelector('.tabs .tab');
+  if (sekme && typeof goTab === 'function') goTab('oyun', sekme);
+  goSAndSave(2);
+  if (typeof renderSessChips === 'function') renderSessChips();
+  window.scrollTo(0, 0);
 }
 
 function goSAndSave(n) {
