@@ -354,6 +354,14 @@ button,.btn,.chip{touch-action:manipulation}
       <button class="btn bp bs" style="white-space:nowrap" onclick="yiliArsivle()">Arşivle</button>
     </div>
   </div>
+  <div class="card" style="margin-bottom:10px">
+    <div class="ctitle">Yalnız Tüm Zamanlar'ı Arşivle ve Sıfırla</div>
+    <p style="font-size:.78rem;color:var(--tx3);margin-bottom:10px">Tüm Zamanlar listesi (para ve W/L) arşivlenir ve sıfırlanır. Oyunlar, oturumlar ve istatistikler silinmez, yeni oyunlar üstüne eklenir.</p>
+    <div class="fx" style="margin-bottom:0">
+      <input id="tz-yil-adi" type="text" placeholder="Yıl adı (örn: 2026)" maxlength="20">
+      <button class="btn bp bs" style="white-space:nowrap" onclick="tumZamanArsivle()">Arşivle</button>
+    </div>
+  </div>
   <div class="card">
     <div class="ctitle">Verileri Sifirla</div>
     <p style="font-size:.78rem;color:var(--tx3);margin-bottom:12px">Oyuncu havuzu korunur. Tüm oyunlar, hesaplar, oturumlar ve istatistikler sıfırlanır.</p>
@@ -5691,6 +5699,33 @@ function yiliArsivle() {
   });
 }
 
+function tumZamanArsivle() {
+  var yilAdi = document.getElementById('tz-yil-adi').value.trim();
+  if (!yilAdi) { toast('Yıl adı girin (örn: 2026)'); return; }
+  if (D.started) { toast('Önce açık oturumu kapatın'); return; }
+  sifreSor('Arşivlemek için şifre:', function(sifre) {
+    if (sifre !== '2580') { toast('Yanlış şifre'); return; }
+    if (!confirm(yilAdi + ' Tüm Zamanlar listesi (para ve W/L) arşivlenip sıfırlanacak. Oyunlar ve istatistikler silinmeyecek. Emin misiniz?')) return;
+    if (!D.arsiv) D.arsiv = [];
+    D.arsiv.push({
+      yil: yilAdi,
+      tarih: new Date().toLocaleDateString('tr-TR'),
+      sadeceTumZaman: true,
+      ldg: JSON.parse(JSON.stringify(D.ldg || {})),
+      initialLdg: JSON.parse(JSON.stringify(D.initialLdg || {})),
+      winLoss: JSON.parse(JSON.stringify(D.winLoss || {})),
+      pool: D.pool.slice()
+    });
+    D.ldg = {};
+    D.initialLdg = {};
+    D.winLoss = {};
+    saveD();
+    document.getElementById('tz-yil-adi').value = '';
+    renderHesap();
+    toast(yilAdi + ' Tüm Zamanlar arşivlendi');
+  });
+}
+
 function renderArsiv() {
   var el = document.getElementById('h-arsiv');
   if (!D.arsiv || !D.arsiv.length) {
@@ -5701,6 +5736,7 @@ function renderArsiv() {
   for (var ai = D.arsiv.length - 1; ai >= 0; ai--) {
     var a = D.arsiv[ai];
     var aid = 'arsiv-' + ai;
+    var _tzEtiket = a.sadeceTumZaman ? 'Tüm Zamanlar' : null;
     // Tüm zamanlar listesi
     var allP = [];
     var seen = {};
@@ -5762,7 +5798,7 @@ function renderArsiv() {
     }
 
     html += '<div class="csbox" style="margin-bottom:12px">';
-    html += '<div class="cshd" style="cursor:pointer" onclick="toggleCS(\''+aid+'\')"><span class="csdt" style="font-size:.88rem;font-weight:700;color:var(--g1)">📁 ' + a.yil + '</span><span class="csinf">' + a.tarih + ' · ' + (a.allGames?a.allGames.length:0) + ' oyun</span></div>';
+    html += '<div class="cshd" style="cursor:pointer" onclick="toggleCS(\''+aid+'\')"><span class="csdt" style="font-size:.88rem;font-weight:700;color:var(--g1)">📁 ' + a.yil + '</span><span class="csinf">' + a.tarih + ' · ' + (_tzEtiket || ((a.allGames?a.allGames.length:0) + ' oyun')) + '</span></div>';
     html += '<div id="'+aid+'" style="display:none">';
     html += '<div style="padding:10px 13px"><div class="ctitle" style="margin-bottom:8px">Tüm Zamanlar</div><div class="ldg">' + ldgRows + '</div></div>';
     if (sessHtml) html += '<div style="padding:0 13px 10px"><div class="ctitle" style="margin-bottom:8px">Oturumlar</div>' + sessHtml + '</div>';
@@ -5774,7 +5810,7 @@ function renderArsiv() {
 function renderArsivStat() {
   var el = document.getElementById('st-arsiv');
   var sec = document.getElementById('st-arsiv-sec');
-  if (!D.arsiv || !D.arsiv.length) {
+  if (!D.arsiv || !D.arsiv.some(function(a){ return a && !a.sadeceTumZaman; })) {
     el.innerHTML = '';
     if (sec) sec.style.display = 'none';
     return;
@@ -5783,6 +5819,7 @@ function renderArsivStat() {
   var html = '';
   for (var ai = D.arsiv.length - 1; ai >= 0; ai--) {
     var a = D.arsiv[ai];
+    if (a.sadeceTumZaman) continue; // yalnız Tüm Zamanlar arşivi: oyun istatistiği yok
     var aid = 'ast-' + ai;
     // Oyuncu istatistikleri
     var ps = {};
